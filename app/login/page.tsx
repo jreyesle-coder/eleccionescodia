@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Marca from '@/components/marca'
 
@@ -71,10 +72,17 @@ export default function LoginPage() {
       {/* ── Contenido centrado ── */}
       <div className="relative z-10 w-full max-w-sm px-4 space-y-6">
         {/* Marca sobre blanco — separada de la tarjeta */}
-        <div className="flex justify-center">
-          <div className="bg-white rounded-2xl px-6 py-4 shadow-sm border border-gray-100">
+        <div className="flex flex-col items-center gap-3">
+          <div className="bg-white rounded-2xl px-6 py-4 shadow-sm border border-gray-100 w-full flex justify-center">
             <Marca />
           </div>
+          <Link
+            href="/consulta"
+            className="w-full text-center text-sm font-semibold px-4 py-2.5 rounded-xl border-2 bg-white hover:bg-gray-50 transition-colors"
+            style={{ color: 'var(--color-marino)', borderColor: 'var(--color-marino)' }}
+          >
+            Verificate para Votar
+          </Link>
         </div>
 
         {/* Tarjeta de acceso */}
@@ -142,9 +150,9 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-400">
-          Elecciones CODIA · Sistema confidencial
-        </p>
+        <div className="flex justify-center">
+          <p className="text-xs text-gray-400">Elecciones CODIA · Sistema confidencial</p>
+        </div>
       </div>
     </main>
   )

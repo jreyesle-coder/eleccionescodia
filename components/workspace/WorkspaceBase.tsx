@@ -38,17 +38,16 @@ type MiembroRPC = {
   asignado_a: string | null
   bloqueado_hasta: string | null
   intentos_no_contesta: number
-  lote_manual: boolean
-  orden_manual: number | null
   created_at: string
 }
 
-type ContactadoItem = {
+type LlamadaHistorialRow = {
   id: number
-  matricula: string
-  nombre: string
-  telefono: string | null
-  orden_manual: number | null
+  resultado: string
+  fecha_hora: string
+  confirma_plancha1: boolean
+  notas: string | null
+  miembros: { nombre: string; matricula: string; telefono: string | null }[] | { nombre: string; matricula: string; telefono: string | null } | null
 }
 
 type LlamadaCallbackRow = {
@@ -159,17 +158,24 @@ export default function WorkspaceBase({ userId, modo }: Props) {
   const [errorAccion, setErrorAccion] = useState<string | null>(null)
 
   // ── Pestaña ──
-  const [pestañaActiva, setPestañaActiva] = useState<'nuevas' | 'contactados'>('nuevas')
+  const [pestañaActiva, setPestañaActiva] = useState<'nuevas' | 'historial'>('nuevas')
 
-  // ── Contactados ──
-  const [contactados, setContactados] = useState<ContactadoItem[]>([])
-  const [filaExpandida, setFilaExpandida] = useState<number | null>(null)
-  const [formResultadoC, setFormResultadoC] = useState<FormResultado | null>(null)
-  const [confirmaPlanchaC, setConfirmaPlanchaC] = useState<boolean | null>(null)
-  const [callbackAtC, setCallbackAtC] = useState('')
-  const [notasC, setNotasC] = useState('')
-  const [guardandoC, setGuardandoC] = useState(false)
-  const [errorC, setErrorC] = useState<string | null>(null)
+  // ── Historial ──
+  type LlamadaHistorial = {
+    id: number
+    resultado: ResultadoLlamada
+    fecha_hora: string
+    confirma_plancha1: boolean
+    notas: string | null
+    miembro_nombre: string
+    miembro_matricula: string
+    miembro_telefono: string | null
+  }
+  const [historial, setHistorial] = useState<LlamadaHistorial[]>([])
+  const [paginaHistorial, setPaginaHistorial] = useState(0)
+  const [totalHistorial, setTotalHistorial] = useState(0)
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const PAGE_SIZE = 50
 
   // ─── Reset helpers ────────────────────────────────────────────────────────
 
@@ -180,24 +186,6 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     setNotas('')
     setErrorAccion(null)
     setSinMiembros(false)
-  }
-
-  function abrirFila(id: number) {
-    setFilaExpandida(id)
-    setFormResultadoC(null)
-    setConfirmaPlanchaC(null)
-    setCallbackAtC('')
-    setNotasC('')
-    setErrorC(null)
-  }
-
-  function cerrarFila() {
-    setFilaExpandida(null)
-    setFormResultadoC(null)
-    setConfirmaPlanchaC(null)
-    setCallbackAtC('')
-    setNotasC('')
-    setErrorC(null)
   }
 
   // ─── Carga de datos ───────────────────────────────────────────────────────
@@ -260,23 +248,41 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     setLlamadasHoy(lista.slice(0, 10))
   }, [supabase, userId])
 
-  const cargarContactados = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('miembros')
-      .select('id, matricula, nombre, telefono, orden_manual')
-      .eq('asignado_a', userId)
-      .eq('lote_manual', true)
-      .eq('estado_gestion', 'pendiente')
-      .order('orden_manual', { ascending: true })
-      .limit(2000)
+  const cargarHistorial = useCallback(async (pagina: number) => {
+    setCargandoHistorial(true)
+    const from = pagina * 50
+    const to = from + 49
+    const { data, error, count } = await supabase
+      .from('llamadas')
+      .select('id, resultado, fecha_hora, confirma_plancha1, notas, miembros(nombre, matricula, telefono)', { count: 'exact' })
+      .eq('operador_id', userId)
+      .order('fecha_hora', { ascending: false })
+      .range(from, to)
 
+    setCargandoHistorial(false)
     if (error || !data) return
-    setContactados(data as ContactadoItem[])
+    if (count !== null) setTotalHistorial(count)
+
+    const lista = (data as unknown as LlamadaHistorialRow[]).map(row => {
+      const rawM = row.miembros
+      const m = rawM ? (Array.isArray(rawM) ? rawM[0] : rawM) : null
+      return {
+        id: row.id,
+        resultado: row.resultado as ResultadoLlamada,
+        fecha_hora: row.fecha_hora,
+        confirma_plancha1: row.confirma_plancha1,
+        notas: row.notas,
+        miembro_nombre: m?.nombre ?? '—',
+        miembro_matricula: m?.matricula ?? '—',
+        miembro_telefono: m?.telefono ?? null,
+      }
+    })
+    setHistorial(lista)
   }, [supabase, userId])
 
   const recargarTodo = useCallback(async () => {
-    await Promise.all([cargarCallbacks(), cargarGestionesHoy(), cargarContactados()])
-  }, [cargarCallbacks, cargarGestionesHoy, cargarContactados])
+    await Promise.all([cargarCallbacks(), cargarGestionesHoy()])
+  }, [cargarCallbacks, cargarGestionesHoy])
 
   useEffect(() => {
     async function init() {
@@ -395,46 +401,12 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     setCallbacks(prev => prev.filter(c => c.miembro.id !== item.miembro.id))
   }
 
-  // ─── Acciones contactados ─────────────────────────────────────────────────
-
-  async function guardarLlamadaContactado(miembroId: number) {
-    if (!formResultadoC) return
-    if (formResultadoC === 'efectiva' && confirmaPlanchaC === null) {
-      setErrorC('Indica si el miembro confirmó apoyo a la Plancha 1.')
-      return
+  useEffect(() => {
+    if (pestañaActiva === 'historial') {
+      cargarHistorial(paginaHistorial)
     }
-    if (formResultadoC === 'volver_a_llamar' && !callbackAtC) {
-      setErrorC('Selecciona la fecha y hora para volver a llamar.')
-      return
-    }
-
-    const pResultado: ResultadoLlamada =
-      formResultadoC === 'efectiva'
-        ? confirmaPlanchaC ? 'efectiva_confirma' : 'efectiva_no_confirma'
-        : (formResultadoC as ResultadoLlamada)
-
-    const pConfirma = formResultadoC === 'efectiva' ? (confirmaPlanchaC ?? false) : false
-    const pCallbackAt = formResultadoC === 'volver_a_llamar' ? new Date(callbackAtC).toISOString() : null
-
-    setGuardandoC(true)
-    setErrorC(null)
-    try {
-      const { error } = await supabase.rpc('registrar_llamada', {
-        p_miembro_id: miembroId,
-        p_resultado: pResultado,
-        p_confirma: pConfirma,
-        p_notas: notasC.trim() || null,
-        p_callback_at: pCallbackAt,
-      })
-      if (error) throw error
-      cerrarFila()
-      await Promise.all([cargarContactados(), cargarGestionesHoy()])
-    } catch {
-      setErrorC('No se pudo guardar. Intenta de nuevo.')
-    } finally {
-      setGuardandoC(false)
-    }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pestañaActiva, paginaHistorial])
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -452,10 +424,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     !!formResultado &&
     (formResultado !== 'efectiva' || confirmaPlanchaEfectiva !== null) &&
     (formResultado !== 'volver_a_llamar' || !!callbackAt)
-  const puedeGuardarC =
-    !!formResultadoC &&
-    (formResultadoC !== 'efectiva' || confirmaPlanchaC !== null) &&
-    (formResultadoC !== 'volver_a_llamar' || !!callbackAtC)
+  const totalPaginas = Math.ceil(totalHistorial / PAGE_SIZE)
 
   return (
     <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
@@ -464,9 +433,9 @@ export default function WorkspaceBase({ userId, modo }: Props) {
       <div className="flex border-b border-gray-200">
         {(
           [
-            { key: 'nuevas',      label: 'Llamadas nuevas' },
-            { key: 'contactados', label: `Contactados${contactados.length > 0 ? ` (${contactados.length})` : ''}` },
-          ] as { key: 'nuevas' | 'contactados'; label: string }[]
+            { key: 'nuevas',    label: 'Llamadas nuevas' },
+            { key: 'historial', label: `Historial${totalHistorial > 0 ? ` (${totalHistorial})` : ''}` },
+          ] as { key: 'nuevas' | 'historial'; label: string }[]
         ).map(({ key, label }) => (
           <button
             key={key}
@@ -755,150 +724,89 @@ export default function WorkspaceBase({ userId, modo }: Props) {
       )}
 
       {/* ════════════════════════════════════════
-          VISTA: Contactados
+          VISTA: Historial
       ════════════════════════════════════════ */}
-      {pestañaActiva === 'contactados' && (
-        <section aria-label="Contactados manualmente">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Seguimiento contactados a mano{contactados.length > 0 ? ` · ${contactados.length} pendientes` : ''}
-          </h2>
+      {pestañaActiva === 'historial' && (
+        <section aria-label="Historial de llamadas">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              Mi historial · {totalHistorial} llamadas
+            </h2>
+            {totalPaginas > 1 && (
+              <span className="text-xs text-gray-400">
+                Página {paginaHistorial + 1} de {totalPaginas}
+              </span>
+            )}
+          </div>
 
-          {contactados.length === 0 ? (
+          {cargandoHistorial ? (
             <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-              <p className="text-gray-400 text-sm">No hay miembros pendientes en tu lista manual.</p>
+              <p className="text-gray-400 text-sm">Cargando historial…</p>
+            </div>
+          ) : historial.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+              <p className="text-gray-400 text-sm">Todavía no has registrado ninguna llamada.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {contactados.map((item) => {
-                const abierta = filaExpandida === item.id
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-xl border border-gray-100 overflow-hidden"
-                  >
-                    {/* Cabecera de fila */}
-                    <button
-                      className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
-                      onClick={() => abierta ? cerrarFila() : abrirFila(item.id)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm truncate">{item.nombre}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          #{item.matricula} · {item.telefono ?? 'Sin teléfono'}
+            <>
+              <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 overflow-hidden mb-4">
+                {historial.map(l => (
+                  <div key={l.id} className="px-4 py-3 space-y-0.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{l.miembro_nombre}</p>
+                        <p className="text-xs text-gray-400">
+                          #{l.miembro_matricula}
+                          {l.miembro_telefono ? ` · ${l.miembro_telefono}` : ''}
                         </p>
                       </div>
-                      <span className="text-xs text-gray-400 shrink-0">
-                        {abierta ? '▲ Cerrar' : '▼ Registrar'}
-                      </span>
-                    </button>
-
-                    {/* Formulario inline */}
-                    {abierta && (
-                      <div className="border-t border-gray-100 px-4 py-4 space-y-4 bg-gray-50">
-                        {errorC && (
-                          <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                            {errorC}
-                          </p>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-2">
-                          {BOTONES_RESULTADO.map(({ valor, label }) => (
-                            <button
-                              key={valor}
-                              onClick={() => { setFormResultadoC(valor); setConfirmaPlanchaC(null); setErrorC(null) }}
-                              className={cn(
-                                'rounded-xl border-2 py-3 px-3 text-sm font-medium transition-colors text-left leading-tight',
-                                formResultadoC === valor
-                                  ? 'border-blue-500 bg-blue-50 text-blue-800'
-                                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                              )}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-
-                        {formResultadoC === 'efectiva' && (
-                          <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
-                            <p className="text-sm font-semibold text-green-800">¿Confirmó apoyo a Plancha 1?</p>
-                            <div className="grid grid-cols-2 gap-3">
-                              <button
-                                onClick={() => setConfirmaPlanchaC(true)}
-                                className={cn(
-                                  'rounded-xl border-2 py-3 font-semibold text-sm transition-colors',
-                                  confirmaPlanchaC === true
-                                    ? 'border-green-600 bg-green-600 text-white'
-                                    : 'border-green-400 text-green-700 hover:bg-green-100'
-                                )}
-                              >
-                                ✓ Sí, confirma
-                              </button>
-                              <button
-                                onClick={() => setConfirmaPlanchaC(false)}
-                                className={cn(
-                                  'rounded-xl border-2 py-3 font-semibold text-sm transition-colors',
-                                  confirmaPlanchaC === false
-                                    ? 'border-red-500 bg-red-500 text-white'
-                                    : 'border-red-300 text-red-600 hover:bg-red-50'
-                                )}
-                              >
-                                ✗ No confirma
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {formResultadoC === 'volver_a_llamar' && (
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                              Fecha y hora para volver a llamar *
-                            </label>
-                            <input
-                              type="datetime-local"
-                              value={callbackAtC}
-                              onChange={e => setCallbackAtC(e.target.value)}
-                              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                            />
-                          </div>
-                        )}
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                            Notas (opcional)
-                          </label>
-                          <textarea
-                            value={notasC}
-                            onChange={e => setNotasC(e.target.value)}
-                            rows={2}
-                            placeholder="Observaciones…"
-                            className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                          />
-                        </div>
-
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={() => guardarLlamadaContactado(item.id)}
-                            disabled={guardandoC || !puedeGuardarC}
-                            className="flex-1 h-11 text-sm font-semibold"
-                            style={puedeGuardarC ? { backgroundColor: 'var(--color-exito)' } : undefined}
-                          >
-                            {guardandoC ? 'Guardando…' : 'Guardar resultado'}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={cerrarFila}
-                            disabled={guardandoC}
-                            className="h-11 text-sm text-gray-500"
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
+                      <div className="shrink-0 text-right">
+                        <span className={cn(
+                          'text-xs font-semibold px-2 py-0.5 rounded-full',
+                          l.resultado === 'efectiva_confirma'    ? 'bg-green-100 text-green-700' :
+                          l.resultado === 'efectiva_no_confirma' ? 'bg-blue-100 text-blue-700' :
+                          l.resultado === 'rechaza'              ? 'bg-red-100 text-red-700' :
+                          l.resultado === 'numero_equivocado'    ? 'bg-orange-100 text-orange-700' :
+                          'bg-gray-100 text-gray-600'
+                        )}>
+                          {ETIQUETAS[l.resultado]}
+                        </span>
+                        <p className="text-xs text-gray-400 mt-1">{formatFechaHora(l.fecha_hora)}</p>
                       </div>
+                    </div>
+                    {l.notas && (
+                      <p className="text-xs text-gray-500 italic pt-1">{l.notas}</p>
                     )}
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+
+              {totalPaginas > 1 && (
+                <div className="flex items-center justify-between gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaHistorial === 0}
+                    onClick={() => setPaginaHistorial(p => p - 1)}
+                    className="text-xs"
+                  >
+                    ← Anterior
+                  </Button>
+                  <span className="text-xs text-gray-500">
+                    {paginaHistorial * PAGE_SIZE + 1}–{Math.min((paginaHistorial + 1) * PAGE_SIZE, totalHistorial)} de {totalHistorial}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={paginaHistorial >= totalPaginas - 1}
+                    onClick={() => setPaginaHistorial(p => p + 1)}
+                    className="text-xs"
+                  >
+                    Siguiente →
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </section>
       )}

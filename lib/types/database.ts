@@ -67,11 +67,25 @@ export interface PanelOperadorRow {
   nombre: string
   rol: string
   miembro_activo: boolean
+  llamadas_total: number
+  efectivas_total: number
+  confirmados_p1_total: number
+  no_contesta_total: number
   llamadas_hoy: number
   efectivas_hoy: number
   confirmados_p1_hoy: number
   no_contesta_hoy: number
   ultima_actividad: string | null
+}
+
+export interface HistorialOperadorRow {
+  llamada_id: number
+  fecha_hora: string
+  miembro_nombre: string
+  matricula: string
+  resultado: ResultadoLlamada
+  confirma_p1: boolean
+  notas: string | null
 }
 
 export interface KpisGenerales {

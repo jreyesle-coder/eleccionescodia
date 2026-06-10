@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts'
 import AppHeader from '@/components/app-header'
-import type { KpisGenerales, PanelOperadorRow, MetricaRegion, PadronVivoRow, EstadoGestion } from '@/lib/types/database'
+import type { KpisGenerales, PanelOperadorRow, MetricaRegion, PadronVivoRow, EstadoGestion, HistorialOperadorRow } from '@/lib/types/database'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -56,6 +56,239 @@ function KpiCard({ titulo, valor, subtitulo, color, grande }: KpiCardProps) {
       </p>
       {subtitulo && <p className="text-xs text-gray-400">{subtitulo}</p>}
     </div>
+  )
+}
+
+// ─── Etiquetas de resultado ───────────────────────────────────────────────────
+
+const ETIQUETA_RESULTADO: Record<string, string> = {
+  efectiva_confirma:     'Confirmó Plancha #1',
+  efectiva_no_confirma:  'Efectiva (no confirma)',
+  no_contesta:           'No contesta',
+  numero_equivocado:     'Número equivocado',
+  volver_a_llamar:       'Volver a llamar',
+  rechaza:               'Rechaza',
+}
+
+const COLOR_RESULTADO: Record<string, string> = {
+  efectiva_confirma:     'bg-green-100 text-green-800',
+  efectiva_no_confirma:  'bg-blue-100 text-blue-700',
+  no_contesta:           'bg-yellow-100 text-yellow-700',
+  numero_equivocado:     'bg-gray-100 text-gray-600',
+  volver_a_llamar:       'bg-purple-100 text-purple-700',
+  rechaza:               'bg-red-100 text-red-700',
+}
+
+// ─── Modal historial de operador ──────────────────────────────────────────────
+
+interface ModalHistorialProps {
+  operador: PanelOperadorRow
+  onCerrar: () => void
+}
+
+function ModalHistorial({ operador, onCerrar }: ModalHistorialProps) {
+  const supabase = createClient()
+  const [historial, setHistorial] = useState<HistorialOperadorRow[]>([])
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .rpc('historial_operador', { p_operador_id: operador.operador_id })
+      .then(({ data }) => {
+        setHistorial((data as HistorialOperadorRow[]) ?? [])
+        setCargando(false)
+      })
+  }, [supabase, operador.operador_id])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4 pb-4"
+      style={{ backgroundColor: 'rgba(10,42,94,0.45)' }}
+      onClick={onCerrar}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Cabecera */}
+        <div
+          className="px-6 py-4 flex items-center justify-between rounded-t-2xl"
+          style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}
+        >
+          <div>
+            <p className="text-xs uppercase tracking-wide opacity-70">Historial de llamadas</p>
+            <h2 className="text-lg font-bold">{operador.nombre}</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right text-sm">
+              <p><span className="opacity-70">Total:</span> <strong>{operador.llamadas_total}</strong> llamadas</p>
+              <p><span className="opacity-70">Conf. P1:</span> <strong style={{ color: 'var(--color-dorado)' }}>{operador.confirmados_p1_total}</strong></p>
+            </div>
+            <button
+              onClick={onCerrar}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 text-white font-bold transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Tabla */}
+        <div className="overflow-y-auto flex-1">
+          {cargando ? (
+            <p className="text-center text-gray-400 py-10">Cargando historial…</p>
+          ) : historial.length === 0 ? (
+            <p className="text-center text-gray-400 py-10">Sin llamadas registradas</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+                <tr className="text-xs uppercase tracking-wide text-gray-500">
+                  <th className="text-left px-4 py-3 font-semibold">Fecha / Hora</th>
+                  <th className="text-left px-4 py-3 font-semibold">Miembro</th>
+                  <th className="text-left px-4 py-3 font-semibold">Matrícula</th>
+                  <th className="text-left px-4 py-3 font-semibold">Resultado</th>
+                  <th className="text-center px-4 py-3 font-semibold">P1</th>
+                  <th className="text-left px-4 py-3 font-semibold">Notas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {historial.map(h => (
+                  <tr key={h.llamada_id} className="hover:bg-gray-50/70 transition-colors">
+                    <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                      {new Date(h.fecha_hora).toLocaleString('es-DO', {
+                        timeZone: ZONA,
+                        day: '2-digit', month: '2-digit', year: '2-digit',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900">{h.miembro_nombre}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{h.matricula}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_RESULTADO[h.resultado] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {ETIQUETA_RESULTADO[h.resultado] ?? h.resultado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {h.confirma_p1
+                        ? <span className="text-green-600 font-bold">✔</span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-gray-400 max-w-[180px] truncate">{h.notas ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400 text-right rounded-b-2xl">
+          {historial.length} registros
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tabla resumen de operadores ──────────────────────────────────────────────
+
+type VistaConteo = 'total' | 'hoy'
+
+interface TablaOperadoresProps {
+  operadores: PanelOperadorRow[]
+}
+
+function TablaOperadores({ operadores }: TablaOperadoresProps) {
+  const [vista, setVista] = useState<VistaConteo>('total')
+  const [operadorSeleccionado, setOperadorSeleccionado] = useState<PanelOperadorRow | null>(null)
+
+  const llamadas   = (op: PanelOperadorRow) => vista === 'total' ? op.llamadas_total        : op.llamadas_hoy
+  const efectivas  = (op: PanelOperadorRow) => vista === 'total' ? op.efectivas_total       : op.efectivas_hoy
+  const confP1     = (op: PanelOperadorRow) => vista === 'total' ? op.confirmados_p1_total  : op.confirmados_p1_hoy
+  const noContesta = (op: PanelOperadorRow) => vista === 'total' ? op.no_contesta_total     : op.no_contesta_hoy
+
+  return (
+    <>
+      {operadorSeleccionado && (
+        <ModalHistorial operador={operadorSeleccionado} onCerrar={() => setOperadorSeleccionado(null)} />
+      )}
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-sm font-semibold text-gray-700">Resumen de operadores</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">{operadores.length} operadores · haz clic para ver historial</span>
+            {/* Toggle hoy / total */}
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-xs font-semibold">
+              <button
+                onClick={() => setVista('total')}
+                className="px-3 py-1.5 rounded-md transition-colors"
+                style={vista === 'total' ? { backgroundColor: 'var(--color-marino)', color: 'white' } : { color: 'var(--color-real)' }}
+              >
+                Total
+              </button>
+              <button
+                onClick={() => setVista('hoy')}
+                className="px-3 py-1.5 rounded-md transition-colors"
+                style={vista === 'hoy' ? { backgroundColor: 'var(--color-marino)', color: 'white' } : { color: 'var(--color-real)' }}
+              >
+                Hoy
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="text-xs uppercase tracking-wide border-b-2"
+                style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
+              >
+                <th className="text-left px-4 py-3 font-semibold">Operador</th>
+                <th className="text-left px-4 py-3 font-semibold">Rol</th>
+                <th className="text-right px-4 py-3 font-semibold">Llamadas</th>
+                <th className="text-right px-4 py-3 font-semibold">Efectivas</th>
+                <th className="text-right px-4 py-3 font-semibold">Conf. P1</th>
+                <th className="text-right px-4 py-3 font-semibold">No contesta</th>
+                <th className="text-left px-4 py-3 font-semibold">Últ. actividad</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {operadores.map(op => (
+                <tr
+                  key={op.operador_id}
+                  className="hover:bg-blue-50/50 transition-colors cursor-pointer"
+                  onClick={() => setOperadorSeleccionado(op)}
+                >
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-marino)' }}>
+                    <span className="underline decoration-dotted underline-offset-2">{op.nombre}</span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 capitalize">{op.rol}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums">{llamadas(op)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-green-700">{efectivas(op)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums font-bold" style={{ color: 'var(--color-dorado)' }}>
+                    {confP1(op)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-red-600">{noContesta(op)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-400">
+                    {op.ultima_actividad
+                      ? new Date(op.ultima_actividad).toLocaleString('es-DO', {
+                          timeZone: ZONA,
+                          day: '2-digit', month: '2-digit',
+                          hour: '2-digit', minute: '2-digit',
+                        })
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+              {operadores.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-gray-400">Sin operadores registrados</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -177,56 +410,7 @@ function TabResumen({ kpis, operadores }: TabResumenProps) {
       </div>
 
       {/* Resumen de operadores */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Resumen de operadores</h2>
-          <span className="text-xs text-gray-400">{operadores.length} operadores</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr
-                className="text-xs uppercase tracking-wide border-b-2"
-                style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
-              >
-                <th className="text-left px-4 py-3 font-semibold">Operador</th>
-                <th className="text-left px-4 py-3 font-semibold">Rol</th>
-                <th className="text-right px-4 py-3 font-semibold">Llamadas</th>
-                <th className="text-right px-4 py-3 font-semibold">Efectivas</th>
-                <th className="text-right px-4 py-3 font-semibold">Conf. P1</th>
-                <th className="text-right px-4 py-3 font-semibold">No contesta</th>
-                <th className="text-left px-4 py-3 font-semibold">Últ. actividad</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {operadores.map(op => (
-                <tr key={op.operador_id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{op.nombre}</td>
-                  <td className="px-4 py-3 text-gray-500 capitalize">{op.rol}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums">{op.llamadas_hoy}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700">{op.efectivas_hoy}</td>
-                  <td className="px-4 py-3 text-right tabular-nums font-bold" style={{ color: 'var(--color-dorado)' }}>
-                    {op.confirmados_p1_hoy}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-red-600">{op.no_contesta_hoy}</td>
-                  <td className="px-4 py-3 text-xs text-gray-400">
-                    {op.ultima_actividad
-                      ? new Date(op.ultima_actividad).toLocaleTimeString('es-DO', {
-                          timeZone: ZONA, hour: '2-digit', minute: '2-digit',
-                        })
-                      : '—'}
-                  </td>
-                </tr>
-              ))}
-              {operadores.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-400">Sin operadores registrados</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TablaOperadores operadores={operadores} />
 
       {/* Segmento Montero */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
@@ -450,12 +634,7 @@ function TabRegion({ regiones }: TabRegionProps) {
     setRegionActiva(region)
     setFilasMostradas([])
     setCargandoPadron(true)
-    const { data } = await supabase
-      .from('vista_padron_vivo')
-      .select('*')
-      .eq('region', region)
-      .order('nombre')
-      .limit(5000)
+    const { data } = await supabase.rpc('listar_padron_region', { p_region: region })
     const filas = ordenarPadron((data as PadronVivoRow[]) ?? [], region)
     setFilasMostradas(filas)
     setCargandoPadron(false)
@@ -500,11 +679,14 @@ function TabRegion({ regiones }: TabRegionProps) {
 // ─── Exportar CSV ─────────────────────────────────────────────────────────────
 
 function exportarCSV(filas: PanelOperadorRow[]) {
-  const cabecera = ['Operador','Rol','Miembro activo','Llamadas hoy','Efectivas hoy','Conf. P1 hoy','No contesta hoy','Última actividad']
+  const cabecera = ['Operador','Rol','Llamadas total','Efectivas total','Conf. P1 total','No contesta total','Llamadas hoy','Efectivas hoy','Conf. P1 hoy','No contesta hoy','Última actividad']
   const filasCsv = filas.map(op => [
     op.nombre,
     op.rol,
-    op.miembro_activo ? 'Sí' : 'No',
+    op.llamadas_total,
+    op.efectivas_total,
+    op.confirmados_p1_total,
+    op.no_contesta_total,
     op.llamadas_hoy,
     op.efectivas_hoy,
     op.confirmados_p1_hoy,
