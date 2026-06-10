@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Marca CODIA ── */
+    --color-marino:  #0A2A5E;
+    --color-real:    #15407F;
+    --color-dorado:  #E7B228;
+    --color-plancha: #C81E2C;
+    --color-fondo:   #F3F6FB;
+    --color-exito:   #1F9D55;
+
+    /* ── shadcn/ui – remapeados a azul marino ── */
+    --background: 215 60% 97%;
+    --foreground: 222 84% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 13%;
+    --primary: 218 80% 20%;          /* azul marino #0A2A5E */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 40% 93%;
+    --secondary-foreground: 218 80% 20%;
+    --muted: 215 40% 93%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 43 79% 53%;            /* dorado #E7B228 */
+    --accent-foreground: 222 84% 13%;
+    --destructive: 355 74% 45%;      /* rojo plancha #C81E2C */
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 218 80% 20%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-color: var(--color-fondo);
+  }
+}
