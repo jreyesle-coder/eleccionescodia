@@ -705,9 +705,390 @@ function exportarCSV(filas: PanelOperadorRow[]) {
   URL.revokeObjectURL(url)
 }
 
+// ─── Tab: Buscar y corregir ───────────────────────────────────────────────────
+
+type BusquedaResultado = {
+  id: number
+  matricula: string
+  nombre: string
+  telefono: string | null
+  estado_gestion: EstadoGestion
+}
+
+type UltimaLlamada = {
+  id: number
+  resultado: string
+  confirma_plancha1: boolean
+  fecha_hora: string
+  notas: string | null
+  operador_nombre: string | null
+}
+
+type FormResultadoBuscar = 'efectiva' | 'no_contesta' | 'numero_equivocado' | 'volver_a_llamar' | 'rechaza'
+
+const BOTONES_RESULTADO_BUSCAR: { valor: FormResultadoBuscar; label: string }[] = [
+  { valor: 'efectiva',          label: '✓ Efectiva' },
+  { valor: 'no_contesta',       label: '📵 No contesta' },
+  { valor: 'numero_equivocado', label: '❌ Núm. equivocado' },
+  { valor: 'volver_a_llamar',   label: '🔁 Volver a llamar' },
+  { valor: 'rechaza',           label: '🚫 Rechaza' },
+]
+
+function TabBuscar() {
+  const supabase = createClient()
+
+  const [query, setQuery] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [resultados, setResultados] = useState<BusquedaResultado[]>([])
+  const [sinResultados, setSinResultados] = useState(false)
+
+  const [seleccionado, setSeleccionado] = useState<BusquedaResultado | null>(null)
+  const [ultimaLlamada, setUltimaLlamada] = useState<UltimaLlamada | null>(null)
+  const [cargandoDetalle, setCargandoDetalle] = useState(false)
+
+  // Formulario
+  const [formResultado, setFormResultado] = useState<FormResultadoBuscar | null>(null)
+  const [confirmaP1, setConfirmaP1] = useState<boolean | null>(null)
+  const [callbackAt, setCallbackAt] = useState('')
+  const [notas, setNotas] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [errorAccion, setErrorAccion] = useState<string | null>(null)
+  const [exito, setExito] = useState(false)
+
+  function resetForm() {
+    setFormResultado(null)
+    setConfirmaP1(null)
+    setCallbackAt('')
+    setNotas('')
+    setErrorAccion(null)
+    setExito(false)
+  }
+
+  async function buscar() {
+    const q = query.trim()
+    if (q.length < 2) return
+    setBuscando(true)
+    setSinResultados(false)
+    setResultados([])
+    setSeleccionado(null)
+    resetForm()
+
+    const { data } = await supabase.rpc('buscar_miembro_publico', { p_nombre: q })
+    const filas = (data as BusquedaResultado[] | null) ?? []
+    setResultados(filas)
+    setSinResultados(filas.length === 0)
+    setBuscando(false)
+  }
+
+  async function seleccionar(m: BusquedaResultado) {
+    setSeleccionado(m)
+    resetForm()
+    setCargandoDetalle(true)
+
+    const { data } = await supabase
+      .from('llamadas')
+      .select('id, resultado, confirma_plancha1, fecha_hora, notas, profiles!llamadas_operador_id_fkey(nombre)')
+      .eq('miembro_id', m.id)
+      .order('fecha_hora', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (data) {
+      const p = (Array.isArray(data.profiles) ? data.profiles[0] : data.profiles) as { nombre: string } | null
+      setUltimaLlamada({
+        id: data.id,
+        resultado: data.resultado,
+        confirma_plancha1: data.confirma_plancha1,
+        fecha_hora: data.fecha_hora,
+        notas: data.notas,
+        operador_nombre: p?.nombre ?? null,
+      })
+    } else {
+      setUltimaLlamada(null)
+    }
+    setCargandoDetalle(false)
+  }
+
+  async function guardar() {
+    if (!seleccionado || !formResultado) return
+    if (formResultado === 'efectiva' && confirmaP1 === null) {
+      setErrorAccion('Indica si confirmó apoyo a la Plancha 1.')
+      return
+    }
+    if (formResultado === 'volver_a_llamar' && !callbackAt) {
+      setErrorAccion('Selecciona fecha y hora para volver a llamar.')
+      return
+    }
+
+    const pResultado =
+      formResultado === 'efectiva'
+        ? confirmaP1 ? 'efectiva_confirma' : 'efectiva_no_confirma'
+        : formResultado
+
+    setGuardando(true)
+    setErrorAccion(null)
+    const { error } = await supabase.rpc('registrar_llamada', {
+      p_miembro_id: seleccionado.id,
+      p_resultado: pResultado,
+      p_confirma: formResultado === 'efectiva' ? (confirmaP1 ?? false) : false,
+      p_notas: notas.trim() || null,
+      p_callback_at: formResultado === 'volver_a_llamar' ? new Date(callbackAt).toISOString() : null,
+    })
+    setGuardando(false)
+
+    if (error) {
+      setErrorAccion('No se pudo guardar. Intenta de nuevo.')
+      return
+    }
+
+    setExito(true)
+    // Refrescar detalle
+    const estadoNuevo: EstadoGestion =
+      pResultado === 'efectiva_confirma' || pResultado === 'efectiva_no_confirma' ? 'contactado'
+      : pResultado === 'numero_equivocado' || pResultado === 'rechaza' ? 'cerrado'
+      : seleccionado.estado_gestion
+    setSeleccionado({ ...seleccionado, estado_gestion: estadoNuevo })
+    await seleccionar({ ...seleccionado, estado_gestion: estadoNuevo })
+    resetForm()
+    setExito(true)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Buscador */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-700">Buscar miembro</h2>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && buscar()}
+            placeholder="Nombre o matrícula…"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+            style={{ focusRingColor: 'var(--color-marino)' } as React.CSSProperties}
+          />
+          <button
+            onClick={buscar}
+            disabled={buscando || query.trim().length < 2}
+            className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50"
+            style={{ backgroundColor: 'var(--color-marino)' }}
+          >
+            {buscando ? 'Buscando…' : 'Buscar'}
+          </button>
+        </div>
+
+        {sinResultados && (
+          <p className="text-sm text-gray-400">No se encontraron resultados para «{query}».</p>
+        )}
+
+        {resultados.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr
+                  className="text-xs uppercase tracking-wide border-b-2"
+                  style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
+                >
+                  <th className="text-left px-3 py-2 font-semibold">Matrícula</th>
+                  <th className="text-left px-3 py-2 font-semibold">Nombre</th>
+                  <th className="text-left px-3 py-2 font-semibold">Teléfono</th>
+                  <th className="text-left px-3 py-2 font-semibold">Estado</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {resultados.map(m => (
+                  <tr
+                    key={m.id}
+                    className="hover:bg-blue-50/50 transition-colors cursor-pointer"
+                    style={seleccionado?.id === m.id ? { backgroundColor: 'rgba(21,64,127,0.07)' } : {}}
+                    onClick={() => seleccionar(m)}
+                  >
+                    <td className="px-3 py-2 font-mono text-xs text-gray-500">{m.matricula}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900">{m.nombre}</td>
+                    <td className="px-3 py-2 text-gray-500">{m.telefono ?? '—'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_ESTADO_BADGE[m.estado_gestion]}`}>
+                        {ETIQUETA_ESTADO[m.estado_gestion]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        className="text-xs font-medium underline decoration-dotted"
+                        style={{ color: 'var(--color-marino)' }}
+                        onClick={e => { e.stopPropagation(); seleccionar(m) }}
+                      >
+                        Seleccionar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Panel de corrección */}
+      {seleccionado && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+          {/* Cabecera miembro */}
+          <div
+            className="rounded-xl px-5 py-4 text-white space-y-1"
+            style={{ background: 'linear-gradient(135deg, var(--color-marino), var(--color-real))' }}
+          >
+            <p className="text-xs uppercase tracking-wide opacity-70">Miembro seleccionado</p>
+            <p className="text-lg font-bold">{seleccionado.nombre}</p>
+            <div className="flex items-center gap-4 text-sm flex-wrap">
+              <span className="opacity-80">Matrícula: <strong>{seleccionado.matricula}</strong></span>
+              <span
+                className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+              >
+                {ETIQUETA_ESTADO[seleccionado.estado_gestion]}
+              </span>
+            </div>
+          </div>
+
+          {/* Última llamada */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Última llamada</p>
+            {cargandoDetalle ? (
+              <p className="text-sm text-gray-400">Cargando…</p>
+            ) : ultimaLlamada ? (
+              <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm space-y-1">
+                <div className="flex flex-wrap gap-4">
+                  <span>
+                    <span className="text-gray-400">Resultado: </span>
+                    <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_RESULTADO[ultimaLlamada.resultado] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {ETIQUETA_RESULTADO[ultimaLlamada.resultado] ?? ultimaLlamada.resultado}
+                    </span>
+                  </span>
+                  <span>
+                    <span className="text-gray-400">Conf. P1: </span>
+                    {ultimaLlamada.confirma_plancha1
+                      ? <span className="text-green-600 font-bold">✔ Sí</span>
+                      : <span className="text-gray-500">No</span>}
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    {new Date(ultimaLlamada.fecha_hora).toLocaleString('es-DO', {
+                      timeZone: ZONA, day: '2-digit', month: '2-digit', year: '2-digit',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                    {ultimaLlamada.operador_nombre && ` · ${ultimaLlamada.operador_nombre}`}
+                  </span>
+                </div>
+                {ultimaLlamada.notas && (
+                  <p className="text-xs text-gray-500 italic">&ldquo;{ultimaLlamada.notas}&rdquo;</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Sin llamadas previas registradas.</p>
+            )}
+          </div>
+
+          {/* Éxito */}
+          {exito && (
+            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
+              ✔ Llamada registrada correctamente. Estado actualizado.
+            </div>
+          )}
+
+          {/* Formulario nuevo resultado */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Registrar nuevo resultado</p>
+
+            {/* Botones de resultado */}
+            <div className="flex flex-wrap gap-2">
+              {BOTONES_RESULTADO_BUSCAR.map(b => (
+                <button
+                  key={b.valor}
+                  onClick={() => { setFormResultado(b.valor); setConfirmaP1(null); setErrorAccion(null); setExito(false) }}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
+                  style={
+                    formResultado === b.valor
+                      ? { backgroundColor: 'var(--color-marino)', borderColor: 'var(--color-marino)', color: 'white' }
+                      : { backgroundColor: 'white', borderColor: '#e5e7eb', color: 'var(--color-marino)' }
+                  }
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sub-opciones Efectiva */}
+            {formResultado === 'efectiva' && (
+              <div className="flex gap-3 pl-1">
+                <button
+                  onClick={() => setConfirmaP1(true)}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
+                  style={
+                    confirmaP1 === true
+                      ? { backgroundColor: '#1F9D55', borderColor: '#1F9D55', color: 'white' }
+                      : { backgroundColor: 'white', borderColor: '#e5e7eb', color: '#1F9D55' }
+                  }
+                >
+                  ✔ Confirma Plancha 1
+                </button>
+                <button
+                  onClick={() => setConfirmaP1(false)}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
+                  style={
+                    confirmaP1 === false
+                      ? { backgroundColor: '#3B82F6', borderColor: '#3B82F6', color: 'white' }
+                      : { backgroundColor: 'white', borderColor: '#e5e7eb', color: '#3B82F6' }
+                  }
+                >
+                  No confirma
+                </button>
+              </div>
+            )}
+
+            {/* Callback fecha/hora */}
+            {formResultado === 'volver_a_llamar' && (
+              <div className="pl-1">
+                <label className="text-xs text-gray-500 block mb-1">Fecha y hora para volver a llamar</label>
+                <input
+                  type="datetime-local"
+                  value={callbackAt}
+                  onChange={e => setCallbackAt(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                />
+              </div>
+            )}
+
+            {/* Notas */}
+            <textarea
+              value={notas}
+              onChange={e => setNotas(e.target.value)}
+              placeholder="Notas (opcional)…"
+              rows={2}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2"
+            />
+
+            {errorAccion && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{errorAccion}</p>
+            )}
+
+            <button
+              onClick={guardar}
+              disabled={!formResultado || guardando}
+              className="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-40"
+              style={{ backgroundColor: 'var(--color-marino)' }}
+            >
+              {guardando ? 'Guardando…' : 'Guardar resultado'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Tipos de tab ─────────────────────────────────────────────────────────────
 
-type Tab = 'resumen' | 'region'
+type Tab = 'resumen' | 'region' | 'buscar'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -769,6 +1150,7 @@ export default function DashboardGerente({ nombreGerente, rol }: Props) {
   const TABS: { id: Tab; label: string }[] = [
     { id: 'resumen', label: 'Resumen' },
     { id: 'region',  label: 'Por región' },
+    { id: 'buscar',  label: '🔍 Buscar y corregir' },
   ]
 
   if (cargando) {
@@ -852,6 +1234,9 @@ export default function DashboardGerente({ nombreGerente, rol }: Props) {
         )}
         {tab === 'region' && (
           <TabRegion regiones={regiones} />
+        )}
+        {tab === 'buscar' && (
+          <TabBuscar />
         )}
       </div>
     </div>
