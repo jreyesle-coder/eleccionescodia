@@ -71,12 +71,11 @@ type LlamadaDiaRow = {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-export type ModoWorkspace = 'pool' | 'recuperacion' | 'montero'
+export type ModoWorkspace = 'pool' | 'recuperacion'
 
-const MODO_CONFIG: Record<ModoWorkspace, { montero: boolean; estado: string; botonLabel: string }> = {
-  pool:        { montero: false, estado: 'pendiente',       botonLabel: 'Siguiente colegiado →' },
-  recuperacion:{ montero: false, estado: 'no_comunicacion', botonLabel: 'Tomar siguiente →' },
-  montero:     { montero: true,  estado: 'pendiente',       botonLabel: 'Siguiente Montero →' },
+const MODO_CONFIG: Record<ModoWorkspace, { estado: string; botonLabel: string }> = {
+  pool:        { estado: 'pendiente',       botonLabel: 'Siguiente colegiado →' },
+  recuperacion:{ estado: 'no_comunicacion', botonLabel: 'Tomar siguiente →' },
 }
 
 const ZONA = 'America/Santo_Domingo'
@@ -312,7 +311,6 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     setErrorAccion(null)
     try {
       const { data, error } = await supabase.rpc('jalar_siguiente_colegiado', {
-        p_montero: cfg.montero,
         p_estado: cfg.estado,
       })
       if (error) {

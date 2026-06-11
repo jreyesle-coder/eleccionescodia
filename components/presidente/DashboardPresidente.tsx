@@ -55,9 +55,6 @@ const ETIQUETA_RESULTADO: Record<string, string> = {
 
 type Tab = 'resumen' | 'padron' | 'asignacion'
 
-function esMontero(s: string) {
-  return s.toLowerCase().includes('montero')
-}
 
 function fmt(d: string | null) {
   if (!d) return '—'

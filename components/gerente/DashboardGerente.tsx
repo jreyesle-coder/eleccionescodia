@@ -314,10 +314,6 @@ function TabResumen({ kpis, operadores }: TabResumenProps) {
     'Conf. P1': op.confirmados_p1_hoy,
   }))
 
-  const progMontero = kpis.montero_total > 0
-    ? Math.round((kpis.montero_contactados / kpis.montero_total) * 100)
-    : 0
-
   return (
     <div className="space-y-8">
       {/* KPIs */}
@@ -411,32 +407,6 @@ function TabResumen({ kpis, operadores }: TabResumenProps) {
 
       {/* Resumen de operadores */}
       <TablaOperadores operadores={operadores} />
-
-      {/* Segmento Montero */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-gray-700">
-            ★ Segmento Montero
-            <span className="ml-2 text-xs font-normal text-gray-400">(supervisado directamente)</span>
-          </h2>
-          <span
-            className="text-sm font-bold px-3 py-1 rounded-full"
-            style={{ backgroundColor: 'var(--color-dorado)', color: '#0F1B33' }}
-          >
-            {kpis.montero_contactados} / {kpis.montero_total}
-          </span>
-        </div>
-        <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${progMontero}%`, backgroundColor: 'var(--color-dorado)' }}
-          />
-        </div>
-        <p className="text-sm text-gray-500">
-          <strong>{kpis.montero_contactados}</strong> contactados de{' '}
-          <strong>{kpis.montero_total}</strong> en el padrón Montero — {progMontero}% completado
-        </p>
-      </div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import AppHeader from '@/components/app-header'
 import WorkspaceBase from '@/components/workspace/WorkspaceBase'
-import type { PanelOperadorRow, RecuperacionRow, MonteroRow, DeudasVotante } from '@/lib/types/database'
+import type { PanelOperadorRow, RecuperacionRow, DeudasVotante } from '@/lib/types/database'
 
 const ZONA = 'America/Santo_Domingo'
 
@@ -210,133 +210,6 @@ function TabRecuperacion({ userId }: { userId: string }) {
   )
 }
 
-// ─── Pestaña Montero ──────────────────────────────────────────────────────────
-
-function TabMontero({ userId }: { userId: string }) {
-  const supabase = createClient()
-  const [lista, setLista] = useState<MonteroRow[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const cargar = useCallback(async () => {
-    setCargando(true)
-    setError(null)
-    try {
-      const { data, error } = await supabase.rpc('listar_montero_codia', { p_limit: 200 })
-      if (error) {
-        console.error('[TabMontero] RPC error:', error)
-        setError(`Error al cargar segmento Montero: ${error.message}`)
-        return
-      }
-      setLista((data as unknown as MonteroRow[]) ?? [])
-    } finally {
-      setCargando(false)
-    }
-  }, [supabase])
-
-  useEffect(() => { cargar() }, [cargar])
-
-  const total = lista.length
-  const contactados = lista.filter(m => m.estado === 'contactado').length
-  const confirmados = lista.filter(m => m.confirmado_p1).length
-
-  if (cargando) return <p className="text-gray-500 text-sm py-8 text-center">Cargando segmento Montero…</p>
-  if (error) return (
-    <div className="py-6 text-center space-y-3">
-      <p className="text-red-600 text-sm">{error}</p>
-      <button onClick={cargar} className="text-sm px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">
-        Reintentar
-      </button>
-    </div>
-  )
-  if (lista.length === 0) return (
-    <p className="text-center text-gray-400 text-sm py-8">No hay miembros en el segmento Montero</p>
-  )
-
-  return (
-    <div className="space-y-6">
-      {/* Progreso Montero */}
-      <div
-        className="rounded-xl p-5 text-white space-y-3"
-        style={{ backgroundColor: 'var(--color-real)' }}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg">Segmento Montero</h3>
-          <span
-            className="text-sm font-bold px-3 py-1 rounded-full"
-            style={{ backgroundColor: 'var(--color-dorado)', color: '#0F1B33' }}
-          >
-            ★ Especial
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold tabular-nums">{total}</p>
-            <p className="text-blue-200 text-xs">Total</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold tabular-nums">{contactados}</p>
-            <p className="text-blue-200 text-xs">Contactados</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold tabular-nums">{confirmados}</p>
-            <p className="text-blue-200 text-xs">Confirman P1</p>
-          </div>
-        </div>
-        {/* Barra de progreso */}
-        <div className="bg-blue-900/40 rounded-full h-2.5 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: total > 0 ? `${Math.round((contactados / total) * 100)}%` : '0%',
-              backgroundColor: 'var(--color-dorado)',
-            }}
-          />
-        </div>
-        <p className="text-xs text-blue-200 text-right">
-          {total > 0 ? Math.round((contactados / total) * 100) : 0}% contactados
-        </p>
-      </div>
-
-      {/* Lista Montero */}
-      <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50 overflow-hidden max-h-72 overflow-y-auto">
-        {lista.map(m => (
-          <div key={m.id} className="px-4 py-2.5 flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 truncate text-sm">{m.nombre_completo}</p>
-              <p className="text-xs text-gray-400">#{m.codigo}{m.regional ? ` · ${m.regional}` : ''}</p>
-              <p className="text-xs text-gray-500">{m.telefono ?? 'Sin teléfono'}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {m.confirmado_p1 && (
-                <span className="text-green-600 font-bold text-sm" title="Confirmó Plancha 1">✔</span>
-              )}
-              <span className={cn(
-                'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                m.estado === 'contactado'      && 'bg-green-100 text-green-700',
-                m.estado === 'pendiente'       && 'bg-gray-100 text-gray-600',
-                m.estado === 'en_proceso'      && 'bg-blue-100 text-blue-700',
-                m.estado === 'no_comunicacion' && 'bg-red-100 text-red-700',
-                m.estado === 'cerrado'         && 'bg-gray-200 text-gray-500',
-              )}>
-                {(m.estado ?? '').replace('_', ' ')}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Workspace Montero */}
-      <div className="border-t border-gray-200 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--color-dorado)' }}>
-          ★ Workspace · Montero
-        </p>
-        <WorkspaceBase userId={userId} modo="montero" />
-      </div>
-    </div>
-  )
-}
-
 // ─── Pestaña Deudas ───────────────────────────────────────────────────────────
 
 function TabDeudas() {
@@ -468,7 +341,7 @@ function TabDeudas() {
 
 // ─── Componente principal PanelSupervisor ─────────────────────────────────────
 
-const TABS = ['Monitoreo', 'Pool general', 'Recuperación', 'Montero', 'Deudas'] as const
+const TABS = ['Monitoreo', 'Pool general', 'Recuperación', 'Deudas'] as const
 type Tab = typeof TABS[number]
 
 interface Props {
@@ -497,8 +370,7 @@ export default function PanelSupervisor({ userId, nombreSupervisor }: Props) {
           <div className="flex">
             {TABS.map(tab => {
               const activo = tabActivo === tab
-              const esMontero = tab === 'Montero'
-              const accentColor = esMontero ? 'var(--color-dorado)' : 'var(--color-marino)'
+              const accentColor = 'var(--color-marino)'
               return (
                 <button
                   key={tab}
@@ -514,7 +386,6 @@ export default function PanelSupervisor({ userId, nombreSupervisor }: Props) {
                   {tab === 'Monitoreo'    && '📊 '}
                   {tab === 'Pool general' && '📞 '}
                   {tab === 'Recuperación' && '🔄 '}
-                  {tab === 'Montero'      && '★ '}
                   {tab === 'Deudas'       && '💳 '}
                   {tab}
                 </button>
@@ -528,7 +399,6 @@ export default function PanelSupervisor({ userId, nombreSupervisor }: Props) {
           {tabActivo === 'Monitoreo'    && <TabMonitoreo onRefresh={refreshMonitoreo} />}
           {tabActivo === 'Pool general' && <WorkspaceBase userId={userId} modo="pool" />}
           {tabActivo === 'Recuperación' && <TabRecuperacion userId={userId} />}
-          {tabActivo === 'Montero'      && <TabMontero userId={userId} />}
           {tabActivo === 'Deudas'       && <TabDeudas />}
         </div>
       </div>

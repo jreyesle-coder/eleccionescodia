@@ -149,6 +149,7 @@ export interface KpisGenerales {
   pensionados: number
 }
 
+
 export interface RecuperacionRow {
   id: number
   codigo: string
@@ -160,15 +161,6 @@ export interface RecuperacionRow {
   nucleo: string | null
 }
 
-export interface MonteroRow {
-  id: number
-  codigo: string
-  nombre_completo: string
-  telefono: string | null
-  estado: string
-  confirmado_p1: boolean
-  regional: string | null
-}
 
 export interface MetricaRegion {
   region: string
