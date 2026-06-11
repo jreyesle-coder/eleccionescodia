@@ -1271,7 +1271,7 @@ function TabDeudasGerente() {
     if (filtroRegional && d.regional !== filtroRegional) return false
     if (busqueda) {
       const q = busqueda.toLowerCase()
-      return (d.nombre?.toLowerCase().includes(q) || d.codigo?.toLowerCase().includes(q))
+      return (d.nombre?.toLowerCase().includes(q) || String(d.codigo ?? '').toLowerCase().includes(q))
     }
     return true
   })

@@ -53,7 +53,7 @@ const ETIQUETA_RESULTADO: Record<string, string> = {
   rechaza:              'Rechaza',
 }
 
-type Tab = 'resumen' | 'padron' | 'asignacion'
+type Tab = 'resumen' | 'padron' | 'nucleos'
 
 
 function fmt(d: string | null) {
@@ -311,6 +311,59 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
         </div>
       </div>
 
+      {/* ── Gráfico de aceptación ── */}
+      {(() => {
+        const simpatiza   = padron.filter(f => f.ultimo_confirma === true).length
+        const noSimpatiza = padron.filter(f => f.ultimo_confirma === false && (f.estado_gestion === 'contactado' || f.estado_gestion === 'cerrado')).length
+        const noContactados = total.total - simpatiza - noSimpatiza
+        const dataAcept = [
+          { name: 'Simpatiza',       value: simpatiza,     fill: '#16a34a' },
+          { name: 'No simpatiza',    value: noSimpatiza,   fill: '#dc2626' },
+          { name: 'Sin gestionar',   value: noContactados, fill: '#cbd5e1' },
+        ].filter(d => d.value > 0)
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-1">
+              Aceptación de la candidatura
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">
+              {simpatiza.toLocaleString()} simpatizantes confirmados de {total.total.toLocaleString()} colegiados
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <ResponsiveContainer width={200} height={200}>
+                <PieChart>
+                  <Pie data={dataAcept} cx="50%" cy="50%" innerRadius={55} outerRadius={90}
+                    paddingAngle={2} dataKey="value" labelLine={false}
+                    label={({ percent }) => percent != null && percent > 0.03 ? `${(percent*100).toFixed(0)}%` : ''}>
+                    {dataAcept.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(val) => [typeof val === 'number' ? val.toLocaleString() : val, '']} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-3 flex-1">
+                {dataAcept.map(d => (
+                  <div key={d.name} className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: d.fill }} />
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium text-gray-700">{d.name}</span>
+                        <span className="font-bold tabular-nums">{d.value.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-gray-100 rounded-full h-1.5 mt-1">
+                        <div className="h-full rounded-full" style={{
+                          width: `${total.total > 0 ? (d.value / total.total * 100) : 0}%`,
+                          backgroundColor: d.fill,
+                        }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Columnas por distrito */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {columnas.map(m => (
@@ -459,6 +512,8 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
 
 // ─── Tab: Padrón en vivo ──────────────────────────────────────────────────────
 
+const PAGE_PADRON = 1000
+
 function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaboradoras: string[] }) {
   const [buscar, setBuscar] = useState('')
   const [filtroDistrito, setFiltroDistrito] = useState('')
@@ -466,6 +521,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
   const [filtroColab, setFiltroColab] = useState('')
   const [soloPendientes, setSoloPendientes] = useState(false)
   const [miembroSelec, setMiembroSelec] = useState<PadronVivoRow | null>(null)
+  const [pagina, setPagina] = useState(0)
 
   const distritos = Array.from(new Set(filas.map(f => f.regional).filter(Boolean))).sort() as string[]
 
@@ -477,6 +533,8 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
     if (buscar && !f.nombre_completo.toLowerCase().includes(buscar.toLowerCase())) return false
     return true
   })
+  const totalPaginas = Math.ceil(filtradas.length / PAGE_PADRON)
+  const paginadas    = filtradas.slice(pagina * PAGE_PADRON, (pagina + 1) * PAGE_PADRON)
 
   return (
     <div className="space-y-4">
@@ -533,7 +591,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
             {colaboradoras.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <p className="text-xs text-gray-400 mt-2">{filtradas.length.toLocaleString()} colegiados mostrados</p>
+        <p className="text-xs text-gray-400 mt-2">{filtradas.length.toLocaleString()} colegiados · página {pagina + 1} de {Math.max(1, totalPaginas)}</p>
       </div>
 
       {/* Tabla */}
@@ -553,7 +611,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtradas.slice(0, 200).map(f => (
+              {paginadas.map(f => (
                 <tr
                   key={f.id}
                   onClick={() => setMiembroSelec(f)}
@@ -575,17 +633,33 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
                   </td>
                 </tr>
               )}
-              {filtradas.length > 200 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-3 text-center text-xs text-gray-400">
-                    Mostrando los primeros 200 de {filtradas.length.toLocaleString()} resultados. Usa los filtros para afinar.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Paginación */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <button
+            disabled={pagina === 0}
+            onClick={() => setPagina(p => p - 1)}
+            className="text-sm px-4 py-2 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 font-medium"
+          >
+            ← Anterior
+          </button>
+          <span className="text-sm text-gray-500">
+            {pagina * PAGE_PADRON + 1}–{Math.min((pagina + 1) * PAGE_PADRON, filtradas.length).toLocaleString()} de {filtradas.length.toLocaleString()}
+          </span>
+          <button
+            disabled={pagina >= totalPaginas - 1}
+            onClick={() => setPagina(p => p + 1)}
+            className="text-sm px-4 py-2 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 font-medium"
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
 
       {/* Modal detalle */}
       {miembroSelec && (
@@ -598,92 +672,114 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
   )
 }
 
-// ─── Tab: Vista de asignación ─────────────────────────────────────────────────
+// ─── Tab: Vista por Núcleos ───────────────────────────────────────────────────
 
-function TabAsignacion({ filas }: { filas: PadronVivoRow[] }) {
-  const visibles = filas
+function TabNucleos({ filas }: { filas: PadronVivoRow[] }) {
+  const [filtroCarrera, setFiltroCarrera] = useState('Arquitectura')
 
-  // Agrupar por colaboradora
-  const mapa = new Map<string, PadronVivoRow[]>()
-  for (const f of visibles) {
-    const clave = f.asignado_a ?? '(sin asignar)'
-    const grupo = mapa.get(clave) ?? []
-    grupo.push(f)
-    mapa.set(clave, grupo)
+  const carreras = Array.from(new Set(filas.map(f => f.carrera).filter(Boolean))).sort() as string[]
+
+  const filtrados = filtroCarrera
+    ? filas.filter(f => f.carrera?.toLowerCase().includes(filtroCarrera.toLowerCase()))
+    : filas
+
+  // Agrupar por núcleo
+  type NucleoStats = { total: number; simpatiza: number; noSimpatiza: number; pendientes: number }
+  const mapa = new Map<string, NucleoStats>()
+  for (const f of filtrados) {
+    const key = f.nucleo ?? 'Sin núcleo'
+    const s = mapa.get(key) ?? { total: 0, simpatiza: 0, noSimpatiza: 0, pendientes: 0 }
+    s.total++
+    if (f.ultimo_confirma === true) s.simpatiza++
+    else if (f.ultimo_confirma === false && (f.estado_gestion === 'contactado' || f.estado_gestion === 'cerrado')) s.noSimpatiza++
+    else s.pendientes++
+    mapa.set(key, s)
   }
 
-  const grupos = Array.from(mapa.entries()).sort((a, b) => b[1].length - a[1].length)
-
-  function contarEstado(filas: PadronVivoRow[], estado: EstadoGestion) {
-    return filas.filter(f => f.estado_gestion === estado).length
-  }
+  const grupos = Array.from(mapa.entries()).sort((a, b) => b[1].total - a[1].total)
+  const totales = grupos.reduce((acc, [, s]) => ({
+    total: acc.total + s.total,
+    simpatiza: acc.simpatiza + s.simpatiza,
+    noSimpatiza: acc.noSimpatiza + s.noSimpatiza,
+    pendientes: acc.pendientes + s.pendientes,
+  }), { total: 0, simpatiza: 0, noSimpatiza: 0, pendientes: 0 })
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {grupos.map(([nombre, miembros]) => {
-          const confirmados = miembros.filter(m => m.ultimo_confirma === true).length
-          const pct = miembros.length > 0
-            ? Math.round(((contarEstado(miembros, 'contactado') + contarEstado(miembros, 'cerrado')) / miembros.length) * 100)
-            : 0
+      {/* Filtro carrera */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-wrap gap-3 items-center">
+        <span className="text-sm font-semibold text-gray-600">Profesión:</span>
+        <select
+          value={filtroCarrera}
+          onChange={e => setFiltroCarrera(e.target.value)}
+          className="text-sm px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+        >
+          <option value="">Todas las profesiones</option>
+          {carreras.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="text-xs text-gray-400">{filtrados.length.toLocaleString()} colegiados</span>
+      </div>
 
-          return (
-            <div
-              key={nombre}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-            >
-              <div
-                className="px-5 py-3 flex items-center justify-between"
-                style={{ backgroundColor: 'var(--color-real)', color: 'white' }}
-              >
-                <p className="font-semibold text-sm truncate max-w-[70%]">{nombre}</p>
-                <p className="font-bold tabular-nums">{miembros.length}</p>
-              </div>
+      {/* Resumen global */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total', value: totales.total,       color: 'var(--color-marino)' },
+          { label: 'Simpatiza',    value: totales.simpatiza,    color: '#16a34a' },
+          { label: 'No simpatiza', value: totales.noSimpatiza,  color: '#dc2626' },
+          { label: 'Sin gestionar',value: totales.pendientes,   color: '#94a3b8' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
+            <p className="text-2xl font-bold tabular-nums" style={{ color }}>{value.toLocaleString()}</p>
+            <p className="text-xs text-gray-400 mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
 
-              {/* Plancha 1 */}
-              <div
-                className="px-5 py-3 flex items-center justify-between border-b border-gray-100"
-                style={{ backgroundColor: 'rgba(231,178,40,0.07)' }}
-              >
-                <p className="text-xs font-semibold text-gray-600">★ Confirman Plancha 1</p>
-                <p className="font-bold tabular-nums" style={{ color: 'var(--color-dorado)' }}>
-                  {confirmados}
-                </p>
-              </div>
-
-              {/* Estados */}
-              <div className="px-5 py-3 space-y-1.5">
-                {([
-                  ['pendiente',       'Pendientes'],
-                  ['en_proceso',      'En proceso'],
-                  ['contactado',      'Contactados'],
-                  ['no_comunicacion', 'Sin comunicación'],
-                  ['cerrado',         'Cerrados'],
-                ] as [EstadoGestion, string][]).map(([est]) => {
-                  const n = contarEstado(miembros, est)
-                  if (n === 0) return null
-                  return (
-                    <div key={est} className="flex items-center justify-between text-sm">
-                      <EstadoBadge estado={est} />
-                      <span className="font-semibold tabular-nums text-gray-700">{n}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Progreso */}
-              <div className="px-5 pb-4">
-                <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${pct}%`, backgroundColor: 'var(--color-exito)' }}
-                  />
-                </div>
-                <p className="text-xs text-gray-400 mt-1">{pct}% gestionados</p>
-              </div>
-            </div>
-          )
-        })}
+      {/* Tabla por núcleo */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide border-b-2 text-left"
+                style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}>
+                <th className="px-5 py-3 font-semibold">Núcleo</th>
+                <th className="px-4 py-3 font-semibold text-right">Total</th>
+                <th className="px-4 py-3 font-semibold text-right text-green-700">Simpatiza</th>
+                <th className="px-4 py-3 font-semibold text-right text-red-600">No simpatiza</th>
+                <th className="px-4 py-3 font-semibold text-right">Sin gestionar</th>
+                <th className="px-4 py-3 font-semibold">% Aceptación</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {grupos.map(([nucleo, s]) => {
+                const pct = s.simpatiza + s.noSimpatiza > 0
+                  ? Math.round(s.simpatiza / (s.simpatiza + s.noSimpatiza) * 100)
+                  : null
+                return (
+                  <tr key={nucleo} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-5 py-3 font-medium text-gray-900">{nucleo}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-gray-700">{s.total}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{s.simpatiza}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-red-600">{s.noSimpatiza}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-gray-400">{s.pendientes}</td>
+                    <td className="px-4 py-3">
+                      {pct !== null ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-100 rounded-full h-2">
+                            <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-600 w-8 text-right">{pct}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -708,7 +804,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
   const cargar = useCallback(async () => {
     const [resMetricas, resPadron] = await Promise.all([
       supabase.from('vista_metricas_distrito').select('*'),
-      supabase.from('vista_padron_vivo').select('*').order('nombre_completo').limit(5000),
+      supabase.from('vista_padron_vivo').select('*').order('nombre_completo').limit(49200),
     ])
 
     if (resMetricas.error || resPadron.error) {
@@ -747,9 +843,9 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
   ).sort()
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'resumen',   label: 'Resumen por distrito' },
-    { id: 'padron',    label: 'Padrón en vivo' },
-    { id: 'asignacion', label: 'Por colaboradora' },
+    { id: 'resumen', label: 'Resumen por distrito' },
+    { id: 'padron',  label: 'Padrón en vivo' },
+    { id: 'nucleos', label: 'Vista por Núcleos' },
   ]
 
   if (cargando) {
@@ -829,9 +925,9 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         </div>
 
         {/* Contenido del tab activo */}
-        {tab === 'resumen'    && <TabResumen metricas={metricas} padron={padron} />}
-        {tab === 'padron'     && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
-        {tab === 'asignacion' && <TabAsignacion filas={padron} />}
+        {tab === 'resumen' && <TabResumen metricas={metricas} padron={padron} />}
+        {tab === 'padron'  && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
+        {tab === 'nucleos' && <TabNucleos filas={padron} />}
       </div>
     </div>
   )

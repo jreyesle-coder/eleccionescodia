@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "CODIA Call Center",
-  description: "Gestor de llamadas para elecciones CODIA",
+  title: "Elecciones CODIA",
+  description: "Sistema de campaña electoral CODIA 2026",
 };
 
 export default function RootLayout({

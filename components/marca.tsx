@@ -1,18 +1,16 @@
 export default function Marca() {
   return (
     <div className="flex items-center gap-3">
-      {/* Logo directamente sobre fondo blanco, sin recuadro extra */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/Logo 1.jpeg"
-        alt="CODIA"
-        className="h-11 w-auto object-contain"
+        src="/presidente.jpg"
+        alt="George Richardson"
+        className="h-11 w-auto object-contain rounded-full"
       />
       <div className="flex flex-col gap-0.5">
         <span className="font-bold text-sm tracking-wide leading-tight" style={{ color: 'var(--color-marino)' }}>
-          CODIA · Call Center
+          George Richardson
         </span>
-        {/* Pildora PLANCHA #1: rojo con borde dorado */}
         <span
           className="inline-block text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full border"
           style={{
