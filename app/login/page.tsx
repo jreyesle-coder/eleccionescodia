@@ -31,7 +31,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 md:p-10 bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/Logo 1.jpg"
+          src="/Logo 1.jpeg"
           alt="Elecciones CODIA"
           className="w-full max-w-sm h-auto object-contain"
         />
