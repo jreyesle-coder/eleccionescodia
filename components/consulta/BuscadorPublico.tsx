@@ -97,21 +97,34 @@ export default function BuscadorPublico() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-fondo)' }}>
-      {/* Encabezado */}
-      <div style={{ backgroundColor: 'var(--color-marino)' }} className="px-4 py-5">
+      {/* Encabezado con foto del candidato */}
+      <div style={{ backgroundColor: 'var(--color-marino)' }} className="px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-          <div>
+          <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Logo 4.jpg" alt="Verificate" className="h-16 w-auto object-contain" />
+            <img src="/presidente.jpg" alt="George Richardson" className="h-12 w-auto object-contain rounded-full" />
+            <div>
+              <p className="font-bold text-white text-sm leading-tight">George Richardson</p>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                style={{ backgroundColor: 'var(--color-plancha)', border: '1px solid var(--color-dorado)' }}>
+                Presidente
+              </span>
+            </div>
           </div>
-          <Link href="/login"
+          <Link href="/"
             className="text-xs text-blue-200 hover:text-white border border-blue-400 rounded-lg px-3 py-1.5 transition-colors">
-            ← Acceso operadores
+            ← Página principal
           </Link>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {/* Banner Logo 4 */}
+        <div className="rounded-2xl overflow-hidden shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/Logo 4.jpg" alt="Verificate para Votar" className="w-full h-auto object-contain" />
+        </div>
+
         {/* Búsqueda */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
           <div>

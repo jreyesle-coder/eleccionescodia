@@ -19,7 +19,7 @@ export default function Marca() {
             letterSpacing: '0.04em',
           }}
         >
-          PLANCHA #1
+          Presidente
         </span>
       </div>
     </div>
