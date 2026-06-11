@@ -4,7 +4,7 @@ export default function Marca() {
       {/* Logo directamente sobre fondo blanco, sin recuadro extra */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/logo-codia.png"
+        src="/Logo 1.jpeg"
         alt="CODIA"
         className="h-11 w-auto object-contain"
       />
