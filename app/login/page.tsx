@@ -27,18 +27,18 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex flex-col md:flex-row bg-white">
-      {/* ── Mitad izquierda: Logo 4 ── */}
-      <div className="flex-1 flex items-center justify-center p-8 md:p-12 bg-white">
+      {/* ── Mitad izquierda: Logo 1 ── */}
+      <div className="flex-1 flex items-center justify-center p-6 md:p-10 bg-white">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/Logo 4.jpg"
+          src="/Logo 1.jpg"
           alt="Elecciones CODIA"
           className="w-full max-w-sm h-auto object-contain"
         />
       </div>
 
       {/* ── Mitad derecha: botones / form ── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-12 gap-4">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 gap-3">
 
         {/* Botón Verificate */}
         <Link
