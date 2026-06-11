@@ -23,24 +23,6 @@ type ContadoresHoy = {
   numero_equivocado: number
 }
 
-type ColegiadoRPC = {
-  id: number
-  codigo: string
-  nombre_completo: string
-  telefono: string | null
-  celular: string | null
-  regional: string | null
-  provincia: string | null
-  nucleo: string | null
-  carrera: string | null
-  pensionado: boolean
-  nuevo_integrante: boolean
-  estado_gestion: string
-  asignado_a: string | null
-  bloqueado_hasta: string | null
-  intentos_no_contesta: number
-  created_at: string
-}
 
 type LlamadaHistorialRow = {
   id: number

@@ -512,6 +512,7 @@ function TarjetaRegion({
 }
 
 // Pone Santiago primero; el resto ordenado como viene (por nombre desde Supabase)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ordenarPadron(filas: PadronVivoRow[], region: string): PadronVivoRow[] {
   return [...filas].sort((a, b) => {
     const aNucleo = (a.nucleo ?? '').toLowerCase()
