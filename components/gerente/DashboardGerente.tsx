@@ -705,15 +705,7 @@ type UltimaLlamada = {
   operador_nombre: string | null
 }
 
-type FormResultadoBuscar = 'efectiva' | 'no_contesta' | 'numero_equivocado' | 'volver_a_llamar' | 'rechaza'
-
-const BOTONES_RESULTADO_BUSCAR: { valor: FormResultadoBuscar; label: string }[] = [
-  { valor: 'efectiva',          label: '✓ Efectiva' },
-  { valor: 'no_contesta',       label: '📵 No contesta' },
-  { valor: 'numero_equivocado', label: '❌ Núm. equivocado' },
-  { valor: 'volver_a_llamar',   label: '🔁 Volver a llamar' },
-  { valor: 'rechaza',           label: '🚫 Rechaza' },
-]
+type FormResultadoBuscar = 'efectiva_confirma' | 'efectiva_no_confirma' | 'no_contesta' | 'numero_equivocado'
 
 function TabBuscar() {
   const supabase = createClient()
@@ -729,8 +721,6 @@ function TabBuscar() {
 
   // Formulario
   const [formResultado, setFormResultado] = useState<FormResultadoBuscar | null>(null)
-  const [confirmaP1, setConfirmaP1] = useState<boolean | null>(null)
-  const [callbackAt, setCallbackAt] = useState('')
   const [notas, setNotas] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorAccion, setErrorAccion] = useState<string | null>(null)
@@ -738,8 +728,6 @@ function TabBuscar() {
 
   function resetForm() {
     setFormResultado(null)
-    setConfirmaP1(null)
-    setCallbackAt('')
     setNotas('')
     setErrorAccion(null)
     setExito(false)
@@ -754,12 +742,7 @@ function TabBuscar() {
     setSeleccionado(null)
     resetForm()
 
-    const { data } = await supabase
-      .from('padron')
-      .select('id, codigo, nombre_completo, telefono, celular, regional, nucleo, carrera, pensionado, nuevo_integrante, estado_gestion')
-      .or(`nombre_completo.ilike.%${q}%,codigo.ilike.%${q}%,cedula.ilike.%${q}%`)
-      .order('nombre_completo', { ascending: true })
-      .limit(30)
+    const { data } = await supabase.rpc('buscar_colegiado', { p_q: q })
     const filas = (data as BusquedaResultado[] | null) ?? []
     setResultados(filas)
     setSinResultados(filas.length === 0)
@@ -801,24 +784,14 @@ function TabBuscar() {
       setErrorAccion('Indica si confirmó apoyo a la Plancha 1.')
       return
     }
-    if (formResultado === 'volver_a_llamar' && !callbackAt) {
-      setErrorAccion('Selecciona fecha y hora para volver a llamar.')
-      return
-    }
-
-    const pResultado =
-      formResultado === 'efectiva'
-        ? confirmaP1 ? 'efectiva_confirma' : 'efectiva_no_confirma'
-        : formResultado
-
     setGuardando(true)
     setErrorAccion(null)
     const { error } = await supabase.rpc('registrar_llamada', {
       p_colegiado_id: seleccionado.id,
-      p_resultado: pResultado,
-      p_confirma: formResultado === 'efectiva' ? (confirmaP1 ?? false) : false,
+      p_resultado: formResultado,
+      p_confirma: formResultado === 'efectiva_confirma',
       p_notas: notas.trim() || null,
-      p_callback_at: formResultado === 'volver_a_llamar' ? new Date(callbackAt).toISOString() : null,
+      p_callback_at: null,
     })
     setGuardando(false)
 
@@ -830,8 +803,8 @@ function TabBuscar() {
     setExito(true)
     // Refrescar detalle
     const estadoNuevo: EstadoGestion =
-      pResultado === 'efectiva_confirma' || pResultado === 'efectiva_no_confirma' ? 'contactado'
-      : pResultado === 'numero_equivocado' || pResultado === 'rechaza' ? 'cerrado'
+      formResultado === 'efectiva_confirma' || formResultado === 'efectiva_no_confirma' ? 'contactado'
+      : formResultado === 'numero_equivocado' ? 'cerrado'
       : seleccionado.estado_gestion
     setSeleccionado({ ...seleccionado, estado_gestion: estadoNuevo })
     await seleccionar({ ...seleccionado, estado_gestion: estadoNuevo })
@@ -996,63 +969,38 @@ function TabBuscar() {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Registrar nuevo resultado</p>
 
             {/* Botones de resultado */}
-            <div className="flex flex-wrap gap-2">
-              {BOTONES_RESULTADO_BUSCAR.map(b => (
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={() => { setFormResultado('efectiva_confirma'); setErrorAccion(null); setExito(false) }}
+                className="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-all"
+                style={{ backgroundColor: formResultado === 'efectiva_confirma' ? '#15803d' : '#16a34a', opacity: formResultado && formResultado !== 'efectiva_confirma' ? 0.5 : 1 }}
+              >
+                ✓ Simpatiza con George Richardson
+              </button>
+              <button
+                onClick={() => { setFormResultado('efectiva_no_confirma'); setErrorAccion(null); setExito(false) }}
+                className="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-all"
+                style={{ backgroundColor: formResultado === 'efectiva_no_confirma' ? '#b91c1c' : '#dc2626', opacity: formResultado && formResultado !== 'efectiva_no_confirma' ? 0.5 : 1 }}
+              >
+                ✗ No Simpatiza con George Richardson
+              </button>
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  key={b.valor}
-                  onClick={() => { setFormResultado(b.valor); setConfirmaP1(null); setErrorAccion(null); setExito(false) }}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
-                  style={
-                    formResultado === b.valor
-                      ? { backgroundColor: 'var(--color-marino)', borderColor: 'var(--color-marino)', color: 'white' }
-                      : { backgroundColor: 'white', borderColor: '#e5e7eb', color: 'var(--color-marino)' }
-                  }
+                  onClick={() => { setFormResultado('no_contesta'); setErrorAccion(null); setExito(false) }}
+                  className="py-2.5 rounded-xl text-sm font-semibold border-2 transition-all"
+                  style={formResultado === 'no_contesta' ? { backgroundColor: '#f1f5f9', borderColor: '#94a3b8', color: '#374151' } : { borderColor: '#e5e7eb', color: '#6b7280' }}
                 >
-                  {b.label}
+                  📵 No contesta
                 </button>
-              ))}
+                <button
+                  onClick={() => { setFormResultado('numero_equivocado'); setErrorAccion(null); setExito(false) }}
+                  className="py-2.5 rounded-xl text-sm font-semibold border-2 transition-all"
+                  style={formResultado === 'numero_equivocado' ? { backgroundColor: '#f1f5f9', borderColor: '#94a3b8', color: '#374151' } : { borderColor: '#e5e7eb', color: '#6b7280' }}
+                >
+                  ❌ Núm. equivocado
+                </button>
+              </div>
             </div>
-
-            {/* Sub-opciones Efectiva */}
-            {formResultado === 'efectiva' && (
-              <div className="flex gap-3 pl-1">
-                <button
-                  onClick={() => setConfirmaP1(true)}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
-                  style={
-                    confirmaP1 === true
-                      ? { backgroundColor: '#1F9D55', borderColor: '#1F9D55', color: 'white' }
-                      : { backgroundColor: 'white', borderColor: '#e5e7eb', color: '#1F9D55' }
-                  }
-                >
-                  ✔ Confirma Plancha 1
-                </button>
-                <button
-                  onClick={() => setConfirmaP1(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold border-2 transition-all"
-                  style={
-                    confirmaP1 === false
-                      ? { backgroundColor: '#3B82F6', borderColor: '#3B82F6', color: 'white' }
-                      : { backgroundColor: 'white', borderColor: '#e5e7eb', color: '#3B82F6' }
-                  }
-                >
-                  No confirma
-                </button>
-              </div>
-            )}
-
-            {/* Callback fecha/hora */}
-            {formResultado === 'volver_a_llamar' && (
-              <div className="pl-1">
-                <label className="text-xs text-gray-500 block mb-1">Fecha y hora para volver a llamar</label>
-                <input
-                  type="datetime-local"
-                  value={callbackAt}
-                  onChange={e => setCallbackAt(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
-                />
-              </div>
-            )}
 
             {/* Notas */}
             <textarea
