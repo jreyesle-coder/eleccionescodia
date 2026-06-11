@@ -106,7 +106,7 @@ function ModalDetalle({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(10,42,94,0.45)' }}
+      style={{ backgroundColor: 'rgba(14,28,66,0.45)' }}
       onClick={onCerrar}
     >
       <div
@@ -236,10 +236,10 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
 
   const dataDona = [
     { name: 'Pendientes',       value: total.pendientes,       fill: '#94a3b8' },
-    { name: 'En proceso',       value: total.en_proceso,       fill: '#15407F' },
+    { name: 'En proceso',       value: total.en_proceso,       fill: '#2A407A' },
     { name: 'Contactados',      value: total.contactados,      fill: '#1F9D55' },
-    { name: 'Sin comunicación', value: total.sin_comunicacion, fill: '#C81E2C' },
-    { name: 'Cerrados',         value: total.cerrados,         fill: '#0A2A5E' },
+    { name: 'Sin comunicación', value: total.sin_comunicacion, fill: '#B61F2E' },
+    { name: 'Cerrados',         value: total.cerrados,         fill: '#16285A' },
   ].filter(d => d.value > 0)
 
   return (
@@ -348,10 +348,10 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
             <div className="px-5 py-4 space-y-1">
               {([
                 { label: 'Pendientes',       val: m.pendientes,       color: '#94a3b8', estado: 'pendiente'       as EstadoGestion },
-                { label: 'En proceso',       val: m.en_proceso,       color: '#15407F', estado: 'en_proceso'      as EstadoGestion },
+                { label: 'En proceso',       val: m.en_proceso,       color: '#2A407A', estado: 'en_proceso'      as EstadoGestion },
                 { label: 'Contactados',      val: m.contactados,      color: '#1F9D55', estado: 'contactado'      as EstadoGestion },
-                { label: 'Sin comunicación', val: m.sin_comunicacion, color: '#C81E2C', estado: 'no_comunicacion' as EstadoGestion },
-                { label: 'Cerrados',         val: m.cerrados,         color: '#0A2A5E', estado: 'cerrado'         as EstadoGestion },
+                { label: 'Sin comunicación', val: m.sin_comunicacion, color: '#B61F2E', estado: 'no_comunicacion' as EstadoGestion },
+                { label: 'Cerrados',         val: m.cerrados,         color: '#16285A', estado: 'cerrado'         as EstadoGestion },
               ]).map(({ label, val, color, estado: e }) => {
                 const esTotal = m.distrito === 'Total'
                 const activo = !esTotal && desglose?.distrito === m.distrito && desglose?.estado === e

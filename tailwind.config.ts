@@ -13,13 +13,15 @@ const config: Config = {
         sans: ["var(--font-sans)"],
       },
       colors: {
-        /* ── Marca CODIA ── */
-        marino:  "var(--color-marino)",
-        real:    "var(--color-real)",
-        dorado:  "var(--color-dorado)",
-        plancha: "var(--color-plancha)",
-        fondo:   "var(--color-fondo)",
-        exito:   "var(--color-exito)",
+        /* ── Marca Richardson Presidente / CODIA ── */
+        marino:        "var(--color-marino)",
+        "marino-oscuro": "var(--color-marino-oscuro)",
+        real:          "var(--color-real)",
+        dorado:        "var(--color-dorado)",
+        plancha:       "var(--color-plancha)",
+        fondo:         "var(--color-fondo)",
+        exito:         "var(--color-exito)",
+        "texto-suave": "var(--color-texto-suave)",
 
         /* ── shadcn tokens ── */
         background: "hsl(var(--background))",

@@ -4,34 +4,36 @@
 
 @layer base {
   :root {
-    /* ── Marca CODIA ── */
-    --color-marino:  #0A2A5E;
-    --color-real:    #15407F;
-    --color-dorado:  #E7B228;
-    --color-plancha: #C81E2C;
-    --color-fondo:   #F3F6FB;
+    /* ── Marca Richardson Presidente / CODIA ── */
+    --color-marino:  #16285A;   /* primario navy */
+    --color-real:    #2A407A;   /* navy claro */
+    --color-marino-oscuro: #0E1C42; /* navy oscuro */
+    --color-dorado:  #C8961E;   /* secundario dorado */
+    --color-plancha: #B61F2E;   /* acento rojo */
+    --color-fondo:   #F3F5F8;
     --color-exito:   #1F9D55;
+    --color-texto-suave: #5B6472;
 
-    /* ── shadcn/ui – remapeados a azul marino ── */
-    --background: 215 60% 97%;
-    --foreground: 222 84% 13%;
+    /* ── shadcn/ui – remapeados a navy Richardson ── */
+    --background: 220 25% 96%;          /* #F3F5F8 */
+    --foreground: 225 60% 22%;          /* navy oscuro */
     --card: 0 0% 100%;
-    --card-foreground: 222 84% 13%;
+    --card-foreground: 225 60% 22%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 84% 13%;
-    --primary: 218 80% 20%;          /* azul marino #0A2A5E */
+    --popover-foreground: 225 60% 22%;
+    --primary: 225 57% 22%;             /* #16285A */
     --primary-foreground: 210 40% 98%;
-    --secondary: 215 40% 93%;
-    --secondary-foreground: 218 80% 20%;
-    --muted: 215 40% 93%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 43 79% 53%;            /* dorado #E7B228 */
-    --accent-foreground: 222 84% 13%;
-    --destructive: 355 74% 45%;      /* rojo plancha #C81E2C */
+    --secondary: 220 30% 93%;
+    --secondary-foreground: 225 57% 22%;
+    --muted: 220 25% 92%;
+    --muted-foreground: 218 11% 39%;    /* #5B6472 */
+    --accent: 38 74% 45%;               /* #C8961E dorado */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 355 71% 42%;         /* #B61F2E rojo */
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 218 80% 20%;
+    --border: 220 20% 87%;
+    --input: 220 20% 87%;
+    --ring: 225 57% 22%;
     --radius: 0.5rem;
   }
 

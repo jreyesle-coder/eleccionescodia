@@ -16,10 +16,10 @@ const ZONA = 'America/Santo_Domingo'
 
 const COLORES_ESTADO: Record<string, string> = {
   pendiente:       '#94a3b8',
-  en_proceso:      '#15407F',
+  en_proceso:      '#2A407A',
   contactado:      '#1F9D55',
-  no_comunicacion: '#C81E2C',
-  cerrado:         '#0A2A5E',
+  no_comunicacion: '#B61F2E',
+  cerrado:         '#16285A',
 }
 
 function formatPct(n: number | null | undefined): string {
@@ -103,7 +103,7 @@ function ModalHistorial({ operador, onCerrar }: ModalHistorialProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-12 px-4 pb-4"
-      style={{ backgroundColor: 'rgba(10,42,94,0.45)' }}
+      style={{ backgroundColor: 'rgba(14,28,66,0.45)' }}
       onClick={onCerrar}
     >
       <div
@@ -400,7 +400,7 @@ function TabResumen({ kpis, operadores }: TabResumenProps) {
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="Efectivas"  fill="#1F9D55" radius={[4,4,0,0]} />
-                <Bar dataKey="Conf. P1"   fill="#E7B228"  radius={[4,4,0,0]} />
+                <Bar dataKey="Conf. P1"   fill="#C8961E"  radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
