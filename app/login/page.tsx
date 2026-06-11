@@ -27,15 +27,19 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-white px-6 py-10">
-      <div className="flex flex-col items-center w-full max-w-sm gap-4">
+      <div className="flex flex-row items-center justify-center gap-8 w-full max-w-4xl">
 
         {/* Banner */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/Logo 1.jpeg"
           alt="Elecciones CODIA"
-          className="w-full h-auto object-contain"
+          className="h-auto object-contain"
+          style={{ width: '380px', maxWidth: '50vw' }}
         />
+
+        {/* Botones y form */}
+        <div className="flex flex-col gap-4 w-72">
 
         {/* Botón Verificate */}
         <Link
@@ -103,7 +107,8 @@ export default function LoginPage() {
         )}
 
         <p className="text-xs text-gray-400">CODIA · Elecciones 2026</p>
-      </div>
+        </div>{/* fin columna botones */}
+      </div>{/* fin fila */}
     </main>
   )
 }
