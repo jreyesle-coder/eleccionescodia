@@ -6,20 +6,17 @@ import Link from 'next/link'
 
 interface ResultadoBusqueda {
   id: number
-  matricula: string
-  nombre: string
+  codigo: string
+  nombre_completo: string
+  cedula: string | null
   telefono: string | null
-  distrito: string
-  region: string
-  vencimiento: string | null
-  estado_gestion: string
-}
-
-function fmtVencimiento(fecha: string | null) {
-  if (!fecha) return '—'
-  return new Date(`${fecha}T12:00:00Z`).toLocaleDateString('es-DO', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
+  celular: string | null
+  regional: string | null
+  provincia: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  nuevo_integrante: boolean
 }
 
 export default function BuscadorPublico() {
@@ -36,7 +33,15 @@ export default function BuscadorPublico() {
     setBuscando(true)
     setError(null)
     setBuscado(false)
-    const { data, error: err } = await supabase.rpc('buscar_miembro_publico', { p_nombre: q })
+
+    // Buscar por nombre_completo, codigo (colegiatura) o cedula
+    const { data, error: err } = await supabase
+      .from('padron')
+      .select('id, codigo, nombre_completo, cedula, telefono, celular, regional, provincia, nucleo, carrera, pensionado, nuevo_integrante')
+      .or(`nombre_completo.ilike.%${q}%,codigo.ilike.%${q}%,cedula.ilike.%${q}%`)
+      .order('nombre_completo', { ascending: true })
+      .limit(50)
+
     setBuscando(false)
     setBuscado(true)
     if (err) {
@@ -78,7 +83,7 @@ export default function BuscadorPublico() {
               Consulta tu habilitación para votar
             </h1>
             <p className="text-sm text-gray-400 mt-0.5">
-              Escribe tu nombre y apellido para verificar si estás hábil en el padrón del CODIA
+              Escribe tu nombre, número de colegiatura o cédula para verificar si estás en el padrón del CODIA
             </p>
           </div>
 
@@ -87,7 +92,7 @@ export default function BuscadorPublico() {
               type="text"
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              placeholder="Ej: Juan García…"
+              placeholder="Nombre, colegiatura o cédula…"
               minLength={3}
               className="flex-1 text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
               style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
@@ -142,33 +147,48 @@ export default function BuscadorPublico() {
             ) : (
               <div className="divide-y divide-gray-50">
                 {resultados.map(r => (
-                  <div key={r.id} className="px-5 py-4 space-y-1.5">
+                  <div key={r.id} className="px-5 py-4 space-y-2">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div>
-                        <p className="font-semibold text-gray-900 text-sm">{r.nombre}</p>
+                        <p className="font-semibold text-gray-900 text-sm">{r.nombre_completo}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          Matrícula {r.matricula}
-                          {r.distrito && <> · {r.distrito}</>}
-                          {r.region && <> · Región {r.region}</>}
+                          Colegiatura {r.codigo}
+                          {r.cedula && <> · CI: {r.cedula}</>}
                         </p>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full shrink-0">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                        Hábil para votar
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                          Hábil para votar
+                        </span>
+                        {r.pensionado && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
+                        )}
+                        {r.nuevo_integrante && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Nuevo integrante</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-                      {r.telefono && (
-                        <p className="text-xs text-gray-500">
-                          Tel: <span className="font-medium">{r.telefono}</span>
-                        </p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                      {r.carrera && (
+                        <span>Profesión: <span className="font-medium text-gray-700">{r.carrera}</span></span>
                       )}
-                      {r.vencimiento && (
-                        <p className="text-xs text-gray-500">
-                          Vence: <span className="font-medium">{fmtVencimiento(r.vencimiento)}</span>
-                        </p>
+                      {r.regional && (
+                        <span>Regional: <span className="font-medium text-gray-700">{r.regional}</span></span>
+                      )}
+                      {r.provincia && (
+                        <span>Provincia: <span className="font-medium text-gray-700">{r.provincia}</span></span>
+                      )}
+                      {r.nucleo && (
+                        <span>Núcleo: <span className="font-medium text-gray-700">{r.nucleo}</span></span>
+                      )}
+                      {r.telefono && (
+                        <span>Tel: <span className="font-medium">{r.telefono}</span></span>
+                      )}
+                      {r.celular && r.celular !== r.telefono && (
+                        <span>Cel: <span className="font-medium">{r.celular}</span></span>
                       )}
                     </div>
                   </div>

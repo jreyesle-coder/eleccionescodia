@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { Miembro, ResultadoLlamada } from '@/lib/types/database'
+import type { Colegiado, ResultadoLlamada } from '@/lib/types/database'
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
 
 type CallbackItem = {
   llamadaId: number
-  miembro: Miembro
+  colegiado: Colegiado
   callbackAt: string
 }
 
@@ -19,21 +19,25 @@ type LlamadaResumen = {
   resultado: ResultadoLlamada
   fecha_hora: string
   confirma_plancha1: boolean
-  miembro_nombre: string
+  colegiado_nombre: string
 }
 
 type ContadoresHoy = Record<ResultadoLlamada, number>
 
 type FormResultado = 'efectiva' | 'no_contesta' | 'numero_equivocado' | 'volver_a_llamar' | 'rechaza'
 
-type MiembroRPC = {
+type ColegiadoRPC = {
   id: number
-  matricula: string
-  nombre: string
-  vencimiento: string | null
+  codigo: string
+  nombre_completo: string
   telefono: string | null
-  segmento_montero: boolean
-  telefono_revisar: boolean
+  celular: string | null
+  regional: string | null
+  provincia: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  nuevo_integrante: boolean
   estado_gestion: string
   asignado_a: string | null
   bloqueado_hasta: string | null
@@ -47,14 +51,14 @@ type LlamadaHistorialRow = {
   fecha_hora: string
   confirma_plancha1: boolean
   notas: string | null
-  miembros: { nombre: string; matricula: string; telefono: string | null }[] | { nombre: string; matricula: string; telefono: string | null } | null
+  padron: { nombre_completo: string; codigo: string; telefono: string | null }[] | { nombre_completo: string; codigo: string; telefono: string | null } | null
 }
 
 type LlamadaCallbackRow = {
   id: number
   callback_at: string | null
-  miembro_id: number
-  miembros: MiembroRPC[] | MiembroRPC | null
+  colegiado_id: number
+  padron: ColegiadoRPC[] | ColegiadoRPC | null
 }
 
 type LlamadaDiaRow = {
@@ -62,7 +66,7 @@ type LlamadaDiaRow = {
   resultado: string
   fecha_hora: string
   confirma_plancha1: boolean
-  miembros: { nombre: string }[] | { nombre: string } | null
+  padron: { nombre_completo: string }[] | { nombre_completo: string } | null
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -70,7 +74,7 @@ type LlamadaDiaRow = {
 export type ModoWorkspace = 'pool' | 'recuperacion' | 'montero'
 
 const MODO_CONFIG: Record<ModoWorkspace, { montero: boolean; estado: string; botonLabel: string }> = {
-  pool:        { montero: false, estado: 'pendiente',       botonLabel: 'Siguiente miembro →' },
+  pool:        { montero: false, estado: 'pendiente',       botonLabel: 'Siguiente colegiado →' },
   recuperacion:{ montero: false, estado: 'no_comunicacion', botonLabel: 'Tomar siguiente →' },
   montero:     { montero: true,  estado: 'pendiente',       botonLabel: 'Siguiente Montero →' },
 }
@@ -122,12 +126,6 @@ function formatHora(iso: string): string {
   })
 }
 
-function formatVencimiento(fecha: string): string {
-  return new Date(`${fecha}T12:00:00Z`).toLocaleDateString('es-DO', {
-    timeZone: ZONA, day: 'numeric', month: 'long', year: 'numeric',
-  })
-}
-
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 interface Props {
@@ -140,8 +138,8 @@ export default function WorkspaceBase({ userId, modo }: Props) {
   const cfg = MODO_CONFIG[modo]
 
   // ── Estado vista principal ──
-  const [miembroActivo, setMiembroActivo] = useState<Miembro | null>(null)
-  const [sinMiembros, setSinMiembros] = useState(false)
+  const [colegiadoActivo, setColegiadoActivo] = useState<Colegiado | null>(null)
+  const [sinColegiados, setSinColegiados] = useState(false)
   const [callbacks, setCallbacks] = useState<CallbackItem[]>([])
   const [llamadasHoy, setLlamadasHoy] = useState<LlamadaResumen[]>([])
   const [contadoresHoy, setContadoresHoy] = useState<ContadoresHoy>({ ...CONTADORES_VACIOS })
@@ -167,9 +165,9 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     fecha_hora: string
     confirma_plancha1: boolean
     notas: string | null
-    miembro_nombre: string
-    miembro_matricula: string
-    miembro_telefono: string | null
+    colegiado_nombre: string
+    codigo: string
+    telefono: string | null
   }
   const [historial, setHistorial] = useState<LlamadaHistorial[]>([])
   const [paginaHistorial, setPaginaHistorial] = useState(0)
@@ -185,7 +183,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     setCallbackAt('')
     setNotas('')
     setErrorAccion(null)
-    setSinMiembros(false)
+    setSinColegiados(false)
   }
 
   // ─── Carga de datos ───────────────────────────────────────────────────────
@@ -194,11 +192,12 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     const { data, error } = await supabase
       .from('llamadas')
       .select(`
-        id, callback_at, miembro_id,
-        miembros (
-          id, matricula, nombre, vencimiento, telefono,
-          segmento_montero, telefono_revisar, estado_gestion,
-          asignado_a, bloqueado_hasta, intentos_no_contesta, created_at
+        id, callback_at, colegiado_id,
+        padron (
+          id, codigo, nombre_completo, telefono, celular,
+          regional, provincia, nucleo, carrera,
+          pensionado, nuevo_integrante,
+          estado_gestion, asignado_a, bloqueado_hasta, intentos_no_contesta, created_at
         )
       `)
       .eq('operador_id', userId)
@@ -212,11 +211,11 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     const visto = new Set<number>()
     const items: CallbackItem[] = []
     for (const row of (data as unknown) as LlamadaCallbackRow[]) {
-      const rawM = row.miembros
-      const m: MiembroRPC | null = Array.isArray(rawM) ? (rawM[0] ?? null) : rawM
-      if (!m || visto.has(row.miembro_id) || m.asignado_a !== userId) continue
-      visto.add(row.miembro_id)
-      items.push({ llamadaId: row.id, miembro: m as unknown as Miembro, callbackAt: row.callback_at! })
+      const rawM = row.padron
+      const m: ColegiadoRPC | null = Array.isArray(rawM) ? (rawM[0] ?? null) : rawM
+      if (!m || visto.has(row.colegiado_id) || m.asignado_a !== userId) continue
+      visto.add(row.colegiado_id)
+      items.push({ llamadaId: row.id, colegiado: m as unknown as Colegiado, callbackAt: row.callback_at! })
     }
     setCallbacks(items)
   }, [supabase, userId])
@@ -225,7 +224,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     const inicio = hoyInicioISO()
     const { data, error } = await supabase
       .from('llamadas')
-      .select('id, resultado, fecha_hora, confirma_plancha1, miembros(nombre)')
+      .select('id, resultado, fecha_hora, confirma_plancha1, padron(nombre_completo)')
       .eq('operador_id', userId)
       .gte('fecha_hora', inicio)
       .order('fecha_hora', { ascending: false })
@@ -238,11 +237,11 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     for (const row of (data as unknown) as LlamadaDiaRow[]) {
       const resultado = row.resultado as ResultadoLlamada
       contadores[resultado] = (contadores[resultado] ?? 0) + 1
-      const rawM = row.miembros
+      const rawM = row.padron
       const nombreM = rawM
-        ? Array.isArray(rawM) ? (rawM[0]?.nombre ?? '—') : rawM.nombre
+        ? Array.isArray(rawM) ? (rawM[0]?.nombre_completo ?? '—') : rawM.nombre_completo
         : '—'
-      lista.push({ id: row.id, resultado, fecha_hora: row.fecha_hora, confirma_plancha1: row.confirma_plancha1, miembro_nombre: nombreM })
+      lista.push({ id: row.id, resultado, fecha_hora: row.fecha_hora, confirma_plancha1: row.confirma_plancha1, colegiado_nombre: nombreM })
     }
     setContadoresHoy(contadores)
     setLlamadasHoy(lista.slice(0, 10))
@@ -254,7 +253,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     const to = from + 49
     const { data, error, count } = await supabase
       .from('llamadas')
-      .select('id, resultado, fecha_hora, confirma_plancha1, notas, miembros(nombre, matricula, telefono)', { count: 'exact' })
+      .select('id, resultado, fecha_hora, confirma_plancha1, notas, padron(nombre_completo, codigo, telefono)', { count: 'exact' })
       .eq('operador_id', userId)
       .order('fecha_hora', { ascending: false })
       .range(from, to)
@@ -264,7 +263,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     if (count !== null) setTotalHistorial(count)
 
     const lista = (data as unknown as LlamadaHistorialRow[]).map(row => {
-      const rawM = row.miembros
+      const rawM = row.padron
       const m = rawM ? (Array.isArray(rawM) ? rawM[0] : rawM) : null
       return {
         id: row.id,
@@ -272,9 +271,9 @@ export default function WorkspaceBase({ userId, modo }: Props) {
         fecha_hora: row.fecha_hora,
         confirma_plancha1: row.confirma_plancha1,
         notas: row.notas,
-        miembro_nombre: m?.nombre ?? '—',
-        miembro_matricula: m?.matricula ?? '—',
-        miembro_telefono: m?.telefono ?? null,
+        colegiado_nombre: m?.nombre_completo ?? '—',
+        codigo: m?.codigo ?? '—',
+        telefono: m?.telefono ?? null,
       }
     })
     setHistorial(lista)
@@ -289,7 +288,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
       setCargandoInicial(true)
       const ahora = new Date().toISOString()
       const { data } = await supabase
-        .from('miembros')
+        .from('padron')
         .select('*')
         .eq('asignado_a', userId)
         .eq('estado_gestion', 'en_proceso')
@@ -297,7 +296,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
         .order('bloqueado_hasta', { ascending: false })
         .limit(1)
 
-      if (data && data.length > 0) setMiembroActivo(data[0] as Miembro)
+      if (data && data.length > 0) setColegiadoActivo(data[0] as Colegiado)
       await recargarTodo()
       setCargandoInicial(false)
     }
@@ -309,10 +308,10 @@ export default function WorkspaceBase({ userId, modo }: Props) {
 
   async function jalarSiguiente() {
     setCargandoSiguiente(true)
-    setSinMiembros(false)
+    setSinColegiados(false)
     setErrorAccion(null)
     try {
-      const { data, error } = await supabase.rpc('jalar_siguiente_miembro', {
+      const { data, error } = await supabase.rpc('jalar_siguiente_colegiado', {
         p_montero: cfg.montero,
         p_estado: cfg.estado,
       })
@@ -324,20 +323,20 @@ export default function WorkspaceBase({ userId, modo }: Props) {
         throw error
       }
       const resultado = Array.isArray(data) ? data[0] : data
-      if (!resultado) { setSinMiembros(true); return }
-      setMiembroActivo(resultado as Miembro)
+      if (!resultado) { setSinColegiados(true); return }
+      setColegiadoActivo(resultado as Colegiado)
       resetForm()
     } catch {
-      setErrorAccion('No se pudo obtener el siguiente miembro. Intenta de nuevo.')
+      setErrorAccion('No se pudo obtener el siguiente colegiado. Intenta de nuevo.')
     } finally {
       setCargandoSiguiente(false)
     }
   }
 
   async function guardarLlamada() {
-    if (!miembroActivo || !formResultado) return
+    if (!colegiadoActivo || !formResultado) return
     if (formResultado === 'efectiva' && confirmaPlanchaEfectiva === null) {
-      setErrorAccion('Indica si el miembro confirmó apoyo a la Plancha 1.')
+      setErrorAccion('Indica si el colegiado confirmó apoyo a la Plancha 1.')
       return
     }
     if (formResultado === 'volver_a_llamar' && !callbackAt) {
@@ -357,14 +356,14 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     setErrorAccion(null)
     try {
       const { error } = await supabase.rpc('registrar_llamada', {
-        p_miembro_id: miembroActivo.id,
+        p_colegiado_id: colegiadoActivo.id,
         p_resultado: pResultado,
         p_confirma: pConfirma,
         p_notas: notas.trim() || null,
         p_callback_at: pCallbackAt,
       })
       if (error) throw error
-      setMiembroActivo(null)
+      setColegiadoActivo(null)
       resetForm()
       await recargarTodo()
     } catch {
@@ -374,31 +373,31 @@ export default function WorkspaceBase({ userId, modo }: Props) {
     }
   }
 
-  async function liberarMiembro() {
-    if (!miembroActivo) return
+  async function liberarColegiado() {
+    if (!colegiadoActivo) return
     const ok = window.confirm(
-      `¿Liberar a ${miembroActivo.nombre} al pool? Quedará disponible para otros operadores.`
+      `¿Liberar a ${colegiadoActivo.nombre_completo} al pool? Quedará disponible para otros operadores.`
     )
     if (!ok) return
     setLiberando(true)
     setErrorAccion(null)
     try {
-      const { error } = await supabase.rpc('liberar_miembro', { p_miembro_id: miembroActivo.id })
+      const { error } = await supabase.rpc('liberar_colegiado', { p_colegiado_id: colegiadoActivo.id })
       if (error) throw error
-      setMiembroActivo(null)
+      setColegiadoActivo(null)
       resetForm()
     } catch {
-      setErrorAccion('No se pudo liberar el miembro. Intenta de nuevo.')
+      setErrorAccion('No se pudo liberar el colegiado. Intenta de nuevo.')
     } finally {
       setLiberando(false)
     }
   }
 
   function cargarDesdeCallback(item: CallbackItem) {
-    if (miembroActivo) return
-    setMiembroActivo(item.miembro)
+    if (colegiadoActivo) return
+    setColegiadoActivo(item.colegiado)
     resetForm()
-    setCallbacks(prev => prev.filter(c => c.miembro.id !== item.miembro.id))
+    setCallbacks(prev => prev.filter(c => c.colegiado.id !== item.colegiado.id))
   }
 
   useEffect(() => {
@@ -463,16 +462,16 @@ export default function WorkspaceBase({ userId, modo }: Props) {
             </div>
           )}
 
-          {/* ── ZONA A: Miembro actual ── */}
-          <section aria-label="Miembro actual">
+          {/* ── ZONA A: Colegiado actual ── */}
+          <section aria-label="Colegiado actual">
             <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              Miembro actual
+              Colegiado actual
             </h2>
 
-            {!miembroActivo ? (
+            {!colegiadoActivo ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center space-y-4">
-                {sinMiembros && (
-                  <p className="text-gray-500 text-sm">No hay más miembros en este bucket por ahora.</p>
+                {sinColegiados && (
+                  <p className="text-gray-500 text-sm">No hay más colegiados en este bucket por ahora.</p>
                 )}
                 <Button
                   onClick={jalarSiguiente}
@@ -489,56 +488,85 @@ export default function WorkspaceBase({ userId, modo }: Props) {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-bold text-gray-900 text-xl leading-tight truncate">
-                        {miembroActivo.nombre}
+                        {colegiadoActivo.nombre_completo}
                       </p>
-                      <p className="text-sm text-gray-400">Matrícula #{miembroActivo.matricula}</p>
+                      <p className="text-sm text-gray-400">Colegiatura #{colegiadoActivo.codigo}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      {miembroActivo.telefono_revisar && (
-                        <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-1 rounded-full border border-orange-200">
-                          ⚠ Revisar teléfono
+                      {colegiadoActivo.pensionado && (
+                        <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full border border-purple-200">
+                          Pensionado
                         </span>
                       )}
-                      {miembroActivo.segmento_montero && (
+                      {colegiadoActivo.nuevo_integrante && (
                         <span
                           className="text-xs font-bold px-2.5 py-1 rounded-full text-white"
                           style={{ backgroundColor: 'var(--color-dorado)' }}
                         >
-                          ★ Montero
+                          ★ Nuevo
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {miembroActivo.telefono ? (
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`tel:${miembroActivo.telefono}`}
-                        className="font-bold text-2xl hover:underline"
-                        style={{ color: 'var(--color-real)' }}
-                      >
-                        {miembroActivo.telefono}
-                      </a>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(miembroActivo.telefono!)}
-                        className="text-xs text-gray-400 hover:text-gray-700 border border-gray-200 rounded-md px-2 py-1 transition-colors"
-                      >
-                        Copiar
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm italic">Sin teléfono registrado</p>
-                  )}
+                  {/* Teléfono principal y celular */}
+                  <div className="space-y-1">
+                    {colegiadoActivo.telefono ? (
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`tel:${colegiadoActivo.telefono}`}
+                          className="font-bold text-2xl hover:underline"
+                          style={{ color: 'var(--color-real)' }}
+                        >
+                          {colegiadoActivo.telefono}
+                        </a>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(colegiadoActivo.telefono!)}
+                          className="text-xs text-gray-400 hover:text-gray-700 border border-gray-200 rounded-md px-2 py-1 transition-colors"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-sm italic">Sin teléfono fijo</p>
+                    )}
+                    {colegiadoActivo.celular && colegiadoActivo.celular !== colegiadoActivo.telefono && (
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`tel:${colegiadoActivo.celular}`}
+                          className="font-medium text-lg hover:underline"
+                          style={{ color: 'var(--color-real)' }}
+                        >
+                          {colegiadoActivo.celular}
+                        </a>
+                        <span className="text-xs text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Cel</span>
+                      </div>
+                    )}
+                  </div>
 
+                  {/* Datos de perfil */}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                    {miembroActivo.vencimiento && (
+                    {colegiadoActivo.carrera && (
                       <span className="text-gray-600">
-                        Vence: <strong>{formatVencimiento(miembroActivo.vencimiento)}</strong>
+                        <span className="text-gray-400">Profesión:</span>{' '}
+                        <strong>{colegiadoActivo.carrera}</strong>
                       </span>
                     )}
-                    {miembroActivo.intentos_no_contesta > 0 && (
+                    {colegiadoActivo.regional && (
+                      <span className="text-gray-600">
+                        <span className="text-gray-400">Regional:</span>{' '}
+                        <strong>{colegiadoActivo.regional}</strong>
+                      </span>
+                    )}
+                    {colegiadoActivo.nucleo && (
+                      <span className="text-gray-600">
+                        <span className="text-gray-400">Núcleo:</span>{' '}
+                        <strong>{colegiadoActivo.nucleo}</strong>
+                      </span>
+                    )}
+                    {colegiadoActivo.intentos_no_contesta > 0 && (
                       <span className="text-orange-600 font-semibold">
-                        Intento {miembroActivo.intentos_no_contesta} de 3
+                        Intento {colegiadoActivo.intentos_no_contesta} de 3
                       </span>
                     )}
                   </div>
@@ -633,7 +661,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
                     </Button>
                     <Button
                       variant="destructive"
-                      onClick={liberarMiembro}
+                      onClick={liberarColegiado}
                       disabled={liberando}
                       className="h-12 text-sm font-semibold"
                     >
@@ -663,17 +691,17 @@ export default function WorkspaceBase({ userId, modo }: Props) {
                       )}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 truncate text-sm">{item.miembro.nombre}</p>
-                        <p className="text-sm text-gray-600">{item.miembro.telefono ?? '—'}</p>
+                        <p className="font-semibold text-gray-900 truncate text-sm">{item.colegiado.nombre_completo}</p>
+                        <p className="text-sm text-gray-600">{item.colegiado.telefono ?? item.colegiado.celular ?? '—'}</p>
                         <p className={cn('text-xs mt-0.5', vencio ? 'text-orange-600 font-semibold' : 'text-gray-400')}>
                           {vencio ? '⏰ ' : ''}{formatFechaHora(item.callbackAt)}
                         </p>
                       </div>
                       <Button
                         size="sm"
-                        variant={miembroActivo ? 'secondary' : 'default'}
+                        variant={colegiadoActivo ? 'secondary' : 'default'}
                         onClick={() => cargarDesdeCallback(item)}
-                        disabled={!!miembroActivo}
+                        disabled={!!colegiadoActivo}
                         className="shrink-0"
                       >
                         Llamar ahora
@@ -711,7 +739,7 @@ export default function WorkspaceBase({ userId, modo }: Props) {
                 {llamadasHoy.map(l => (
                   <div key={l.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{l.miembro_nombre}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{l.colegiado_nombre}</p>
                       <p className="text-xs text-gray-400">{formatHora(l.fecha_hora)}</p>
                     </div>
                     <span className="text-xs text-gray-500 shrink-0 text-right">{ETIQUETAS[l.resultado]}</span>
@@ -754,10 +782,10 @@ export default function WorkspaceBase({ userId, modo }: Props) {
                   <div key={l.id} className="px-4 py-3 space-y-0.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{l.miembro_nombre}</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{l.colegiado_nombre}</p>
                         <p className="text-xs text-gray-400">
-                          #{l.miembro_matricula}
-                          {l.miembro_telefono ? ` · ${l.miembro_telefono}` : ''}
+                          #{l.codigo}
+                          {l.telefono ? ` · ${l.telefono}` : ''}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">

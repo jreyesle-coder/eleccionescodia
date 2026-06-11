@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts'
 import AppHeader from '@/components/app-header'
-import type { KpisGenerales, PanelOperadorRow, MetricaRegion, PadronVivoRow, EstadoGestion, HistorialOperadorRow } from '@/lib/types/database'
+import type { KpisGenerales, PanelOperadorRow, MetricaRegion, PadronVivoRow, EstadoGestion, HistorialOperadorRow, DeudasVotante } from '@/lib/types/database'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -161,8 +161,8 @@ function ModalHistorial({ operador, onCerrar }: ModalHistorialProps) {
                         hour: '2-digit', minute: '2-digit',
                       })}
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-gray-900">{h.miembro_nombre}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{h.matricula}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900">{h.colegiado_nombre ?? h.miembro_nombre}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-gray-400">{h.codigo}</td>
                     <td className="px-4 py-2.5">
                       <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_RESULTADO[h.resultado] ?? 'bg-gray-100 text-gray-600'}`}>
                         {ETIQUETA_RESULTADO[h.resultado] ?? h.resultado}
@@ -322,7 +322,7 @@ function TabResumen({ kpis, operadores }: TabResumenProps) {
     <div className="space-y-8">
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <KpiCard titulo="Total miembros"   valor={kpis.total_miembros}  color="var(--color-marino)" />
+        <KpiCard titulo="Total colegiados"  valor={kpis.total_colegiados ?? kpis.total_miembros}  color="var(--color-marino)" />
         <KpiCard titulo="Pendientes"        valor={kpis.pendientes}       color={COLORES_ESTADO.pendiente} />
         <KpiCard titulo="Contactados"       valor={kpis.contactados}      color={COLORES_ESTADO.contactado} />
         <KpiCard titulo="No comunicación"   valor={kpis.no_comunicacion}  color={COLORES_ESTADO.no_comunicacion} />
@@ -543,13 +543,10 @@ function TarjetaRegion({
 
 // Pone Santiago primero; el resto ordenado como viene (por nombre desde Supabase)
 function ordenarPadron(filas: PadronVivoRow[], region: string): PadronVivoRow[] {
-  if (region !== 'Norte') return filas
   return [...filas].sort((a, b) => {
-    const aEsSantiago = a.distrito.toLowerCase().includes('santiago')
-    const bEsSantiago = b.distrito.toLowerCase().includes('santiago')
-    if (aEsSantiago && !bEsSantiago) return -1
-    if (!aEsSantiago && bEsSantiago) return 1
-    return a.distrito.localeCompare(b.distrito, 'es') || a.nombre.localeCompare(b.nombre, 'es')
+    const aNucleo = (a.nucleo ?? '').toLowerCase()
+    const bNucleo = (b.nucleo ?? '').toLowerCase()
+    return aNucleo.localeCompare(bNucleo, 'es') || a.nombre_completo.localeCompare(b.nombre_completo, 'es')
   })
 }
 
@@ -571,10 +568,12 @@ function TablaPadron({ filas, cargandoPadron }: { filas: PadronVivoRow[]; cargan
               className="text-xs uppercase tracking-wide border-b-2"
               style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
             >
-              <th className="text-left px-4 py-3 font-semibold">Distrito</th>
-              <th className="text-left px-4 py-3 font-semibold">Matrícula</th>
+              <th className="text-left px-4 py-3 font-semibold">Regional</th>
+              <th className="text-left px-4 py-3 font-semibold">Núcleo</th>
+              <th className="text-left px-4 py-3 font-semibold">Colegiatura</th>
               <th className="text-left px-4 py-3 font-semibold">Nombre</th>
               <th className="text-left px-4 py-3 font-semibold">Teléfono</th>
+              <th className="text-left px-4 py-3 font-semibold">Profesión</th>
               <th className="text-left px-4 py-3 font-semibold">Estado</th>
               <th className="text-left px-4 py-3 font-semibold">Asignado a</th>
               <th className="text-left px-4 py-3 font-semibold">Último resultado</th>
@@ -584,10 +583,16 @@ function TablaPadron({ filas, cargandoPadron }: { filas: PadronVivoRow[]; cargan
           <tbody className="divide-y divide-gray-50">
             {filas.map(m => (
               <tr key={m.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-4 py-2.5 text-gray-500 text-xs">{m.distrito}</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{m.matricula}</td>
-                <td className="px-4 py-2.5 font-medium text-gray-900">{m.nombre}</td>
-                <td className="px-4 py-2.5 text-gray-500">{m.telefono ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{m.regional}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{m.nucleo ?? '—'}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{m.codigo}</td>
+                <td className="px-4 py-2.5 font-medium text-gray-900">
+                  {m.nombre_completo}
+                  {m.pensionado && <span className="ml-1 text-[10px] text-purple-600 font-bold">(P)</span>}
+                  {m.nuevo_integrante && <span className="ml-1 text-[10px] text-yellow-600 font-bold">★</span>}
+                </td>
+                <td className="px-4 py-2.5 text-gray-500">{m.telefono ?? m.celular ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[120px] truncate">{m.carrera ?? '—'}</td>
                 <td className="px-4 py-2.5">
                   <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_ESTADO_BADGE[m.estado_gestion]}`}>
                     {ETIQUETA_ESTADO[m.estado_gestion]}
@@ -606,7 +611,7 @@ function TablaPadron({ filas, cargandoPadron }: { filas: PadronVivoRow[]; cargan
             ))}
             {filas.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin registros</td>
+                <td colSpan={10} className="px-4 py-8 text-center text-gray-400">Sin registros</td>
               </tr>
             )}
           </tbody>
@@ -634,7 +639,7 @@ function TabRegion({ regiones }: TabRegionProps) {
     setRegionActiva(region)
     setFilasMostradas([])
     setCargandoPadron(true)
-    const { data } = await supabase.rpc('listar_padron_region', { p_region: region })
+    const { data } = await supabase.rpc('listar_padron_regional', { p_regional: region })
     const filas = ordenarPadron((data as PadronVivoRow[]) ?? [], region)
     setFilasMostradas(filas)
     setCargandoPadron(false)
@@ -709,9 +714,15 @@ function exportarCSV(filas: PanelOperadorRow[]) {
 
 type BusquedaResultado = {
   id: number
-  matricula: string
-  nombre: string
+  codigo: string
+  nombre_completo: string
   telefono: string | null
+  celular: string | null
+  regional: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  nuevo_integrante: boolean
   estado_gestion: EstadoGestion
 }
 
@@ -773,7 +784,12 @@ function TabBuscar() {
     setSeleccionado(null)
     resetForm()
 
-    const { data } = await supabase.rpc('buscar_miembro_publico', { p_nombre: q })
+    const { data } = await supabase
+      .from('padron')
+      .select('id, codigo, nombre_completo, telefono, celular, regional, nucleo, carrera, pensionado, nuevo_integrante, estado_gestion')
+      .or(`nombre_completo.ilike.%${q}%,codigo.ilike.%${q}%,cedula.ilike.%${q}%`)
+      .order('nombre_completo', { ascending: true })
+      .limit(30)
     const filas = (data as BusquedaResultado[] | null) ?? []
     setResultados(filas)
     setSinResultados(filas.length === 0)
@@ -788,7 +804,7 @@ function TabBuscar() {
     const { data } = await supabase
       .from('llamadas')
       .select('id, resultado, confirma_plancha1, fecha_hora, notas, profiles!llamadas_operador_id_fkey(nombre)')
-      .eq('miembro_id', m.id)
+      .eq('colegiado_id', m.id)
       .order('fecha_hora', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -828,7 +844,7 @@ function TabBuscar() {
     setGuardando(true)
     setErrorAccion(null)
     const { error } = await supabase.rpc('registrar_llamada', {
-      p_miembro_id: seleccionado.id,
+      p_colegiado_id: seleccionado.id,
       p_resultado: pResultado,
       p_confirma: formResultado === 'efectiva' ? (confirmaP1 ?? false) : false,
       p_notas: notas.trim() || null,
@@ -864,7 +880,7 @@ function TabBuscar() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && buscar()}
-            placeholder="Nombre o matrícula…"
+            placeholder="Nombre, colegiatura o cédula…"
             className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2"
             style={{ focusRingColor: 'var(--color-marino)' } as React.CSSProperties}
           />
@@ -890,8 +906,10 @@ function TabBuscar() {
                   className="text-xs uppercase tracking-wide border-b-2"
                   style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
                 >
-                  <th className="text-left px-3 py-2 font-semibold">Matrícula</th>
+                  <th className="text-left px-3 py-2 font-semibold">Colegiatura</th>
                   <th className="text-left px-3 py-2 font-semibold">Nombre</th>
+                  <th className="text-left px-3 py-2 font-semibold">Profesión</th>
+                  <th className="text-left px-3 py-2 font-semibold">Regional</th>
                   <th className="text-left px-3 py-2 font-semibold">Teléfono</th>
                   <th className="text-left px-3 py-2 font-semibold">Estado</th>
                   <th className="px-3 py-2" />
@@ -905,9 +923,15 @@ function TabBuscar() {
                     style={seleccionado?.id === m.id ? { backgroundColor: 'rgba(21,64,127,0.07)' } : {}}
                     onClick={() => seleccionar(m)}
                   >
-                    <td className="px-3 py-2 font-mono text-xs text-gray-500">{m.matricula}</td>
-                    <td className="px-3 py-2 font-medium text-gray-900">{m.nombre}</td>
-                    <td className="px-3 py-2 text-gray-500">{m.telefono ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-500">{m.codigo}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900">
+                      {m.nombre_completo}
+                      {m.pensionado && <span className="ml-1 text-[10px] text-purple-600">(P)</span>}
+                      {m.nuevo_integrante && <span className="ml-1 text-[10px] text-yellow-600">★</span>}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 text-xs">{m.carrera ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-500 text-xs">{m.regional ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">{m.telefono ?? m.celular ?? '—'}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_ESTADO_BADGE[m.estado_gestion]}`}>
                         {ETIQUETA_ESTADO[m.estado_gestion]}
@@ -938,10 +962,12 @@ function TabBuscar() {
             className="rounded-xl px-5 py-4 text-white space-y-1"
             style={{ background: 'linear-gradient(135deg, var(--color-marino), var(--color-real))' }}
           >
-            <p className="text-xs uppercase tracking-wide opacity-70">Miembro seleccionado</p>
-            <p className="text-lg font-bold">{seleccionado.nombre}</p>
+            <p className="text-xs uppercase tracking-wide opacity-70">Colegiado seleccionado</p>
+            <p className="text-lg font-bold">{seleccionado.nombre_completo}</p>
             <div className="flex items-center gap-4 text-sm flex-wrap">
-              <span className="opacity-80">Matrícula: <strong>{seleccionado.matricula}</strong></span>
+              <span className="opacity-80">Colegiatura: <strong>{seleccionado.codigo}</strong></span>
+              {seleccionado.carrera && <span className="opacity-80 text-xs">{seleccionado.carrera}</span>}
+              {seleccionado.regional && <span className="opacity-80 text-xs">{seleccionado.regional}</span>}
               <span
                 className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
@@ -1088,7 +1114,7 @@ function TabBuscar() {
 
 // ─── Tipos de tab ─────────────────────────────────────────────────────────────
 
-type Tab = 'resumen' | 'region' | 'buscar'
+type Tab = 'resumen' | 'region' | 'buscar' | 'deudas'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -1151,6 +1177,7 @@ export default function DashboardGerente({ nombreGerente, rol }: Props) {
     { id: 'resumen', label: 'Resumen' },
     { id: 'region',  label: 'Por región' },
     { id: 'buscar',  label: '🔍 Buscar y corregir' },
+    { id: 'deudas',  label: '💳 Deudas' },
   ]
 
   if (cargando) {
@@ -1237,6 +1264,117 @@ export default function DashboardGerente({ nombreGerente, rol }: Props) {
         )}
         {tab === 'buscar' && (
           <TabBuscar />
+        )}
+        {tab === 'deudas' && (
+          <TabDeudasGerente />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab Deudas Gerente ───────────────────────────────────────────────────────
+
+function TabDeudasGerente() {
+  const supabase = createClient()
+  const [lista, setLista] = useState<DeudasVotante[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [filtroRegional, setFiltroRegional] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+
+  useEffect(() => {
+    supabase
+      .from('deudas_votantes')
+      .select('*')
+      .order('regional', { ascending: true })
+      .order('nombre', { ascending: true })
+      .limit(5000)
+      .then(({ data }) => {
+        setLista((data as DeudasVotante[]) ?? [])
+        setCargando(false)
+      })
+  }, [supabase])
+
+  const regionales = Array.from(new Set(lista.map(d => d.regional).filter(Boolean))).sort() as string[]
+
+  const filtrado = lista.filter(d => {
+    if (filtroRegional && d.regional !== filtroRegional) return false
+    if (busqueda) {
+      const q = busqueda.toLowerCase()
+      return (d.nombre?.toLowerCase().includes(q) || d.codigo?.toLowerCase().includes(q))
+    }
+    return true
+  })
+
+  const totalMonto = filtrado.reduce((sum, d) => sum + (d.monto ?? 0), 0)
+
+  if (cargando) return <p className="text-gray-500 text-sm py-8 text-center">Cargando deudas…</p>
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700">Deudas / Votantes — {filtrado.length.toLocaleString()} registros</h2>
+          {totalMonto > 0 && (
+            <p className="text-sm text-red-600 font-bold mt-0.5">Total deuda filtrada: RD$ {totalMonto.toLocaleString()}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <input
+          type="text"
+          placeholder="Buscar nombre o código…"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2"
+        />
+        <select
+          value={filtroRegional}
+          onChange={e => setFiltroRegional(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        >
+          <option value="">Todas las regionales</option>
+          {regionales.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs uppercase tracking-wide border-b-2 bg-gray-50" style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}>
+              <th className="text-left px-4 py-3 font-semibold">Nombre</th>
+              <th className="text-left px-4 py-3 font-semibold">Código</th>
+              <th className="text-left px-4 py-3 font-semibold">Profesión</th>
+              <th className="text-left px-4 py-3 font-semibold">Regional</th>
+              <th className="text-left px-4 py-3 font-semibold">Núcleo</th>
+              <th className="text-left px-4 py-3 font-semibold">Teléfono</th>
+              <th className="text-right px-4 py-3 font-semibold">Monto</th>
+              <th className="text-left px-4 py-3 font-semibold">Contacto</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 bg-white">
+            {filtrado.slice(0, 500).map((d, i) => (
+              <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-4 py-2.5 font-medium text-gray-900">{d.nombre}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{d.codigo}</td>
+                <td className="px-4 py-2.5 text-gray-600 text-xs">{d.profesion ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.regional ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.nucleo ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-600">{d.telefono ?? '—'}</td>
+                <td className="px-4 py-2.5 text-right font-semibold text-red-600 tabular-nums">
+                  {d.monto != null ? `RD$ ${d.monto.toLocaleString()}` : '—'}
+                </td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.contacto ?? '—'}</td>
+              </tr>
+            ))}
+            {filtrado.length === 0 && (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
+            )}
+          </tbody>
+        </table>
+        {filtrado.length > 500 && (
+          <div className="px-4 py-2 text-center text-xs text-gray-400 border-t">Mostrando 500 de {filtrado.length.toLocaleString()} — afina los filtros</div>
         )}
       </div>
     </div>

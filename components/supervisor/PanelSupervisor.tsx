@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import AppHeader from '@/components/app-header'
 import WorkspaceBase from '@/components/workspace/WorkspaceBase'
-import type { PanelOperadorRow, RecuperacionRow, MonteroRow } from '@/lib/types/database'
+import type { PanelOperadorRow, RecuperacionRow, MonteroRow, DeudasVotante } from '@/lib/types/database'
 
 const ZONA = 'America/Santo_Domingo'
 
@@ -93,9 +93,9 @@ function TabMonitoreo({ onRefresh }: { onRefresh: number }) {
                 <td className="py-3 px-2 font-medium text-gray-900">{op.nombre}</td>
                 <td className="py-3 px-2 text-gray-500 capitalize">{op.rol}</td>
                 <td className="py-3 px-2 text-center">
-                  {op.miembro_activo
-                    ? <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" title="Con miembro activo" />
-                    : <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-300" title="Sin miembro activo" />}
+                  {(op.colegiado_activo ?? op.miembro_activo)
+                    ? <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" title="Con colegiado activo" />
+                    : <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-300" title="Sin colegiado activo" />}
                 </td>
                 <td className="py-3 px-2 text-right font-semibold tabular-nums">{op.llamadas_hoy}</td>
                 <td className="py-3 px-2 text-right tabular-nums text-green-700">{op.efectivas_hoy}</td>
@@ -130,7 +130,7 @@ function TabRecuperacion({ userId }: { userId: string }) {
     setCargando(true)
     setError(null)
     try {
-      const { data, error } = await supabase.rpc('listar_recuperacion')
+      const { data, error } = await supabase.rpc('listar_recuperacion_codia')
       if (error) {
         console.error('[TabRecuperacion] RPC error:', error)
         setError(`Error al cargar recuperación: ${error.message}`)
@@ -171,16 +171,17 @@ function TabRecuperacion({ userId }: { userId: string }) {
           {lista.slice(0, 20).map(m => (
             <div key={m.id} className="px-4 py-3 flex items-center gap-3">
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate text-sm">{m.nombre}</p>
-                <p className="text-sm text-gray-500">{m.telefono ?? 'Sin teléfono'}</p>
+                <p className="font-medium text-gray-900 truncate text-sm">{m.nombre_completo}</p>
+                <p className="text-xs text-gray-400">#{m.codigo}</p>
+                <p className="text-sm text-gray-500">{m.telefono ?? m.celular ?? 'Sin teléfono'}</p>
+                {(m.regional || m.nucleo) && (
+                  <p className="text-xs text-gray-400">
+                    {[m.regional, m.nucleo].filter(Boolean).join(' · ')}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className="text-xs text-gray-400">{m.intentos} intentos</span>
-                {m.telefono_revisar && (
-                  <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    Revisar tel.
-                  </span>
-                )}
               </div>
             </div>
           ))}
@@ -221,7 +222,7 @@ function TabMontero({ userId }: { userId: string }) {
     setCargando(true)
     setError(null)
     try {
-      const { data, error } = await supabase.rpc('listar_montero', { p_limit: 200 })
+      const { data, error } = await supabase.rpc('listar_montero_codia', { p_limit: 200 })
       if (error) {
         console.error('[TabMontero] RPC error:', error)
         setError(`Error al cargar segmento Montero: ${error.message}`)
@@ -302,8 +303,9 @@ function TabMontero({ userId }: { userId: string }) {
         {lista.map(m => (
           <div key={m.id} className="px-4 py-2.5 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 truncate text-sm">{m.nombre}</p>
-              <p className="text-xs text-gray-400">{m.telefono ?? 'Sin teléfono'}</p>
+              <p className="font-medium text-gray-900 truncate text-sm">{m.nombre_completo}</p>
+              <p className="text-xs text-gray-400">#{m.codigo}{m.regional ? ` · ${m.regional}` : ''}</p>
+              <p className="text-xs text-gray-500">{m.telefono ?? 'Sin teléfono'}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {m.confirmado_p1 && (
@@ -335,9 +337,138 @@ function TabMontero({ userId }: { userId: string }) {
   )
 }
 
+// ─── Pestaña Deudas ───────────────────────────────────────────────────────────
+
+function TabDeudas() {
+  const supabase = createClient()
+  const [lista, setLista] = useState<DeudasVotante[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filtroRegional, setFiltroRegional] = useState('')
+  const [filtroNucleo, setFiltroNucleo] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+
+  const cargar = useCallback(async () => {
+    setCargando(true)
+    setError(null)
+    try {
+      const { data, error } = await supabase
+        .from('deudas_votantes')
+        .select('*')
+        .order('regional', { ascending: true })
+        .order('nombre', { ascending: true })
+        .limit(2000)
+      if (error) { setError(`Error al cargar deudas: ${error.message}`); return }
+      setLista((data as DeudasVotante[]) ?? [])
+    } finally {
+      setCargando(false)
+    }
+  }, [supabase])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const regionales = Array.from(new Set(lista.map(d => d.regional).filter(Boolean))).sort() as string[]
+  const nucleos = Array.from(new Set(lista.filter(d => !filtroRegional || d.regional === filtroRegional).map(d => d.nucleo).filter(Boolean))).sort() as string[]
+
+  const filtrado = lista.filter(d => {
+    if (filtroRegional && d.regional !== filtroRegional) return false
+    if (filtroNucleo && d.nucleo !== filtroNucleo) return false
+    if (busqueda) {
+      const q = busqueda.toLowerCase()
+      return (d.nombre?.toLowerCase().includes(q) || d.codigo?.toLowerCase().includes(q) || d.profesion?.toLowerCase().includes(q))
+    }
+    return true
+  })
+
+  const totalMonto = filtrado.reduce((sum, d) => sum + (d.monto ?? 0), 0)
+
+  if (cargando) return <p className="text-gray-500 text-sm py-8 text-center">Cargando deudas…</p>
+  if (error) return <p className="text-red-600 text-sm py-6 text-center">{error}</p>
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-sm font-semibold text-gray-700">
+          Deudas / Votantes — {filtrado.length.toLocaleString()} registros
+          {totalMonto > 0 && <span className="ml-2 text-red-600">Total: RD$ {totalMonto.toLocaleString()}</span>}
+        </h2>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-3">
+        <input
+          type="text"
+          placeholder="Buscar nombre, código, profesión…"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-blue-300"
+        />
+        <select
+          value={filtroRegional}
+          onChange={e => { setFiltroRegional(e.target.value); setFiltroNucleo('') }}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
+        >
+          <option value="">Todas las regionales</option>
+          {regionales.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select
+          value={filtroNucleo}
+          onChange={e => setFiltroNucleo(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
+        >
+          <option value="">Todos los núcleos</option>
+          {nucleos.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </div>
+
+      {/* Tabla */}
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs uppercase tracking-wide border-b-2 bg-gray-50" style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}>
+              <th className="text-left px-4 py-3 font-semibold">Nombre</th>
+              <th className="text-left px-4 py-3 font-semibold">Código</th>
+              <th className="text-left px-4 py-3 font-semibold">Profesión</th>
+              <th className="text-left px-4 py-3 font-semibold">Regional</th>
+              <th className="text-left px-4 py-3 font-semibold">Núcleo</th>
+              <th className="text-left px-4 py-3 font-semibold">Teléfono</th>
+              <th className="text-right px-4 py-3 font-semibold">Monto</th>
+              <th className="text-left px-4 py-3 font-semibold">Contacto</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 bg-white">
+            {filtrado.slice(0, 200).map((d, i) => (
+              <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-4 py-2.5 font-medium text-gray-900">{d.nombre}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{d.codigo}</td>
+                <td className="px-4 py-2.5 text-gray-600 text-xs">{d.profesion ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.regional ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.nucleo ?? '—'}</td>
+                <td className="px-4 py-2.5 text-gray-600">{d.telefono ?? '—'}</td>
+                <td className="px-4 py-2.5 text-right font-semibold text-red-600 tabular-nums">
+                  {d.monto != null ? `RD$ ${d.monto.toLocaleString()}` : '—'}
+                </td>
+                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.contacto ?? '—'}</td>
+              </tr>
+            ))}
+            {filtrado.length === 0 && (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
+            )}
+          </tbody>
+        </table>
+        {filtrado.length > 200 && (
+          <div className="px-4 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
+            Mostrando 200 de {filtrado.length.toLocaleString()} — afina los filtros
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal PanelSupervisor ─────────────────────────────────────
 
-const TABS = ['Monitoreo', 'Pool general', 'Recuperación', 'Montero'] as const
+const TABS = ['Monitoreo', 'Pool general', 'Recuperación', 'Montero', 'Deudas'] as const
 type Tab = typeof TABS[number]
 
 interface Props {
@@ -384,6 +515,7 @@ export default function PanelSupervisor({ userId, nombreSupervisor }: Props) {
                   {tab === 'Pool general' && '📞 '}
                   {tab === 'Recuperación' && '🔄 '}
                   {tab === 'Montero'      && '★ '}
+                  {tab === 'Deudas'       && '💳 '}
                   {tab}
                 </button>
               )
@@ -397,6 +529,7 @@ export default function PanelSupervisor({ userId, nombreSupervisor }: Props) {
           {tabActivo === 'Pool general' && <WorkspaceBase userId={userId} modo="pool" />}
           {tabActivo === 'Recuperación' && <TabRecuperacion userId={userId} />}
           {tabActivo === 'Montero'      && <TabMontero userId={userId} />}
+          {tabActivo === 'Deudas'       && <TabDeudas />}
         </div>
       </div>
     </div>

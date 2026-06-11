@@ -23,26 +23,40 @@ export interface Profile {
   created_at: string
 }
 
-export interface Miembro {
+/** Colegiado del padrón CODIA (tabla `padron`) */
+export interface Colegiado {
   id: number
-  matricula: string
+  codigo: string            // colegiatura única
+  apellido: string
   nombre: string
-  vencimiento: string | null
+  nombre_completo: string
   telefono: string | null
-  segmento_montero: boolean
-  telefono_revisar: boolean
+  celular: string | null
+  cedula: string | null
+  email: string | null
+  regional: string | null
+  provincia: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  nuevo_integrante: boolean
+  universidad: string | null
+  fecha_exequatur: string | null
+  exequatur: string | null
+  // Campos de gestión call center
   estado_gestion: EstadoGestion
   asignado_a: string | null
   bloqueado_hasta: string | null
   intentos_no_contesta: number
-  lote_manual: boolean
-  orden_manual: number | null
   created_at: string
 }
 
+/** @deprecated Alias de compatibilidad — usa Colegiado */
+export type Miembro = Colegiado
+
 export interface Llamada {
   id: number
-  miembro_id: number
+  colegiado_id: number
   operador_id: string
   fecha_hora: string
   resultado: ResultadoLlamada
@@ -51,21 +65,51 @@ export interface Llamada {
   callback_at: string | null
 }
 
-export interface EncuestaDia {
+/* ── Catálogos ── */
+
+export interface Regional {
   id: number
-  miembro_id: number | null
-  voto_confirmado: boolean
-  plancha_declarada: string | null
-  encuestador_id: string | null
-  fecha_hora: string
+  nombre: string
 }
 
-/* ── Tipos de retorno para RPCs del Sprint 3 ── */
+export interface Provincia {
+  id: number
+  nombre: string
+  regional_id: number | null
+}
+
+export interface Nucleo {
+  id: number
+  nombre: string
+  provincia_id: number | null
+}
+
+export interface Carrera {
+  id: number
+  nombre: string
+}
+
+/* ── Deudas / votantes ── */
+
+export interface DeudasVotante {
+  nombre: string
+  codigo: string
+  telefono: string | null
+  profesion: string | null
+  monto: number | null
+  contacto: string | null
+  nucleo: string | null
+  regional: string | null
+}
+
+/* ── Tipos de retorno para RPCs ── */
 
 export interface PanelOperadorRow {
   operador_id: string
   nombre: string
   rol: string
+  colegiado_activo: boolean
+  /** @deprecated usar colegiado_activo */
   miembro_activo: boolean
   llamadas_total: number
   efectivas_total: number
@@ -81,14 +125,18 @@ export interface PanelOperadorRow {
 export interface HistorialOperadorRow {
   llamada_id: number
   fecha_hora: string
+  colegiado_nombre: string
+  /** @deprecated usar colegiado_nombre */
   miembro_nombre: string
-  matricula: string
+  codigo: string
   resultado: ResultadoLlamada
   confirma_p1: boolean
   notas: string | null
 }
 
 export interface KpisGenerales {
+  total_colegiados: number
+  /** @deprecated usar total_colegiados */
   total_miembros: number
   pendientes: number
   en_proceso: number
@@ -97,26 +145,29 @@ export interface KpisGenerales {
   cerrados: number
   confirmados_p1: number
   tasa_confirmacion: number
-  montero_total: number
-  montero_contactados: number
+  nuevos_integrantes: number
+  pensionados: number
 }
 
 export interface RecuperacionRow {
   id: number
-  matricula: string
-  nombre: string
+  codigo: string
+  nombre_completo: string
   telefono: string | null
+  celular: string | null
   intentos: number
-  telefono_revisar: boolean
+  regional: string | null
+  nucleo: string | null
 }
 
 export interface MonteroRow {
   id: number
-  matricula: string
-  nombre: string
+  codigo: string
+  nombre_completo: string
   telefono: string | null
   estado: string
   confirmado_p1: boolean
+  regional: string | null
 }
 
 export interface MetricaRegion {
@@ -130,24 +181,18 @@ export interface MetricaRegion {
   confirmados_plancha1: number
 }
 
-export interface MetricaDistrito {
-  distrito: string
-  total: number
-  pendientes: number
-  en_proceso: number
-  contactados: number
-  sin_comunicacion: number
-  cerrados: number
-  confirmados_plancha1: number
-}
-
 export interface PadronVivoRow {
   id: number
-  region: string
-  distrito: string
-  matricula: string
-  nombre: string
+  regional: string
+  provincia: string | null
+  nucleo: string | null
+  codigo: string
+  nombre_completo: string
   telefono: string | null
+  celular: string | null
+  carrera: string | null
+  pensionado: boolean
+  nuevo_integrante: boolean
   estado_gestion: EstadoGestion
   asignado_a: string | null
   ultima_llamada: string | null
@@ -158,12 +203,11 @@ export interface PadronVivoRow {
 
 export interface LlamadaPresidente {
   id: number
-  miembro_id: number
+  colegiado_id: number
   operador_id: string
   fecha_hora: string
   resultado: ResultadoLlamada
   confirma_plancha1: boolean
-  motivo: string | null
   notas: string | null
   operador?: { nombre: string } | null
 }

@@ -119,8 +119,8 @@ function ModalDetalle({
           style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}
         >
           <div>
-            <p className="font-bold text-lg leading-tight">{miembro.nombre}</p>
-            <p className="text-blue-200 text-sm">Matrícula {miembro.matricula} · {miembro.distrito}</p>
+            <p className="font-bold text-lg leading-tight">{miembro.nombre_completo}</p>
+            <p className="text-blue-200 text-sm">Colegiatura {miembro.codigo} · {miembro.regional}{miembro.nucleo ? ` · ${miembro.nucleo}` : ''}</p>
           </div>
           <button
             onClick={onCerrar}
@@ -134,7 +134,11 @@ function ModalDetalle({
         <div className="px-6 py-4 border-b border-gray-100 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
           <div>
             <p className="text-xs text-gray-400 uppercase font-semibold">Teléfono</p>
-            <p className="font-medium text-gray-800">{miembro.telefono ?? '—'}</p>
+            <p className="font-medium text-gray-800">{miembro.telefono ?? miembro.celular ?? '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 uppercase font-semibold">Profesión</p>
+            <p className="font-medium text-gray-800 text-xs">{miembro.carrera ?? '—'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase font-semibold">Estado</p>
@@ -207,7 +211,7 @@ function ModalDetalle({
 
 function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron: PadronVivoRow[] }) {
   const [desglose, setDesglose] = useState<{ distrito: string; estado: EstadoGestion; label: string } | null>(null)
-  const visibles = metricas.filter(m => !esMontero(m.distrito))
+  const visibles = metricas
 
   const total: MetricaDistrito = visibles.reduce(
     (acc, m) => ({
@@ -249,7 +253,7 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
         <h2 className="text-sm font-semibold text-gray-700 mb-4">
           Distribución general por estado
           <span className="ml-2 text-xs font-normal text-gray-400">
-            — {total.total.toLocaleString()} miembros en total
+            — {total.total.toLocaleString()} colegiados en total
           </span>
         </h2>
         {dataDona.length > 0 ? (
@@ -325,7 +329,7 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
               }}
             >
               <p className="font-bold text-base">{m.distrito}</p>
-              <p className="font-semibold tabular-nums">{m.total.toLocaleString()} miembros</p>
+              <p className="font-semibold tabular-nums">{m.total.toLocaleString()} colegiados</p>
             </div>
 
             {/* Confirmados Plancha 1 destacado */}
@@ -399,7 +403,7 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
       {/* Panel de desglose por estado */}
       {desglose && (() => {
         const filtradas = padron.filter(
-          f => !esMontero(f.distrito) && f.distrito === desglose.distrito && f.estado_gestion === desglose.estado
+          f => f.regional === desglose.distrito && f.estado_gestion === desglose.estado
         )
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -433,8 +437,8 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
                 <tbody className="divide-y divide-gray-50">
                   {filtradas.map(f => (
                     <tr key={f.id} className="hover:bg-blue-50/30 transition-colors">
-                      <td className="px-5 py-2.5 font-medium text-gray-900">{f.nombre}</td>
-                      <td className="px-5 py-2.5 text-gray-500 hidden sm:table-cell">{f.telefono ?? '—'}</td>
+                      <td className="px-5 py-2.5 font-medium text-gray-900">{f.nombre_completo}</td>
+                      <td className="px-5 py-2.5 text-gray-500 hidden sm:table-cell">{f.telefono ?? f.celular ?? '—'}</td>
                       <td className="px-5 py-2.5 text-gray-500 hidden md:table-cell">{f.asignado_a ?? '—'}</td>
                       <td className="px-5 py-2.5 text-gray-400 text-xs max-w-[220px] truncate hidden lg:table-cell">{f.ultima_nota ?? '—'}</td>
                     </tr>
@@ -466,15 +470,14 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
   const [soloPendientes, setSoloPendientes] = useState(false)
   const [miembroSelec, setMiembroSelec] = useState<PadronVivoRow | null>(null)
 
-  const distritos = Array.from(new Set(filas.map(f => f.distrito))).filter(d => !esMontero(d)).sort()
+  const distritos = Array.from(new Set(filas.map(f => f.regional).filter(Boolean))).sort() as string[]
 
   const filtradas = filas.filter(f => {
-    if (esMontero(f.distrito)) return false
     if (soloPendientes) return f.estado_gestion === 'pendiente'
-    if (filtroDistrito && f.distrito !== filtroDistrito) return false
+    if (filtroDistrito && f.regional !== filtroDistrito) return false
     if (filtroEstado && f.estado_gestion !== filtroEstado) return false
     if (filtroColab && f.asignado_a !== filtroColab) return false
-    if (buscar && !f.nombre.toLowerCase().includes(buscar.toLowerCase())) return false
+    if (buscar && !f.nombre_completo.toLowerCase().includes(buscar.toLowerCase())) return false
     return true
   })
 
@@ -493,7 +496,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
                 : { backgroundColor: '#f1f5f9', color: 'var(--color-marino)' }
             }
           >
-            ⏳ Pendientes ({filas.filter(f => !esMontero(f.distrito) && f.estado_gestion === 'pendiente').length})
+            ⏳ Pendientes ({filas.filter(f => f.estado_gestion === 'pendiente').length})
           </button>
 
           <input
@@ -509,7 +512,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
             onChange={e => { setFiltroDistrito(e.target.value); setSoloPendientes(false) }}
             className="text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
           >
-            <option value="">Todos los distritos</option>
+            <option value="">Todas las regionales</option>
             {distritos.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
 
@@ -533,7 +536,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
             {colaboradoras.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <p className="text-xs text-gray-400 mt-2">{filtradas.length.toLocaleString()} miembros mostrados</p>
+        <p className="text-xs text-gray-400 mt-2">{filtradas.length.toLocaleString()} colegiados mostrados</p>
       </div>
 
       {/* Tabla */}
@@ -559,8 +562,8 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
                   onClick={() => setMiembroSelec(f)}
                   className="hover:bg-blue-50/40 cursor-pointer transition-colors"
                 >
-                  <td className="px-5 py-3 font-medium text-gray-900">{f.nombre}</td>
-                  <td className="px-5 py-3 text-gray-500 hidden sm:table-cell">{f.telefono ?? '—'}</td>
+                  <td className="px-5 py-3 font-medium text-gray-900">{f.nombre_completo}</td>
+                  <td className="px-5 py-3 text-gray-500 hidden sm:table-cell">{f.telefono ?? f.celular ?? '—'}</td>
                   <td className="px-5 py-3"><EstadoBadge estado={f.estado_gestion} /></td>
                   <td className="px-5 py-3 text-gray-500 hidden md:table-cell">{f.asignado_a ?? '—'}</td>
                   <td className="px-5 py-3 text-gray-400 text-xs max-w-[220px] truncate hidden lg:table-cell">
@@ -601,7 +604,7 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
 // ─── Tab: Vista de asignación ─────────────────────────────────────────────────
 
 function TabAsignacion({ filas }: { filas: PadronVivoRow[] }) {
-  const visibles = filas.filter(f => !esMontero(f.distrito))
+  const visibles = filas
 
   // Agrupar por colaboradora
   const mapa = new Map<string, PadronVivoRow[]>()
@@ -708,7 +711,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
   const cargar = useCallback(async () => {
     const [resMetricas, resPadron] = await Promise.all([
       supabase.from('vista_metricas_distrito').select('*'),
-      supabase.from('vista_padron_vivo').select('*').order('nombre').limit(5000),
+      supabase.from('vista_padron_vivo').select('*').order('nombre_completo').limit(5000),
     ])
 
     if (resMetricas.error || resPadron.error) {
@@ -737,7 +740,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
     const canal = supabase
       .channel('presidente-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'llamadas' }, () => cargar())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'miembros' }, () => cargar())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'padron' }, () => cargar())
       .subscribe()
     return () => { supabase.removeChannel(canal) }
   }, [supabase, cargar])
