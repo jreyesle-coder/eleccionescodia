@@ -780,10 +780,6 @@ function TabBuscar() {
 
   async function guardar() {
     if (!seleccionado || !formResultado) return
-    if (formResultado === 'efectiva' && confirmaP1 === null) {
-      setErrorAccion('Indica si confirmó apoyo a la Plancha 1.')
-      return
-    }
     setGuardando(true)
     setErrorAccion(null)
     const { error } = await supabase.rpc('registrar_llamada', {

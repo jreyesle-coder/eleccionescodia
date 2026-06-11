@@ -201,5 +201,17 @@ export interface LlamadaPresidente {
   resultado: ResultadoLlamada
   confirma_plancha1: boolean
   notas: string | null
+  motivo?: string | null
   operador?: { nombre: string } | null
+}
+
+export interface MetricaDistrito {
+  distrito: string
+  total: number
+  pendientes: number
+  en_proceso: number
+  contactados: number
+  sin_comunicacion: number
+  cerrados: number
+  confirmados_plancha1: number
 }
