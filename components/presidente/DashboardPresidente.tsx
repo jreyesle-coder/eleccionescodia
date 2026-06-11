@@ -53,7 +53,7 @@ const ETIQUETA_RESULTADO: Record<string, string> = {
   rechaza:              'Rechaza',
 }
 
-type Tab = 'resumen' | 'padron' | 'nucleos'
+type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar'
 
 
 function fmt(d: string | null) {
@@ -785,6 +785,110 @@ function TabNucleos({ filas }: { filas: PadronVivoRow[] }) {
   )
 }
 
+// ─── Tab: Simpatizantes por regularizar ──────────────────────────────────────
+
+interface SimpatizanteRow {
+  id: number
+  codigo: number
+  nombre_completo: string
+  cedula: string | null
+  telefono: string | null
+  celular: string | null
+  regional: string | null
+  provincia: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  tiene_deuda: boolean
+  voto_verificate_at: string | null
+}
+
+function TabRegularizar() {
+  const supabase = createClient()
+  const [lista, setLista] = useState<SimpatizanteRow[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [filtro, setFiltro] = useState('')
+
+  useEffect(() => {
+    supabase.rpc('simpatizantes_por_regularizar').then(({ data }) => {
+      setLista((data as SimpatizanteRow[]) ?? [])
+      setCargando(false)
+    })
+  }, [supabase])
+
+  const filtrados = lista.filter(r => {
+    const q = filtro.toLowerCase()
+    return !q || r.nombre_completo.toLowerCase().includes(q)
+      || String(r.codigo).includes(q)
+      || (r.cedula ?? '').toLowerCase().includes(q)
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4">
+        <p className="text-sm font-bold text-green-800">⭐ Simpatizantes que necesitan regularizarse</p>
+        <p className="text-xs text-green-700 mt-0.5">
+          Estos colegiados marcaron preferencia por George Richardson en el portal de Verifícate,
+          pero tienen deuda o son pensionados. Contáctalos para regularizar su situación antes del 12 de junio.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <input
+          type="text"
+          placeholder="Buscar por nombre, colegiatura o cédula…"
+          value={filtro}
+          onChange={e => setFiltro(e.target.value)}
+          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+          style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+        />
+      </div>
+
+      {cargando ? (
+        <p className="text-center text-gray-400 py-8">Cargando…</p>
+      ) : filtrados.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-12 text-center">
+          <p className="text-gray-400 text-sm">{filtro ? 'Sin resultados para esa búsqueda.' : 'No hay simpatizantes pendientes de regularizar.'}</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-700">{filtrados.length} colegiado{filtrados.length !== 1 ? 's' : ''}</p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {filtrados.map(r => (
+              <div key={r.id} className="px-5 py-4 space-y-1.5">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">{r.nombre_completo}</p>
+                    <p className="text-xs text-gray-400">Colegiatura {r.codigo}{r.cedula && <> · CI: {r.cedula}</>}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {r.pensionado && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
+                    )}
+                    {r.tiene_deuda && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Deuda pendiente</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                  {r.carrera  && <span>Profesión: <span className="font-medium text-gray-700">{r.carrera}</span></span>}
+                  {r.regional && <span>Regional: <span className="font-medium text-gray-700">{r.regional}</span></span>}
+                  {r.nucleo   && <span>Núcleo: <span className="font-medium text-gray-700">{r.nucleo}</span></span>}
+                  {(r.telefono || r.celular) && (
+                    <span>Tel: <span className="font-medium text-gray-700">{r.celular ?? r.telefono}</span></span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 interface Props {
@@ -843,9 +947,10 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
   ).sort()
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'resumen', label: 'Resumen por distrito' },
-    { id: 'padron',  label: 'Padrón en vivo' },
-    { id: 'nucleos', label: 'Vista por Núcleos' },
+    { id: 'resumen',     label: 'Resumen por distrito' },
+    { id: 'padron',      label: 'Padrón en vivo' },
+    { id: 'nucleos',     label: 'Vista por Núcleos' },
+    { id: 'regularizar', label: '⭐ Por regularizar' },
   ]
 
   if (cargando) {
@@ -925,9 +1030,10 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         </div>
 
         {/* Contenido del tab activo */}
-        {tab === 'resumen' && <TabResumen metricas={metricas} padron={padron} />}
-        {tab === 'padron'  && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
-        {tab === 'nucleos' && <TabNucleos filas={padron} />}
+        {tab === 'resumen'     && <TabResumen metricas={metricas} padron={padron} />}
+        {tab === 'padron'      && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
+        {tab === 'nucleos'     && <TabNucleos filas={padron} />}
+        {tab === 'regularizar' && <TabRegularizar />}
       </div>
     </div>
   )
