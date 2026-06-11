@@ -3,10 +3,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Verifícate para Votar — CODIA 2026',
-  description: 'Consulta tu habilitación para votar en las elecciones CODIA 2026. Plancha #1 · George Richardson Presidente.',
+  description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
   openGraph: {
     title: 'Verifícate para Votar — CODIA 2026',
-    description: '12 de junio, vota Plancha 1. Consulta si estás habilitado para votar.',
+    description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
     images: [
       {
         url: '/Logo 4.jpg',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Verifícate para Votar — CODIA 2026',
-    description: '12 de junio, vota Plancha 1.',
+    description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
     images: ['/Logo 4.jpg'],
   },
 }
