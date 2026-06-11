@@ -207,9 +207,6 @@ export default function BuscadorPublico() {
                           {r.pensionado && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
                           )}
-                          {r.tiene_deuda && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Tiene deuda pendiente</span>
-                          )}
                           {r.nuevo_integrante && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Pendiente de certificado</span>
                           )}
@@ -223,11 +220,10 @@ export default function BuscadorPublico() {
                         {r.nucleo && <span>Núcleo: <span className="font-medium text-gray-700">{r.nucleo}</span></span>}
                       </div>
 
-                      {/* Botón marcar preferencia */}
+                      {/* Nota no hábil */}
                       {!habil && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
-                          <p className="font-semibold">Debes regularizar tu situación para poder votar.</p>
-                          <p>Pasa por las oficinas del CODIA.</p>
+                        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
+                          <p>Favor dirigirse a la oficina del CODIA más cercana.</p>
                         </div>
                       )}
                       <button
