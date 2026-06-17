@@ -53,7 +53,7 @@ const ETIQUETA_RESULTADO: Record<string, string> = {
   rechaza:              'Rechaza',
 }
 
-type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar'
+type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar' | 'confirmados' | 'dia_eleccion'
 
 
 function fmt(d: string | null) {
@@ -912,6 +912,237 @@ function TabRegularizar() {
   )
 }
 
+// ─── Tab: Confirmados por dirigente ──────────────────────────────────────────
+
+interface ConfirmadoResumen {
+  dirigente: string
+  total: number
+  favorables: number
+  indecisos: number
+  en_contra: number
+  ultima_confirmacion: string | null
+}
+
+function TabConfirmadosPresidente() {
+  const supabase = createClient()
+  const [resumen, setResumen]   = useState<ConfirmadoResumen[]>([])
+  const [totalVerif, setTotalVerif] = useState(0)
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('v_confirmados_por_dirigente').select('*'),
+      supabase.from('padron').select('codigo', { count: 'exact', head: true })
+        .eq('simpatiza_verificate', true),
+    ]).then(([{ data }, { count }]) => {
+      setResumen((data as ConfirmadoResumen[]) ?? [])
+      setTotalVerif(count ?? 0)
+      setCargando(false)
+    })
+  }, [supabase])
+
+  const totalConfirmados = resumen.reduce((s, r) => s + r.total, 0)
+  const totalFavorables  = resumen.reduce((s, r) => s + r.favorables, 0) + totalVerif
+
+  if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
+
+  return (
+    <div className="space-y-5">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {[
+          { titulo: 'Total confirmados (dirigentes)', valor: totalConfirmados, color: 'var(--color-marino)' },
+          { titulo: 'Via Verificate (simpatizantes)', valor: totalVerif, color: '#16a34a' },
+          { titulo: 'Favorables totales', valor: totalFavorables, color: '#ca8a04' },
+        ].map(({ titulo, valor, color }) => (
+          <div key={titulo} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4" style={{ borderTopColor: color }}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{titulo}</p>
+            <p className="text-3xl font-black mt-1 tabular-nums" style={{ color }}>{valor.toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla por dirigente */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <p className="text-sm font-semibold text-gray-700">Por dirigente</p>
+        </div>
+        {resumen.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-10">Sin confirmaciones de dirigentes todavía.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-gray-500 bg-gray-50 border-b">
+                  <th className="text-left px-4 py-3">Dirigente</th>
+                  <th className="text-right px-4 py-3">Total</th>
+                  <th className="text-right px-4 py-3 text-green-700">Favorables</th>
+                  <th className="text-right px-4 py-3 text-yellow-700">Indecisos</th>
+                  <th className="text-right px-4 py-3 text-red-600">En contra</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {resumen.map(r => (
+                  <tr key={r.dirigente} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">{r.dirigente}</td>
+                    <td className="px-4 py-3 text-right font-bold tabular-nums">{r.total}</td>
+                    <td className="px-4 py-3 text-right text-green-700 font-semibold tabular-nums">{r.favorables}</td>
+                    <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">{r.indecisos}</td>
+                    <td className="px-4 py-3 text-right text-red-600 tabular-nums">{r.en_contra}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 font-bold">
+                  <td className="px-4 py-3 text-gray-700">Total</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{totalConfirmados}</td>
+                  <td className="px-4 py-3 text-right text-green-700 tabular-nums">
+                    {resumen.reduce((s, r) => s + r.favorables, 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">
+                    {resumen.reduce((s, r) => s + r.indecisos, 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-red-600 tabular-nums">
+                    {resumen.reduce((s, r) => s + r.en_contra, 0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Día de Elección (tiempo real) ──────────────────────────────────────
+
+interface AlertaDoble {
+  codigo: string
+  nombre_completo: string
+  mesas: number
+  lista_mesas: string
+}
+
+interface AlertaNoHab {
+  codigo: string
+  nombre_completo: string
+  mesa: string | null
+  registrado_por: string | null
+  created_at: string
+}
+
+function TabDiaEleccion() {
+  const supabase = createClient()
+  const [totalVotos, setTotalVotos]       = useState(0)
+  const [porMesa, setPorMesa]             = useState<Record<string, number>>({})
+  const [alertasDoble, setAlertasDoble]   = useState<AlertaDoble[]>([])
+  const [alertasNoHab, setAlertasNoHab]   = useState<AlertaNoHab[]>([])
+  const [cargando, setCargando]           = useState(true)
+
+  const cargar = useCallback(async () => {
+    const [resConteo, resDoble, resNoHab] = await Promise.all([
+      supabase.rpc('conteo_votos_dia'),
+      supabase.from('v_alerta_doble_voto').select('*'),
+      supabase.from('v_alerta_no_habilitado').select('*').order('created_at', { ascending: false }),
+    ])
+    const c = Array.isArray(resConteo.data) ? resConteo.data[0] : resConteo.data
+    if (c) {
+      setTotalVotos(c.total_votos ?? 0)
+      setPorMesa((c.por_mesa as Record<string, number>) ?? {})
+    }
+    setAlertasDoble((resDoble.data as AlertaDoble[]) ?? [])
+    setAlertasNoHab((resNoHab.data as AlertaNoHab[]) ?? [])
+    setCargando(false)
+  }, [supabase])
+
+  useEffect(() => {
+    cargar()
+    // Realtime en votos_dia
+    const canal = supabase
+      .channel('dia-eleccion-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votos_dia' }, () => cargar())
+      .subscribe()
+    return () => { supabase.removeChannel(canal) }
+  }, [supabase, cargar])
+
+  if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
+
+  const mesasSorted = Object.entries(porMesa).sort(([a], [b]) => a.localeCompare(b))
+
+  return (
+    <div className="space-y-5">
+      {/* Contador total */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center border-t-4"
+        style={{ borderTopColor: 'var(--color-marino)' }}>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Votos registrados</p>
+        <p className="text-7xl font-black mt-2 tabular-nums" style={{ color: 'var(--color-marino)' }}>
+          {totalVotos.toLocaleString()}
+        </p>
+      </div>
+
+      {/* Votos por mesa */}
+      {mesasSorted.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-700">Por mesa</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-0 divide-x divide-y divide-gray-100">
+            {mesasSorted.map(([mesa, cnt]) => (
+              <div key={mesa} className="p-4 text-center">
+                <p className="text-xs text-gray-400 font-semibold">Mesa {mesa}</p>
+                <p className="text-3xl font-black tabular-nums" style={{ color: 'var(--color-marino)' }}>{cnt}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Alertas doble voto */}
+      {alertasDoble.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-red-200 bg-red-100">
+            <p className="text-sm font-bold text-red-800">⚠ Alerta: Doble voto ({alertasDoble.length})</p>
+          </div>
+          <div className="divide-y divide-red-100">
+            {alertasDoble.map(a => (
+              <div key={a.codigo} className="px-5 py-3">
+                <p className="text-sm font-semibold text-red-900">{a.nombre_completo}</p>
+                <p className="text-xs text-red-700">Colegiatura {a.codigo} · Mesas: {a.lista_mesas}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Alertas no habilitado */}
+      {alertasNoHab.length > 0 && (
+        <div className="bg-orange-50 border border-orange-300 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-orange-200 bg-orange-100">
+            <p className="text-sm font-bold text-orange-800">⚠ Alerta: Votantes no habilitados ({alertasNoHab.length})</p>
+          </div>
+          <div className="divide-y divide-orange-100">
+            {alertasNoHab.map((a, i) => (
+              <div key={`${a.codigo}-${i}`} className="px-5 py-3">
+                <p className="text-sm font-semibold text-orange-900">{a.nombre_completo}</p>
+                <p className="text-xs text-orange-700">
+                  Colegiatura {a.codigo}{a.mesa && ` · Mesa ${a.mesa}`}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {alertasDoble.length === 0 && alertasNoHab.length === 0 && totalVotos > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4 text-center">
+          <p className="text-green-800 font-semibold text-sm">Sin alertas — todo en orden</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 interface Props {
@@ -970,10 +1201,12 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
   ).sort()
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'resumen',     label: 'Resumen por distrito' },
-    { id: 'padron',      label: 'Padrón en vivo' },
-    { id: 'nucleos',     label: 'Vista por Núcleos' },
-    { id: 'regularizar', label: '⭐ Por regularizar' },
+    { id: 'resumen',      label: 'Resumen por distrito' },
+    { id: 'padron',       label: 'Padrón en vivo' },
+    { id: 'nucleos',      label: 'Vista por Núcleos' },
+    { id: 'regularizar',  label: '⭐ Por regularizar' },
+    { id: 'confirmados',  label: '✓ Confirmados' },
+    { id: 'dia_eleccion', label: '🗳 Día de Elección' },
   ]
 
   if (cargando) {
@@ -1053,10 +1286,12 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         </div>
 
         {/* Contenido del tab activo */}
-        {tab === 'resumen'     && <TabResumen metricas={metricas} padron={padron} />}
-        {tab === 'padron'      && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
-        {tab === 'nucleos'     && <TabNucleos />}
-        {tab === 'regularizar' && <TabRegularizar />}
+        {tab === 'resumen'      && <TabResumen metricas={metricas} padron={padron} />}
+        {tab === 'padron'       && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
+        {tab === 'nucleos'      && <TabNucleos />}
+        {tab === 'regularizar'  && <TabRegularizar />}
+        {tab === 'confirmados'  && <TabConfirmadosPresidente />}
+        {tab === 'dia_eleccion' && <TabDiaEleccion />}
       </div>
     </div>
   )

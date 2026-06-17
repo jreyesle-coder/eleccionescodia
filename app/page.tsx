@@ -7,10 +7,14 @@ export default async function RootPage() {
 
   if (session) {
     const { rol } = session
-    if (rol === 'operador')   redirect('/operador')
-    if (rol === 'supervisor') redirect('/supervisor')
-    if (rol === 'gerente')    redirect('/gerente')
-    if (rol === 'presidente') redirect('/presidente')
+    if (rol === 'operador')             redirect('/operador')
+    if (rol === 'supervisor')           redirect('/supervisor')
+    if (rol === 'gerente')              redirect('/gerente')
+    if (rol === 'presidente')           redirect('/presidente')
+    if (rol === 'dirigente')            redirect('/dirigente')
+    if (rol === 'colaborador')          redirect('/dirigente')
+    if (rol === 'delegado')             redirect('/delegado')
+    if (rol === 'suplente')             redirect('/delegado')
   }
 
   return (

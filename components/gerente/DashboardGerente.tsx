@@ -1029,7 +1029,7 @@ function TabBuscar() {
 
 // ─── Tipos de tab ─────────────────────────────────────────────────────────────
 
-type Tab = 'resumen' | 'region' | 'buscar' | 'deudas' | 'regularizar'
+type Tab = 'resumen' | 'region' | 'buscar' | 'deudas' | 'regularizar' | 'confirmados'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -1094,6 +1094,7 @@ export default function DashboardGerente({ nombreGerente, rol }: Props) {
     { id: 'buscar',      label: '🔍 Buscar y corregir' },
     { id: 'deudas',      label: '💳 Deudas' },
     { id: 'regularizar', label: '⭐ Por regularizar' },
+    { id: 'confirmados', label: '✓ Confirmados' },
   ]
 
   if (cargando) {
@@ -1186,6 +1187,9 @@ export default function DashboardGerente({ nombreGerente, rol }: Props) {
         )}
         {tab === 'regularizar' && (
           <TabRegularizarGerente />
+        )}
+        {tab === 'confirmados' && (
+          <TabConfirmadosGerente />
         )}
       </div>
     </div>
@@ -1397,6 +1401,93 @@ function TabRegularizarGerente() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Tab Confirmados Gerente (Fase 2) ─────────────────────────────────────────
+
+interface ConfirmadoResumenG {
+  dirigente: string
+  total: number
+  favorables: number
+  indecisos: number
+  en_contra: number
+  ultima_confirmacion: string | null
+}
+
+function TabConfirmadosGerente() {
+  const supabase = createClient()
+  const [resumen, setResumen] = useState<ConfirmadoResumenG[]>([])
+  const [totalVerif, setTotalVerif] = useState(0)
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('v_confirmados_por_dirigente').select('*'),
+      supabase.from('padron').select('codigo', { count: 'exact', head: true })
+        .eq('simpatiza_verificate', true),
+    ]).then(([{ data }, { count }]) => {
+      setResumen((data as ConfirmadoResumenG[]) ?? [])
+      setTotalVerif(count ?? 0)
+      setCargando(false)
+    })
+  }, [supabase])
+
+  const totalConf = resumen.reduce((s, r) => s + r.total, 0)
+
+  if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {[
+          { titulo: 'Confirmados por dirigentes', valor: totalConf, color: 'var(--color-marino)' },
+          { titulo: 'Via Verificate', valor: totalVerif, color: '#16a34a' },
+          { titulo: 'Total combinado', valor: totalConf + totalVerif, color: '#ca8a04' },
+        ].map(({ titulo, valor, color }) => (
+          <div key={titulo} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4" style={{ borderTopColor: color }}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{titulo}</p>
+            <p className="text-3xl font-black mt-1 tabular-nums" style={{ color }}>{valor.toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+
+      {resumen.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-10 text-center">
+          <p className="text-gray-400 text-sm">Sin confirmaciones de dirigentes todavía.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-700">Por dirigente</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-wide text-gray-500 bg-gray-50 border-b">
+                  <th className="text-left px-4 py-3">Dirigente</th>
+                  <th className="text-right px-4 py-3">Total</th>
+                  <th className="text-right px-4 py-3 text-green-700">Favorables</th>
+                  <th className="text-right px-4 py-3 text-yellow-700">Indecisos</th>
+                  <th className="text-right px-4 py-3 text-red-600">En contra</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {resumen.map(r => (
+                  <tr key={r.dirigente} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{r.dirigente}</td>
+                    <td className="px-4 py-3 text-right font-bold tabular-nums">{r.total}</td>
+                    <td className="px-4 py-3 text-right text-green-700 tabular-nums">{r.favorables}</td>
+                    <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">{r.indecisos}</td>
+                    <td className="px-4 py-3 text-right text-red-600 tabular-nums">{r.en_contra}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
