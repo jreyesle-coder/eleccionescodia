@@ -130,12 +130,11 @@ create policy "deuda_hist_insert" on public.deuda_historial
   for insert to authenticated with check (true);
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- 3. VISTAS (antes de las funciones que las referencian)
+-- 3. VISTAS (DROP explícito antes de cada una para permitir cambio de tipos)
 -- ══════════════════════════════════════════════════════════════════════════════
 
--- Doble voto: mismo colegiado en más de una mesa
--- votos_dia.codigo INTEGER, padron.codigo INTEGER → comparación directa
-create or replace view public.v_alerta_doble_voto as
+drop view if exists public.v_alerta_doble_voto cascade;
+create view public.v_alerta_doble_voto as
   select
     v.codigo,
     ( select nombre_completo from public.padron p2
@@ -146,8 +145,8 @@ create or replace view public.v_alerta_doble_voto as
   group by v.codigo
   having count(*) > 1;
 
--- Votante registrado pero no habilitado
-create or replace view public.v_alerta_no_habilitado as
+drop view if exists public.v_alerta_no_habilitado cascade;
+create view public.v_alerta_no_habilitado as
   select
     v.codigo,
     ( select nombre_completo from public.padron p2
@@ -158,8 +157,8 @@ create or replace view public.v_alerta_no_habilitado as
   from public.votos_dia v
   where v.estaba_habilitado = false;
 
--- Confirmados por dirigente (agrupado)
-create or replace view public.v_confirmados_por_dirigente as
+drop view if exists public.v_confirmados_por_dirigente cascade;
+create view public.v_confirmados_por_dirigente as
   select
     confirmado_por                                                 as dirigente,
     count(*)                                                       as total,
@@ -172,8 +171,8 @@ create or replace view public.v_confirmados_por_dirigente as
   group by confirmado_por
   order by total desc;
 
--- Métricas por regional (para gerente/presidente)
-create or replace view public.vista_metricas_region as
+drop view if exists public.vista_metricas_region cascade;
+create view public.vista_metricas_region as
   select
     coalesce(p.regional, 'Sin regional')                            as region,
     count(*)                                                        as total,
@@ -190,8 +189,8 @@ create or replace view public.vista_metricas_region as
   group by coalesce(p.regional, 'Sin regional')
   order by total desc;
 
--- Métricas por distrito (alias de regional para compatibilidad con DashboardPresidente)
-create or replace view public.vista_metricas_distrito as
+drop view if exists public.vista_metricas_distrito cascade;
+create view public.vista_metricas_distrito as
   select
     coalesce(p.regional, 'Sin regional')                            as distrito,
     count(*)                                                        as total,
@@ -208,15 +207,14 @@ create or replace view public.vista_metricas_distrito as
   group by coalesce(p.regional, 'Sin regional')
   order by total desc;
 
--- Padrón en vivo con último resultado de llamada
--- padron.asignado_a UUID, profiles.id UUID → join directo sin cast
-create or replace view public.vista_padron_vivo as
+drop view if exists public.vista_padron_vivo cascade;
+create view public.vista_padron_vivo as
   select
     p.id,
     coalesce(p.regional, 'Sin regional') as regional,
     p.provincia,
     p.nucleo,
-    p.codigo::text          as codigo,   -- INTEGER → TEXT para el frontend
+    p.codigo::text          as codigo,
     p.nombre_completo,
     p.telefono,
     p.celular,
@@ -230,7 +228,7 @@ create or replace view public.vista_padron_vivo as
     l.confirma_plancha1     as ultimo_confirma,
     l.notas                 as ultima_nota
   from public.padron p
-  left join public.profiles pr on pr.id = p.asignado_a   -- UUID = UUID ✓
+  left join public.profiles pr on pr.id = p.asignado_a
   left join lateral (
     select fecha_hora, resultado, confirma_plancha1, notas
       from public.llamadas
