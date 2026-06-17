@@ -36,7 +36,7 @@ alter table public.profiles
 -- Tabla de historial de cambios de deuda
 create table if not exists public.deuda_historial (
   id              bigserial primary key,
-  codigo          text,            -- guardado como texto (histórico legible)
+  codigo          integer,         -- INTEGER confirmado en BD
   monto_anterior  integer,
   monto_nuevo     integer,
   actualizado_por text,
@@ -46,7 +46,7 @@ create table if not exists public.deuda_historial (
 -- Tabla de deudas de votantes importadas
 create table if not exists public.deudas_votantes (
   nombre    text,
-  codigo    text,                  -- TEXT porque viene de importaciones
+  codigo    integer,               -- INTEGER confirmado en BD
   telefono  text,
   profesion text,
   monto     integer,
@@ -380,7 +380,7 @@ begin
         ( coalesce(p.monto_deuda, 0) > 0
           or exists (
             select 1 from public.deudas_votantes d
-             where d.codigo = p.codigo::text    -- deudas_votantes.codigo es TEXT
+             where d.codigo = p.codigo          -- ambos INTEGER ✓
           )
         ) as tiene_deuda
       from public.padron p
@@ -398,7 +398,7 @@ begin
         p.regional, p.provincia, p.nucleo, p.carrera,
         p.pensionado, p.nuevo_integrante,
         ( coalesce(p.monto_deuda, 0) > 0
-          or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo::text)
+          or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo)
         ) as tiene_deuda
       from public.padron p
       where p.cedula ilike '%' || q || '%'
@@ -421,7 +421,7 @@ begin
       p.regional, p.provincia, p.nucleo, p.carrera,
       p.pensionado, p.nuevo_integrante,
       ( coalesce(p.monto_deuda, 0) > 0
-        or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo::text)
+        or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo)
       ) as tiene_deuda
     from public.padron p
     where true
