@@ -5,6 +5,11 @@
 -- 2. stats_nucleos: agrega confirmados por nucleo/carrera.
 -- 3. listar_confirmados_nucleo: drilldown de confirmados por nucleo+carrera.
 -- 4. confirmados_callcenter_count: KPI de confirmados via call center.
+--
+-- TIPOS CONFIRMADOS:
+--   padron.codigo            INTEGER
+--   colegiado_carreras.codigo INTEGER
+--   padron.id                BIGINT
 -- ════════════════════════════════════════════════════════════════════════
 
 -- ── 1. simpatizantes_por_regularizar con deuda ───────────────────────────────
@@ -61,8 +66,8 @@ language sql security definer stable set search_path = public as $$
       'supervisor','gerente','presidente','dirigente','colaborador'
     )
   order by
-    coalesce(p.monto_deuda, 0) asc,   -- menor deuda primero
-    p.pensionado asc,                   -- pensionados al final
+    coalesce(p.monto_deuda, 0) asc,
+    p.pensionado asc,
     p.nombre_completo asc;
 $$;
 grant execute on function public.simpatizantes_por_regularizar() to authenticated;
@@ -72,10 +77,10 @@ grant execute on function public.simpatizantes_por_regularizar() to authenticate
 drop function if exists public.stats_nucleos();
 create or replace function public.stats_nucleos()
 returns table (
-  nucleo              text,
-  carrera_nombre      text,
-  total               bigint,
-  confirmados         bigint,
+  nucleo                 text,
+  carrera_nombre         text,
+  total                  bigint,
+  confirmados            bigint,
   confirmados_callcenter bigint,
   confirmados_verificate bigint,
   confirmados_dirigente  bigint
@@ -83,51 +88,54 @@ returns table (
 language sql security definer stable set search_path = public as $$
   select
     c.nucleo,
-    c.nombre                      as carrera_nombre,
-    count(distinct cc.codigo)     as total,
-    -- Total confirmados (cualquier fuente, sin duplicar por persona)
+    c.nombre                       as carrera_nombre,
+    count(distinct cc.codigo)      as total,
+    -- confirmados por cualquier fuente
     count(distinct cc.codigo) filter (
       where exists (
         select 1 from public.padron p2
-         where p2.codigo::text = cc.codigo
+         where p2.codigo = cc.codigo          -- integer = integer ✓
            and (
              exists (
                select 1 from public.llamadas l
                 where l.colegiado_id = p2.id
                   and l.resultado = 'efectiva_confirma'
              )
-             or p2.simpatiza_verificate = true
+             or coalesce(p2.simpatiza_verificate, false) = true
              or p2.confirmacion_intencion = 'favorable'
            )
       )
-    )                             as confirmados,
+    )                              as confirmados,
+    -- via call center
     count(distinct cc.codigo) filter (
       where exists (
         select 1 from public.padron p2
-         where p2.codigo::text = cc.codigo
+         where p2.codigo = cc.codigo
            and exists (
              select 1 from public.llamadas l
               where l.colegiado_id = p2.id
                 and l.resultado = 'efectiva_confirma'
            )
       )
-    )                             as confirmados_callcenter,
+    )                              as confirmados_callcenter,
+    -- via verificate
     count(distinct cc.codigo) filter (
       where exists (
         select 1 from public.padron p2
-         where p2.codigo::text = cc.codigo
-           and p2.simpatiza_verificate = true
+         where p2.codigo = cc.codigo
+           and coalesce(p2.simpatiza_verificate, false) = true
       )
-    )                             as confirmados_verificate,
+    )                              as confirmados_verificate,
+    -- via dirigente
     count(distinct cc.codigo) filter (
       where exists (
         select 1 from public.padron p2
-         where p2.codigo::text = cc.codigo
+         where p2.codigo = cc.codigo
            and p2.confirmacion_intencion = 'favorable'
       )
-    )                             as confirmados_dirigente
-  from carreras c
-  left join colegiado_carreras cc on cc.carrera_id = c.id
+    )                              as confirmados_dirigente
+  from public.carreras c
+  left join public.colegiado_carreras cc on cc.carrera_id = c.id
   group by c.nucleo, c.nombre
   order by c.nucleo, c.nombre;
 $$;
@@ -141,15 +149,15 @@ create or replace function public.listar_confirmados_nucleo(
   p_carrera text default null
 )
 returns table (
-  codigo             text,
-  nombre_completo    text,
-  regional           text,
-  nucleo             text,
-  carrera            text,
-  via_callcenter     boolean,
-  via_verificate     boolean,
-  via_dirigente      boolean,
-  confirmado_por     text,
+  codigo                 text,
+  nombre_completo        text,
+  regional               text,
+  nucleo                 text,
+  carrera                text,
+  via_callcenter         boolean,
+  via_verificate         boolean,
+  via_dirigente          boolean,
+  confirmado_por         text,
   confirmacion_intencion text
 )
 language sql security definer stable set search_path = public as $$
@@ -163,9 +171,9 @@ language sql security definer stable set search_path = public as $$
       select 1 from public.llamadas l
        where l.colegiado_id = p.id
          and l.resultado = 'efectiva_confirma'
-    )                                 as via_callcenter,
-    coalesce(p.simpatiza_verificate, false) as via_verificate,
-    (p.confirmacion_intencion = 'favorable') as via_dirigente,
+    )                                          as via_callcenter,
+    coalesce(p.simpatiza_verificate, false)    as via_verificate,
+    (p.confirmacion_intencion = 'favorable')   as via_dirigente,
     p.confirmado_por,
     p.confirmacion_intencion
   from public.padron p
@@ -177,7 +185,7 @@ language sql security definer stable set search_path = public as $$
          where l.colegiado_id = p.id
            and l.resultado = 'efectiva_confirma'
       )
-      or p.simpatiza_verificate = true
+      or coalesce(p.simpatiza_verificate, false) = true
       or p.confirmacion_intencion = 'favorable'
     )
     and public.mi_rol() in (
@@ -193,9 +201,9 @@ drop function if exists public.confirmados_callcenter_count();
 create or replace function public.confirmados_callcenter_count()
 returns bigint
 language sql security definer stable set search_path = public as $$
-  select count(distinct colegiado_id)
-    from public.llamadas
-   where resultado = 'efectiva_confirma'
+  select count(distinct l.colegiado_id)
+    from public.llamadas l
+   where l.resultado = 'efectiva_confirma'
      and public.mi_rol() in (
        'supervisor','gerente','presidente','dirigente','colaborador'
      );
