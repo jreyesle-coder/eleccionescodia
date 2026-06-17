@@ -55,12 +55,10 @@ language sql security definer stable set search_path = public as $$
   from public.padron p
   where p.simpatiza_verificate = true
     and (
-      coalesce(p.monto_deuda, 0) > 0
-      or p.pensionado = true
-      or exists (
-        select 1 from public.deudas_votantes dv
-         where dv.codigo = p.codigo
-      )
+      p.pensionado = true
+      or coalesce(p.monto_deuda, 0) > 0
+      or exists (select 1 from public.deudas_votantes dv where dv.codigo = p.codigo)
+      or p.estado_gestion not in ('contactado', 'cerrado')
     )
     and public.mi_rol() in (
       'supervisor','gerente','presidente','dirigente','colaborador'
