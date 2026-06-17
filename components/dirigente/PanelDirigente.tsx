@@ -71,6 +71,10 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   const [confirmadoNombre, setConfirmadoNombre] = useState<string | null>(null)
   const [errorConfirm, setErrorConfirm]       = useState<string | null>(null)
 
+  // Deuda CODIA en línea
+  const [consultandoDeuda, setConsultandoDeuda] = useState(false)
+  const [deudaInfo, setDeudaInfo] = useState<{ monto: number; encontrado: boolean } | null>(null)
+
   // Lista mis confirmaciones
   const [misConfirmados, setMisConfirmados] = useState<Confirmado[]>([])
   const [cargandoMios, setCargandoMios]     = useState(false)
@@ -109,6 +113,9 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     if (!colegiadoActivo || !intencion || guardando) return
     setGuardando(true)
     setErrorConfirm(null)
+    setDeudaInfo(null)
+
+    // Confirmar intención en la BD
     const { error } = await supabase.rpc('confirmar_colegiado', {
       p_codigo:    colegiadoActivo.codigo,
       p_intencion: intencion,
@@ -118,6 +125,32 @@ export default function PanelDirigente({ nombre, rol }: Props) {
       setErrorConfirm('No se pudo guardar. Intenta de nuevo.')
       return
     }
+
+    // Si tiene cedula, consultar deuda en CODIA en línea (en paralelo, no bloqueante)
+    if (colegiadoActivo.cedula) {
+      setConsultandoDeuda(true)
+      try {
+        const res = await fetch('/api/consulta-deuda', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cedula: colegiadoActivo.cedula, codigo: colegiadoActivo.codigo }),
+        })
+        const data = await res.json() as { encontrado: boolean; monto: number }
+        setDeudaInfo(data)
+        // Si tiene deuda, actualizar en la BD
+        if (data.encontrado && data.monto > 0) {
+          await supabase.rpc('actualizar_deuda', {
+            p_codigo:      colegiadoActivo.codigo,
+            p_monto_nuevo: data.monto,
+          })
+        }
+      } catch {
+        // No interrumpir el flujo si la consulta externa falla
+      } finally {
+        setConsultandoDeuda(false)
+      }
+    }
+
     setConfirmadoNombre(colegiadoActivo.nombre_completo)
     setColegiadoActivo(null)
     setIntencion(null)
@@ -157,8 +190,21 @@ export default function PanelDirigente({ nombre, rol }: Props) {
         {pestañaActiva === 'buscar' && (
           <>
             {confirmadoNombre && (
-              <div className="bg-green-50 border border-green-200 text-green-800 rounded-2xl px-5 py-4 text-sm font-medium">
-                ✓ Confirmado: <strong>{confirmadoNombre}</strong>
+              <div className="bg-green-50 border border-green-200 text-green-800 rounded-2xl px-5 py-4 text-sm space-y-1.5">
+                <p className="font-semibold">✓ Confirmado: <strong>{confirmadoNombre}</strong></p>
+                {consultandoDeuda && (
+                  <p className="text-xs text-green-600 animate-pulse">🔍 Consultando deuda en CODIA en línea…</p>
+                )}
+                {!consultandoDeuda && deudaInfo && (
+                  deudaInfo.monto > 0 ? (
+                    <p className="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5">
+                      ⚠ Deuda encontrada: <span className="text-base font-black">RD$ {deudaInfo.monto.toLocaleString()}</span>
+                      {' '}— registrada automáticamente en el sistema.
+                    </p>
+                  ) : deudaInfo.encontrado ? (
+                    <p className="text-xs text-green-700">✅ Sin deuda en CODIA en línea.</p>
+                  ) : null
+                )}
               </div>
             )}
 
