@@ -904,7 +904,7 @@ begin
   insert into public.deuda_historial (
     codigo, monto_anterior, monto_nuevo, actualizado_por, actualizado_en
   ) values (
-    p_codigo,               -- deuda_historial.codigo es TEXT
+    p_codigo::integer,      -- deuda_historial.codigo es INTEGER
     v_monto_anterior, p_monto_nuevo, v_nombre_actualizador, now()
   );
 end;
@@ -923,7 +923,7 @@ returns table (
 language sql security definer stable set search_path = public as $$
   select monto_anterior, monto_nuevo, actualizado_por, actualizado_en
     from public.deuda_historial
-   where codigo = p_codigo          -- TEXT = TEXT ✓
+   where codigo = p_codigo::integer  -- INTEGER = INTEGER ✓
    order by actualizado_en desc;
 $$;
 grant execute on function public.historial_deuda(text) to authenticated;
