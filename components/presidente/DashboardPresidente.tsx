@@ -206,7 +206,7 @@ function ModalDetalle({
 
 // ─── Tab: Resumen por distrito ────────────────────────────────────────────────
 
-function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron: PadronVivoRow[] }) {
+function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: MetricaDistrito[]; padron: PadronVivoRow[]; simpatizantesVerificate: number }) {
   const [desglose, setDesglose] = useState<{ distrito: string; estado: EstadoGestion; label: string } | null>(null)
   const visibles = metricas
 
@@ -313,8 +313,11 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
 
       {/* ── Gráfico de aceptación ── */}
       {(() => {
-        const simpatiza   = padron.filter(f => f.ultimo_confirma === true).length
-        const noSimpatiza = padron.filter(f => f.ultimo_confirma === false && (f.estado_gestion === 'contactado' || f.estado_gestion === 'cerrado')).length
+        // confirmados_plancha1 = colegiados con al menos una llamada resultado 'efectiva_confirma'
+        // simpatizantesVerificate = colegiados con simpatiza_verificate = true
+        // Usamos el mayor de los dos para no duplicar si coinciden
+        const simpatiza = Math.max(total.confirmados_plancha1, simpatizantesVerificate)
+        const noSimpatiza = padron.filter(f => f.ultimo_resultado === 'efectiva_no_confirma' || f.ultimo_resultado === 'rechaza').length
         const noContactados = total.total - simpatiza - noSimpatiza
         const dataAcept = [
           { name: 'Simpatiza',       value: simpatiza,     fill: '#16a34a' },
@@ -512,7 +515,7 @@ function TabResumen({ metricas, padron }: { metricas: MetricaDistrito[]; padron:
 
 // ─── Tab: Padrón en vivo ──────────────────────────────────────────────────────
 
-const PAGE_PADRON = 1000
+const PAGE_PADRON = 100
 
 function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaboradoras: string[] }) {
   const [buscar, setBuscar] = useState('')
@@ -675,43 +678,82 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
 // ─── Tab: Vista por Núcleos ───────────────────────────────────────────────────
 
 interface NucleoCarreraRow {
-  nucleo:         string
-  carrera_nombre: string
-  total:          number
+  nucleo:                 string
+  carrera_nombre:         string
+  total:                  number
+  confirmados:            number
+  confirmados_callcenter: number
+  confirmados_verificate: number
+  confirmados_dirigente:  number
 }
 
 interface NucleoAgrupado {
-  nucleo:     string
-  totalNucleo: number
-  profesiones: { nombre: string; total: number }[]
+  nucleo:                 string
+  totalNucleo:            number
+  totalConfirmados:       number
+  profesiones: {
+    nombre:                string
+    total:                 number
+    confirmados:           number
+    confirmados_callcenter: number
+    confirmados_verificate: number
+    confirmados_dirigente:  number
+  }[]
+}
+
+interface ConfirmadoNucleoRow {
+  codigo:                 string
+  nombre_completo:        string
+  regional:               string | null
+  nucleo:                 string | null
+  carrera:                string | null
+  via_callcenter:         boolean
+  via_verificate:         boolean
+  via_dirigente:          boolean
+  confirmado_por:         string | null
+  confirmacion_intencion: string | null
 }
 
 function TabNucleos() {
   const supabase = createClient()
-  const [datos, setDatos]       = useState<NucleoAgrupado[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError]       = useState<string | null>(null)
-  const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
+  const [datos, setDatos]           = useState<NucleoAgrupado[]>([])
+  const [cargando, setCargando]     = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [abiertos, setAbiertos]     = useState<Set<string>>(new Set())
+  const [drilldown, setDrilldown]   = useState<{ nucleo: string; carrera: string | null } | null>(null)
+  const [detalle, setDetalle]       = useState<ConfirmadoNucleoRow[]>([])
+  const [cargandoDrill, setCargandoDrill] = useState(false)
 
   useEffect(() => {
     supabase.rpc('stats_nucleos').then(({ data, error: err }) => {
       if (err) { setError('No se pudo cargar la vista por núcleos.'); setCargando(false); return }
       const filas = (data as NucleoCarreraRow[]) ?? []
 
-      // Agrupar: nucleo → profesiones[]
-      const mapa = new Map<string, { nombre: string; total: number }[]>()
+      const mapa = new Map<string, NucleoAgrupado>()
       for (const f of filas) {
-        const lista = mapa.get(f.nucleo) ?? []
-        lista.push({ nombre: f.carrera_nombre, total: Number(f.total) })
-        mapa.set(f.nucleo, lista)
+        const n = mapa.get(f.nucleo) ?? {
+          nucleo: f.nucleo,
+          totalNucleo: 0,
+          totalConfirmados: 0,
+          profesiones: [],
+        }
+        const total = Number(f.total)
+        const conf  = Number(f.confirmados)
+        n.totalNucleo     += total
+        n.totalConfirmados += conf
+        n.profesiones.push({
+          nombre: f.carrera_nombre,
+          total,
+          confirmados:            conf,
+          confirmados_callcenter: Number(f.confirmados_callcenter),
+          confirmados_verificate: Number(f.confirmados_verificate),
+          confirmados_dirigente:  Number(f.confirmados_dirigente),
+        })
+        mapa.set(f.nucleo, n)
       }
 
-      const agrupados: NucleoAgrupado[] = Array.from(mapa.entries())
-        .map(([nucleo, profesiones]) => ({
-          nucleo,
-          totalNucleo: profesiones.reduce((s, p) => s + p.total, 0),
-          profesiones: profesiones.sort((a, b) => b.total - a.total),
-        }))
+      const agrupados = Array.from(mapa.values())
+        .map(n => ({ ...n, profesiones: n.profesiones.sort((a, b) => b.total - a.total) }))
         .sort((a, b) => b.totalNucleo - a.totalNucleo)
 
       setDatos(agrupados)
@@ -727,7 +769,19 @@ function TabNucleos() {
     })
   }
 
-  const totalGlobal = datos.reduce((s, n) => s + n.totalNucleo, 0)
+  async function abrirDrilldown(nucleo: string, carrera: string | null) {
+    setDrilldown({ nucleo, carrera })
+    setCargandoDrill(true)
+    const { data } = await supabase.rpc('listar_confirmados_nucleo', {
+      p_nucleo: nucleo,
+      p_carrera: carrera,
+    })
+    setDetalle((data as ConfirmadoNucleoRow[]) ?? [])
+    setCargandoDrill(false)
+  }
+
+  const totalGlobal      = datos.reduce((s, n) => s + n.totalNucleo, 0)
+  const totalConfGlobal  = datos.reduce((s, n) => s + n.totalConfirmados, 0)
 
   if (cargando) return <p className="text-center text-gray-400 py-12">Cargando núcleos…</p>
   if (error)    return <p className="text-center text-red-500 py-12">{error}</p>
@@ -740,13 +794,22 @@ function TabNucleos() {
           <p className="text-sm font-semibold text-gray-700">Vista por Núcleos</p>
           <p className="text-xs text-gray-400">{datos.length} núcleos · {totalGlobal.toLocaleString()} colegiados</p>
         </div>
-        <p className="text-xs text-gray-400">Haz clic en un núcleo para ver sus profesiones</p>
+        <div className="text-right">
+          <p className="text-xs text-gray-400">Total confirmados en todos los núcleos</p>
+          <p className="text-lg font-bold" style={{ color: 'var(--color-dorado)' }}>
+            {totalConfGlobal.toLocaleString()}
+            <span className="text-xs font-normal text-gray-400 ml-1">
+              ({totalGlobal > 0 ? Math.round(totalConfGlobal / totalGlobal * 100) : 0}%)
+            </span>
+          </p>
+        </div>
       </div>
 
       {/* Acordeón de núcleos */}
       <div className="space-y-2">
-        {datos.map(({ nucleo, totalNucleo, profesiones }) => {
+        {datos.map(({ nucleo, totalNucleo, totalConfirmados, profesiones }) => {
           const abierto = abiertos.has(nucleo)
+          const pct = totalNucleo > 0 ? Math.round(totalConfirmados / totalNucleo * 100) : 0
           return (
             <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               {/* Cabecera del núcleo */}
@@ -754,9 +817,9 @@ function TabNucleos() {
                 onClick={() => toggleNucleo(nucleo)}
                 className="w-full flex items-center justify-between px-5 py-4 hover:bg-blue-50/40 transition-colors text-left"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span
-                    className="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full transition-transform"
+                    className="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full transition-transform shrink-0"
                     style={{
                       color: 'var(--color-marino)',
                       transform: abierto ? 'rotate(90deg)' : 'none',
@@ -767,22 +830,61 @@ function TabNucleos() {
                   <span className="font-semibold text-gray-900">{nucleo}</span>
                   <span className="text-xs text-gray-400">{profesiones.length} profesión{profesiones.length !== 1 ? 'es' : ''}</span>
                 </div>
-                <span
-                  className="text-lg font-bold tabular-nums"
-                  style={{ color: 'var(--color-marino)' }}
-                >
-                  {totalNucleo.toLocaleString()}
-                  <span className="text-xs font-normal text-gray-400 ml-1">colegiados</span>
-                </span>
+                <div className="flex items-center gap-4 shrink-0">
+                  {totalConfirmados > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">Confirmados</p>
+                      <p className="text-sm font-bold" style={{ color: '#16a34a' }}>
+                        {totalConfirmados.toLocaleString()}
+                        <span className="text-xs font-normal text-gray-400 ml-1">({pct}%)</span>
+                      </p>
+                    </div>
+                  )}
+                  <span
+                    className="text-lg font-bold tabular-nums"
+                    style={{ color: 'var(--color-marino)' }}
+                  >
+                    {totalNucleo.toLocaleString()}
+                    <span className="text-xs font-normal text-gray-400 ml-1">colegiados</span>
+                  </span>
+                </div>
               </button>
 
               {/* Lista de profesiones (expandible) */}
               {abierto && (
                 <div className="border-t border-gray-100 divide-y divide-gray-50">
+                  {/* Fila "Ver todos confirmados del núcleo" */}
+                  {totalConfirmados > 0 && (
+                    <div className="px-8 py-2 bg-green-50/50">
+                      <button
+                        onClick={() => abrirDrilldown(nucleo, null)}
+                        className="text-xs font-semibold text-green-700 hover:underline"
+                      >
+                        ★ Ver los {totalConfirmados} confirmados de {nucleo} →
+                      </button>
+                    </div>
+                  )}
                   {profesiones.map(p => (
-                    <div key={p.nombre} className="flex items-center justify-between px-8 py-3">
-                      <span className="text-sm text-gray-700">{p.nombre}</span>
-                      <div className="flex items-center gap-3">
+                    <div key={p.nombre} className="flex items-center justify-between px-8 py-3 gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700">{p.nombre}</p>
+                        {p.confirmados > 0 && (
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            <button
+                              onClick={() => abrirDrilldown(nucleo, p.nombre)}
+                              className="text-xs font-semibold text-green-700 hover:underline"
+                            >
+                              ★ {p.confirmados} confirmados →
+                            </button>
+                            <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                              {p.confirmados_callcenter > 0 && <span>📞 Call center: {p.confirmados_callcenter}</span>}
+                              {p.confirmados_verificate > 0 && <span>🌐 Verifícate: {p.confirmados_verificate}</span>}
+                              {p.confirmados_dirigente  > 0 && <span>👤 Dirigente: {p.confirmados_dirigente}</span>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
                         <div className="w-24 bg-gray-100 rounded-full h-1.5 hidden sm:block">
                           <div
                             className="h-full rounded-full"
@@ -804,6 +906,71 @@ function TabNucleos() {
           )
         })}
       </div>
+
+      {/* Modal drilldown confirmados */}
+      {drilldown && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(14,28,66,0.5)' }}
+          onClick={() => setDrilldown(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 flex items-start justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+              <div>
+                <p className="font-bold text-base">Confirmados — {drilldown.nucleo}</p>
+                {drilldown.carrera && <p className="text-blue-200 text-sm">{drilldown.carrera}</p>}
+              </div>
+              <button onClick={() => setDrilldown(null)} className="text-blue-200 hover:text-white text-xl font-bold ml-4">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {cargandoDrill ? (
+                <p className="text-center text-gray-400 py-10">Cargando…</p>
+              ) : detalle.length === 0 ? (
+                <p className="text-center text-gray-400 py-10">Sin confirmados.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase text-gray-500 bg-gray-50 border-b sticky top-0">
+                      <th className="text-left px-5 py-2">Nombre</th>
+                      <th className="text-left px-5 py-2 hidden sm:table-cell">Colegiatura</th>
+                      <th className="text-left px-5 py-2">Vía</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {detalle.map(d => (
+                      <tr key={d.codigo} className="hover:bg-blue-50/20">
+                        <td className="px-5 py-2.5 font-medium text-gray-900">{d.nombre_completo}</td>
+                        <td className="px-5 py-2.5 text-gray-500 hidden sm:table-cell">{d.codigo}</td>
+                        <td className="px-5 py-2.5">
+                          <div className="flex flex-wrap gap-1">
+                            {d.via_callcenter && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">📞 Call center</span>
+                            )}
+                            {d.via_verificate && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">🌐 Verifícate</span>
+                            )}
+                            {d.via_dirigente && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                                👤 {d.confirmado_por ?? 'Dirigente'}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
+              {!cargandoDrill && `${detalle.length} confirmados`}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -812,7 +979,7 @@ function TabNucleos() {
 
 interface SimpatizanteRow {
   id: number
-  codigo: number
+  codigo: string
   nombre_completo: string
   cedula: string | null
   telefono: string | null
@@ -823,6 +990,7 @@ interface SimpatizanteRow {
   carrera: string | null
   pensionado: boolean
   tiene_deuda: boolean
+  monto_deuda: number
   voto_verificate_at: string | null
 }
 
@@ -877,6 +1045,7 @@ function TabRegularizar() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-700">{filtrados.length} colegiado{filtrados.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400">Ordenados por menor deuda primero</p>
           </div>
           <div className="divide-y divide-gray-50">
             {filtrados.map(r => (
@@ -887,10 +1056,15 @@ function TabRegularizar() {
                     <p className="text-xs text-gray-400">Colegiatura {r.codigo}{r.cedula && <> · CI: {r.cedula}</>}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
+                    {r.monto_deuda > 0 && (
+                      <span className="text-sm font-black tabular-nums text-orange-600">
+                        RD$ {r.monto_deuda.toLocaleString()}
+                      </span>
+                    )}
                     {r.pensionado && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
                     )}
-                    {r.tiene_deuda && (
+                    {r.tiene_deuda && r.monto_deuda === 0 && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Deuda pendiente</span>
                     )}
                   </div>
@@ -925,34 +1099,38 @@ interface ConfirmadoResumen {
 
 function TabConfirmadosPresidente() {
   const supabase = createClient()
-  const [resumen, setResumen]   = useState<ConfirmadoResumen[]>([])
-  const [totalVerif, setTotalVerif] = useState(0)
-  const [cargando, setCargando] = useState(true)
+  const [resumen, setResumen]         = useState<ConfirmadoResumen[]>([])
+  const [totalVerif, setTotalVerif]   = useState(0)
+  const [totalCallCenter, setTotalCallCenter] = useState(0)
+  const [cargando, setCargando]       = useState(true)
 
   useEffect(() => {
     Promise.all([
       supabase.from('v_confirmados_por_dirigente').select('*'),
       supabase.from('padron').select('codigo', { count: 'exact', head: true })
         .eq('simpatiza_verificate', true),
-    ]).then(([{ data }, { count }]) => {
+      supabase.rpc('confirmados_callcenter_count'),
+    ]).then(([{ data }, { count }, { data: ccData }]) => {
       setResumen((data as ConfirmadoResumen[]) ?? [])
       setTotalVerif(count ?? 0)
+      setTotalCallCenter(Number(ccData ?? 0))
       setCargando(false)
     })
-  }, [supabase])
+  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalConfirmados = resumen.reduce((s, r) => s + r.total, 0)
-  const totalFavorables  = resumen.reduce((s, r) => s + r.favorables, 0) + totalVerif
+  const totalFavorables  = resumen.reduce((s, r) => s + r.favorables, 0) + totalVerif + totalCallCenter
 
   if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
 
   return (
     <div className="space-y-5">
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { titulo: 'Total confirmados (dirigentes)', valor: totalConfirmados, color: 'var(--color-marino)' },
-          { titulo: 'Via Verificate (simpatizantes)', valor: totalVerif, color: '#16a34a' },
+          { titulo: 'Via Verifícate (simpatizantes)', valor: totalVerif, color: '#16a34a' },
+          { titulo: 'Via Call Center', valor: totalCallCenter, color: '#2563eb' },
           { titulo: 'Favorables totales', valor: totalFavorables, color: '#ca8a04' },
         ].map(({ titulo, valor, color }) => (
           <div key={titulo} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4" style={{ borderTopColor: color }}>
@@ -1155,14 +1333,16 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
   const [tab, setTab] = useState<Tab>('resumen')
   const [metricas, setMetricas] = useState<MetricaDistrito[]>([])
   const [padron, setPadron] = useState<PadronVivoRow[]>([])
+  const [simpatizantesVerificate, setSimpatizantesVerificate] = useState(0)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null)
 
   const cargar = useCallback(async () => {
-    const [resMetricas, resPadron] = await Promise.all([
+    const [resMetricas, resPadron, resVerif] = await Promise.all([
       supabase.from('vista_metricas_distrito').select('*'),
       supabase.from('vista_padron_vivo').select('*').order('nombre_completo').limit(49200),
+      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('simpatiza_verificate', true),
     ])
 
     if (resMetricas.error || resPadron.error) {
@@ -1172,6 +1352,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
 
     setMetricas((resMetricas.data as MetricaDistrito[]) ?? [])
     setPadron((resPadron.data as PadronVivoRow[]) ?? [])
+    setSimpatizantesVerificate(resVerif.count ?? 0)
     setError(null)
     setUltimaActualizacion(new Date())
   }, [supabase])
@@ -1286,7 +1467,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         </div>
 
         {/* Contenido del tab activo */}
-        {tab === 'resumen'      && <TabResumen metricas={metricas} padron={padron} />}
+        {tab === 'resumen'      && <TabResumen metricas={metricas} padron={padron} simpatizantesVerificate={simpatizantesVerificate} />}
         {tab === 'padron'       && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
         {tab === 'nucleos'      && <TabNucleos />}
         {tab === 'regularizar'  && <TabRegularizar />}
