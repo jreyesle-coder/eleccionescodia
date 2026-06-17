@@ -85,10 +85,25 @@ export default function BuscadorPublico() {
       return
     }
     setVotoGuardado(data.nombre)
-    // Actualizar lista local para que no aparezca "marca tu preferencia" de nuevo
     setResultados(prev => prev.map(r =>
       r.id === modalColegiado.id ? { ...r } : r
     ))
+
+    // Consultar deuda en CODIA en línea en background (sin bloquear UI)
+    // La cédula ya fue validada por marcar_preferencia_verificate.
+    // El monto NUNCA se muestra al usuario — solo se actualiza en BD para dashboards.
+    if (modalColegiado.cedula || cedulaConfirm.trim()) {
+      const cedula = modalColegiado.cedula ?? cedulaConfirm.trim()
+      fetch('/api/consulta-deuda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cedula,
+          codigo:      String(modalColegiado.codigo),
+          actualizarBd: true,   // API actualiza DB server-side
+        }),
+      }).catch(() => { /* fallo silencioso — no interrumpir al usuario */ })
+    }
   }
 
   function habilitadoParaVotar(r: ResultadoBusqueda) {

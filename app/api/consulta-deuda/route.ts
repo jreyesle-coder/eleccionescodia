@@ -1,19 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 const BASE = 'https://www.codiaenlinea.com'
 
+// Cliente Supabase server-side (anon key — solo llama RPCs con security definer)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
 /**
  * POST /api/consulta-deuda
- * Body: { cedula: string, codigo: string }
+ * Body: { cedula: string, codigo: string, actualizarBd?: boolean }
  * Returns: { monto: number, encontrado: boolean, error?: string }
  *
- * Consulta la deuda de un colegiado en codiaenlinea.com
- * usando sus credenciales (cedula + colegiatura) en el momento
- * en que un dirigente lo confirma — nunca en lote.
+ * Consulta la deuda de un colegiado en codiaenlinea.com.
+ * Se llama en dos momentos:
+ *   1. Cuando un dirigente confirma un colegiado (actualizarBd: false, cliente actualiza via RPC auth)
+ *   2. Cuando un colegiado registra preferencia en Verifícate (actualizarBd: true, servidor actualiza via set_deuda_verificate)
  */
 export async function POST(req: NextRequest) {
   try {
-    const { cedula, codigo } = await req.json() as { cedula?: string; codigo?: string }
+    const { cedula, codigo, actualizarBd } = await req.json() as {
+      cedula?: string
+      codigo?: string
+      actualizarBd?: boolean
+    }
 
     if (!cedula || !codigo) {
       return NextResponse.json({ encontrado: false, monto: 0, error: 'Faltan cedula o codigo' }, { status: 400 })
@@ -72,6 +84,15 @@ export async function POST(req: NextRequest) {
 
     // ── Paso 3: Parsear el balance ────────────────────────────────────────────
     const monto = parsearBalance(html)
+
+    // Si viene del flujo de Verifícate, actualizar BD desde el servidor
+    // usando set_deuda_verificate (security definer, solo aplica a simpatizantes)
+    if (actualizarBd && monto > 0) {
+      await supabaseAdmin.rpc('set_deuda_verificate', {
+        p_codigo: codigo,
+        p_monto:  monto,
+      })
+    }
 
     return NextResponse.json({ encontrado: true, monto })
 
