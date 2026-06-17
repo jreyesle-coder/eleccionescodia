@@ -13,7 +13,7 @@ language sql security definer stable set search_path = public as $$
   select
     c.nucleo,
     c.nombre  as carrera_nombre,
-    count(distinct cc.colegiatura) as total
+    count(distinct cc.codigo) as total
   from carreras c
   left join colegiado_carreras cc on cc.carrera_id = c.id
   group by c.nucleo, c.nombre
