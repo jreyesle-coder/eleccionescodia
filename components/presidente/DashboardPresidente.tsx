@@ -674,112 +674,135 @@ function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaborad
 
 // ─── Tab: Vista por Núcleos ───────────────────────────────────────────────────
 
-function TabNucleos({ filas }: { filas: PadronVivoRow[] }) {
-  const [filtroCarrera, setFiltroCarrera] = useState('Arquitectura')
+interface NucleoCarreraRow {
+  nucleo:         string
+  carrera_nombre: string
+  total:          number
+}
 
-  const carreras = Array.from(new Set(filas.map(f => f.carrera).filter(Boolean))).sort() as string[]
+interface NucleoAgrupado {
+  nucleo:     string
+  totalNucleo: number
+  profesiones: { nombre: string; total: number }[]
+}
 
-  const filtrados = filtroCarrera
-    ? filas.filter(f => f.carrera?.toLowerCase().includes(filtroCarrera.toLowerCase()))
-    : filas
+function TabNucleos() {
+  const supabase = createClient()
+  const [datos, setDatos]       = useState<NucleoAgrupado[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError]       = useState<string | null>(null)
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
 
-  // Agrupar por núcleo
-  type NucleoStats = { total: number; simpatiza: number; noSimpatiza: number; pendientes: number }
-  const mapa = new Map<string, NucleoStats>()
-  for (const f of filtrados) {
-    const key = f.nucleo ?? 'Sin núcleo'
-    const s = mapa.get(key) ?? { total: 0, simpatiza: 0, noSimpatiza: 0, pendientes: 0 }
-    s.total++
-    if (f.ultimo_confirma === true) s.simpatiza++
-    else if (f.ultimo_confirma === false && (f.estado_gestion === 'contactado' || f.estado_gestion === 'cerrado')) s.noSimpatiza++
-    else s.pendientes++
-    mapa.set(key, s)
+  useEffect(() => {
+    supabase.rpc('stats_nucleos').then(({ data, error: err }) => {
+      if (err) { setError('No se pudo cargar la vista por núcleos.'); setCargando(false); return }
+      const filas = (data as NucleoCarreraRow[]) ?? []
+
+      // Agrupar: nucleo → profesiones[]
+      const mapa = new Map<string, { nombre: string; total: number }[]>()
+      for (const f of filas) {
+        const lista = mapa.get(f.nucleo) ?? []
+        lista.push({ nombre: f.carrera_nombre, total: Number(f.total) })
+        mapa.set(f.nucleo, lista)
+      }
+
+      const agrupados: NucleoAgrupado[] = Array.from(mapa.entries())
+        .map(([nucleo, profesiones]) => ({
+          nucleo,
+          totalNucleo: profesiones.reduce((s, p) => s + p.total, 0),
+          profesiones: profesiones.sort((a, b) => b.total - a.total),
+        }))
+        .sort((a, b) => b.totalNucleo - a.totalNucleo)
+
+      setDatos(agrupados)
+      setCargando(false)
+    })
+  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleNucleo(nucleo: string) {
+    setAbiertos(prev => {
+      const next = new Set(prev)
+      next.has(nucleo) ? next.delete(nucleo) : next.add(nucleo)
+      return next
+    })
   }
 
-  const grupos = Array.from(mapa.entries()).sort((a, b) => b[1].total - a[1].total)
-  const totales = grupos.reduce((acc, [, s]) => ({
-    total: acc.total + s.total,
-    simpatiza: acc.simpatiza + s.simpatiza,
-    noSimpatiza: acc.noSimpatiza + s.noSimpatiza,
-    pendientes: acc.pendientes + s.pendientes,
-  }), { total: 0, simpatiza: 0, noSimpatiza: 0, pendientes: 0 })
+  const totalGlobal = datos.reduce((s, n) => s + n.totalNucleo, 0)
+
+  if (cargando) return <p className="text-center text-gray-400 py-12">Cargando núcleos…</p>
+  if (error)    return <p className="text-center text-red-500 py-12">{error}</p>
 
   return (
     <div className="space-y-4">
-      {/* Filtro carrera */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-wrap gap-3 items-center">
-        <span className="text-sm font-semibold text-gray-600">Profesión:</span>
-        <select
-          value={filtroCarrera}
-          onChange={e => setFiltroCarrera(e.target.value)}
-          className="text-sm px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-        >
-          <option value="">Todas las profesiones</option>
-          {carreras.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <span className="text-xs text-gray-400">{filtrados.length.toLocaleString()} colegiados</span>
-      </div>
-
       {/* Resumen global */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total', value: totales.total,       color: 'var(--color-marino)' },
-          { label: 'Simpatiza',    value: totales.simpatiza,    color: '#16a34a' },
-          { label: 'No simpatiza', value: totales.noSimpatiza,  color: '#dc2626' },
-          { label: 'Sin gestionar',value: totales.pendientes,   color: '#94a3b8' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
-            <p className="text-2xl font-bold tabular-nums" style={{ color }}>{value.toLocaleString()}</p>
-            <p className="text-xs text-gray-400 mt-1">{label}</p>
-          </div>
-        ))}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-700">Vista por Núcleos</p>
+          <p className="text-xs text-gray-400">{datos.length} núcleos · {totalGlobal.toLocaleString()} colegiados</p>
+        </div>
+        <p className="text-xs text-gray-400">Haz clic en un núcleo para ver sus profesiones</p>
       </div>
 
-      {/* Tabla por núcleo */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs uppercase tracking-wide border-b-2 text-left"
-                style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}>
-                <th className="px-5 py-3 font-semibold">Núcleo</th>
-                <th className="px-4 py-3 font-semibold text-right">Total</th>
-                <th className="px-4 py-3 font-semibold text-right text-green-700">Simpatiza</th>
-                <th className="px-4 py-3 font-semibold text-right text-red-600">No simpatiza</th>
-                <th className="px-4 py-3 font-semibold text-right">Sin gestionar</th>
-                <th className="px-4 py-3 font-semibold">% Aceptación</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {grupos.map(([nucleo, s]) => {
-                const pct = s.simpatiza + s.noSimpatiza > 0
-                  ? Math.round(s.simpatiza / (s.simpatiza + s.noSimpatiza) * 100)
-                  : null
-                return (
-                  <tr key={nucleo} className="hover:bg-blue-50/30 transition-colors">
-                    <td className="px-5 py-3 font-medium text-gray-900">{nucleo}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-700">{s.total}</td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{s.simpatiza}</td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-red-600">{s.noSimpatiza}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-400">{s.pendientes}</td>
-                    <td className="px-4 py-3">
-                      {pct !== null ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-100 rounded-full h-2">
-                            <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs font-semibold text-gray-600 w-8 text-right">{pct}%</span>
+      {/* Acordeón de núcleos */}
+      <div className="space-y-2">
+        {datos.map(({ nucleo, totalNucleo, profesiones }) => {
+          const abierto = abiertos.has(nucleo)
+          return (
+            <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Cabecera del núcleo */}
+              <button
+                onClick={() => toggleNucleo(nucleo)}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-blue-50/40 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full transition-transform"
+                    style={{
+                      color: 'var(--color-marino)',
+                      transform: abierto ? 'rotate(90deg)' : 'none',
+                    }}
+                  >
+                    ›
+                  </span>
+                  <span className="font-semibold text-gray-900">{nucleo}</span>
+                  <span className="text-xs text-gray-400">{profesiones.length} profesión{profesiones.length !== 1 ? 'es' : ''}</span>
+                </div>
+                <span
+                  className="text-lg font-bold tabular-nums"
+                  style={{ color: 'var(--color-marino)' }}
+                >
+                  {totalNucleo.toLocaleString()}
+                  <span className="text-xs font-normal text-gray-400 ml-1">colegiados</span>
+                </span>
+              </button>
+
+              {/* Lista de profesiones (expandible) */}
+              {abierto && (
+                <div className="border-t border-gray-100 divide-y divide-gray-50">
+                  {profesiones.map(p => (
+                    <div key={p.nombre} className="flex items-center justify-between px-8 py-3">
+                      <span className="text-sm text-gray-700">{p.nombre}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 bg-gray-100 rounded-full h-1.5 hidden sm:block">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: totalNucleo > 0 ? `${(p.total / totalNucleo) * 100}%` : '0%',
+                              backgroundColor: 'var(--color-real)',
+                            }}
+                          />
                         </div>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                        <span className="text-sm font-semibold tabular-nums text-gray-800 w-12 text-right">
+                          {p.total.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1032,7 +1055,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         {/* Contenido del tab activo */}
         {tab === 'resumen'     && <TabResumen metricas={metricas} padron={padron} />}
         {tab === 'padron'      && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
-        {tab === 'nucleos'     && <TabNucleos filas={padron} />}
+        {tab === 'nucleos'     && <TabNucleos />}
         {tab === 'regularizar' && <TabRegularizar />}
       </div>
     </div>
