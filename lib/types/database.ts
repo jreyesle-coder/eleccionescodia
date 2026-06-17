@@ -1,4 +1,12 @@
-export type Rol = 'operador' | 'supervisor' | 'gerente' | 'presidente'
+export type Rol =
+  | 'operador'
+  | 'supervisor'
+  | 'gerente'
+  | 'presidente'
+  | 'dirigente'
+  | 'colaborador'
+  | 'delegado'
+  | 'suplente'
 
 export type EstadoGestion =
   | 'pendiente'
@@ -20,7 +28,28 @@ export interface Profile {
   nombre: string
   rol: Rol
   activo: boolean
+  mesa: string | null
   created_at: string
+}
+
+export interface ConfirmadosDirigente {
+  dirigente: string
+  total: number
+  favorables: number
+  indecisos: number
+  en_contra: number
+  ultima_confirmacion: string | null
+}
+
+export interface ConfirmadoColegiado {
+  codigo: string
+  nombre_completo: string
+  regional: string | null
+  nucleo: string | null
+  confirmado_por: string | null
+  confirmacion_intencion: string | null
+  confirmacion_at: string | null
+  via_verificate: boolean
 }
 
 /** Colegiado del padrón CODIA (tabla `padron`) */
