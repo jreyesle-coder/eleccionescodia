@@ -996,6 +996,7 @@ interface MiembroPadronActivo {
   nuevo_integrante: boolean
   tiene_deuda: boolean
   monto_deuda: number
+  centro_votacion: string | null
   confirmado_por: string | null
   confirmacion_intencion: string | null
   confirmacion_at: string | null
@@ -1053,7 +1054,7 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
   useEffect(() => {
     if (cargado) return
     setCargando(true)
-    supabase.rpc('padron_zona_dirigente').then(({ data }) => {
+    supabase.rpc('padron_zona_dirigente').limit(60000).then(({ data }) => {
       setPadron((data as MiembroPadronActivo[]) ?? [])
       setCargando(false)
       setCargado(true)
@@ -1226,9 +1227,10 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Datos CODIA</p>
                   <div className="space-y-2">
                     {detalle.carrera   && <FilaDato label="Profesión" valor={detalle.carrera} />}
-                    {detalle.nucleo    && <FilaDato label="Núcleo"    valor={detalle.nucleo} />}
-                    {detalle.regional  && <FilaDato label="Regional"  valor={detalle.regional} />}
-                    {detalle.provincia && <FilaDato label="Provincia" valor={detalle.provincia} />}
+                    {detalle.nucleo          && <FilaDato label="Núcleo"            valor={detalle.nucleo} />}
+                    {detalle.regional        && <FilaDato label="Regional"          valor={detalle.regional} />}
+                    {detalle.provincia       && <FilaDato label="Provincia"         valor={detalle.provincia} />}
+                    {detalle.centro_votacion && <FilaDato label="Centro de votación" valor={detalle.centro_votacion} />}
                   </div>
                 </div>
 

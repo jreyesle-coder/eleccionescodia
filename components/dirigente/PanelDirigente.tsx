@@ -38,6 +38,7 @@ interface MiembroPadron {
   nuevo_integrante: boolean
   tiene_deuda: boolean
   monto_deuda: number
+  centro_votacion: string | null
   confirmado_por: string | null
   confirmacion_intencion: string | null
   confirmacion_at: string | null
@@ -220,7 +221,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   async function cargarPadronZona() {
     if (padronCargado) return
     setCargandoPadron(true)
-    const { data } = await supabase.rpc('padron_zona_dirigente')
+    const { data } = await supabase.rpc('padron_zona_dirigente').limit(5000)
     setCargandoPadron(false); setPadronCargado(true)
     setPadronZona((data as MiembroPadron[]) ?? [])
   }
@@ -599,10 +600,11 @@ export default function PanelDirigente({ nombre, rol }: Props) {
                 <div className="bg-gray-50 px-6 py-4 space-y-3 border-t border-gray-100">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Datos CODIA</p>
                   <div className="grid grid-cols-1 gap-2">
-                    {detalle.carrera   && <Fila label="Profesión" valor={detalle.carrera} />}
-                    {detalle.nucleo    && <Fila label="Núcleo" valor={detalle.nucleo} />}
-                    {detalle.regional  && <Fila label="Regional" valor={detalle.regional} />}
-                    {detalle.provincia && <Fila label="Provincia" valor={detalle.provincia} />}
+                    {detalle.carrera         && <Fila label="Profesión"         valor={detalle.carrera} />}
+                    {detalle.nucleo          && <Fila label="Núcleo"            valor={detalle.nucleo} />}
+                    {detalle.regional        && <Fila label="Regional"          valor={detalle.regional} />}
+                    {detalle.provincia       && <Fila label="Provincia"         valor={detalle.provincia} />}
+                    {detalle.centro_votacion && <Fila label="Centro de votación" valor={detalle.centro_votacion} />}
                   </div>
                 </div>
 

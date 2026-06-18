@@ -17,7 +17,8 @@ returns table (
   pensionado             boolean,
   nuevo_integrante       boolean,
   tiene_deuda            boolean,
-  monto_deuda            numeric,
+  monto_deuda            integer,
+  centro_votacion        text,
   confirmado_por         text,
   confirmacion_intencion text,
   confirmacion_at        timestamptz
@@ -54,6 +55,7 @@ begin
         or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo)
       ) as tiene_deuda,
       coalesce(p.monto_deuda, 0) as monto_deuda,
+      p.centro_votacion,
       p.confirmado_por,
       p.confirmacion_intencion,
       p.confirmacion_at
