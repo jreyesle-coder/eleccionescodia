@@ -976,6 +976,334 @@ function TabNucleos() {
   )
 }
 
+// ─── Tab: Padrón Activo (misma experiencia que dirigente, padrón general) ────
+
+interface MiembroPadronActivo {
+  id: number
+  codigo: string
+  nombre_completo: string
+  cedula: string | null
+  telefono: string | null
+  celular: string | null
+  regional: string | null
+  provincia: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  nuevo_integrante: boolean
+  tiene_deuda: boolean
+  monto_deuda: number
+  confirmado_por: string | null
+  confirmacion_intencion: string | null
+  confirmacion_at: string | null
+}
+
+interface DeudaAPI { encontrado: boolean; monto: number }
+
+const INTENCION_LABEL_P: Record<string, string> = {
+  favorable: '✓ Favorable',
+  indeciso:  '~ Indeciso',
+  en_contra: '✗ En contra',
+}
+const INTENCION_COLOR_P: Record<string, string> = {
+  favorable: 'bg-green-100 text-green-800',
+  indeciso:  'bg-yellow-100 text-yellow-800',
+  en_contra: 'bg-red-100 text-red-700',
+}
+const INTENCION_ACTIVE_P: Record<string, string> = {
+  favorable: 'bg-green-600 text-white border-green-600',
+  indeciso:  'bg-yellow-500 text-white border-yellow-500',
+  en_contra: 'bg-red-500 text-white border-red-500',
+}
+const INTENCION_BORDER_P: Record<string, string> = {
+  favorable: 'border-green-400 text-green-800',
+  indeciso:  'border-yellow-400 text-yellow-800',
+  en_contra: 'border-red-300 text-red-700',
+}
+
+function FilaDato({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="text-xs text-gray-400 shrink-0">{label}</span>
+      <span className="text-sm font-medium text-gray-800 text-right">{valor}</span>
+    </div>
+  )
+}
+
+function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
+  const supabase = createClient()
+
+  const [padron, setPadron]             = useState<MiembroPadronActivo[]>([])
+  const [cargando, setCargando]         = useState(false)
+  const [cargado, setCargado]           = useState(false)
+  const [busqueda, setBusqueda]         = useState('')
+  const [filtroRegional, setFiltroRegional] = useState('')
+  const [filtroNucleo, setFiltroNucleo] = useState('')
+
+  const [detalle, setDetalle]                       = useState<MiembroPadronActivo | null>(null)
+  const [detalleDeuda, setDetalleDeuda]             = useState<DeudaAPI | null>(null)
+  const [cargandoDeuda, setCargandoDeuda]           = useState(false)
+  const [detalleIntencion, setDetalleIntencion]     = useState<string | null>(null)
+  const [detalleGuardando, setDetalleGuardando]     = useState(false)
+  const [detalleError, setDetalleError]             = useState<string | null>(null)
+
+  useEffect(() => {
+    if (cargado) return
+    setCargando(true)
+    supabase.rpc('padron_zona_dirigente').then(({ data }) => {
+      setPadron((data as MiembroPadronActivo[]) ?? [])
+      setCargando(false)
+      setCargado(true)
+    })
+  }, [supabase, cargado])
+
+  const regionales = Array.from(new Set(padron.map(m => m.regional ?? '').filter(Boolean))).sort()
+  const nucleos    = Array.from(new Set(
+    padron.filter(m => !filtroRegional || m.regional === filtroRegional).map(m => m.nucleo ?? '').filter(Boolean)
+  )).sort()
+
+  const filtrado = padron.filter(m => {
+    if (filtroRegional && m.regional !== filtroRegional) return false
+    if (filtroNucleo   && m.nucleo   !== filtroNucleo)   return false
+    const q = busqueda.trim().toLowerCase()
+    if (q && !m.nombre_completo.toLowerCase().includes(q) && !m.codigo.includes(q)) return false
+    return true
+  })
+
+  async function abrirDetalle(m: MiembroPadronActivo) {
+    setDetalle(m)
+    setDetalleDeuda(null)
+    setDetalleIntencion(null)
+    setDetalleError(null)
+    if (m.cedula) {
+      setCargandoDeuda(true)
+      try {
+        const res  = await fetch('/api/consulta-deuda', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cedula: m.cedula, codigo: m.codigo }),
+        })
+        const data = await res.json() as DeudaAPI
+        setDetalleDeuda(data)
+        if (data.encontrado && data.monto > 0) {
+          await supabase.rpc('actualizar_deuda', { p_codigo: m.codigo, p_monto_nuevo: data.monto })
+          setPadron(prev => prev.map(x => x.codigo === m.codigo ? { ...x, monto_deuda: data.monto, tiene_deuda: true } : x))
+        }
+      } catch { /* no interrumpir */ } finally { setCargandoDeuda(false) }
+    }
+  }
+
+  async function guardarDetalle() {
+    if (!detalle || !detalleIntencion || detalleGuardando) return
+    setDetalleGuardando(true); setDetalleError(null)
+    const { error } = await supabase.rpc('confirmar_colegiado', {
+      p_codigo: detalle.codigo, p_intencion: detalleIntencion,
+    })
+    setDetalleGuardando(false)
+    if (error) {
+      const msg = error.message ?? ''
+      setDetalleError(
+        msg.startsWith('Ya confirmado por') ? msg + '. No se puede re-confirmar.'
+        : 'No se pudo guardar. Intenta de nuevo.'
+      )
+      return
+    }
+    const codigo = detalle.codigo
+    const intencion = detalleIntencion
+    setPadron(prev => prev.map(x =>
+      x.codigo === codigo ? { ...x, confirmado_por: nombreUsuario, confirmacion_intencion: intencion } : x
+    ))
+    setDetalle(prev => prev ? { ...prev, confirmado_por: nombreUsuario, confirmacion_intencion: intencion } : prev)
+    setDetalleIntencion(null)
+  }
+
+  if (cargando) return <p className="text-center text-gray-400 py-16">Cargando padrón…</p>
+
+  return (
+    <div className="space-y-4">
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-wrap gap-3">
+        <input
+          type="text" value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o colegiatura…"
+          className="flex-1 min-w-[200px] text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+        <select value={filtroRegional}
+          onChange={e => { setFiltroRegional(e.target.value); setFiltroNucleo('') }}
+          className="text-sm px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+        >
+          <option value="">Todas las regionales</option>
+          {regionales.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={filtroNucleo} onChange={e => setFiltroNucleo(e.target.value)}
+          className="text-sm px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+        >
+          <option value="">Todos los núcleos</option>
+          {nucleos.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        {(busqueda || filtroRegional || filtroNucleo) && (
+          <button onClick={() => { setBusqueda(''); setFiltroRegional(''); setFiltroNucleo('') }}
+            className="text-sm text-blue-600 hover:underline px-2">Limpiar</button>
+        )}
+        <p className="w-full text-xs text-gray-400">
+          {filtrado.length.toLocaleString()} de {padron.length.toLocaleString()} colegiados
+        </p>
+      </div>
+
+      {/* Lista */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="divide-y divide-gray-50">
+          {filtrado.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-12">Sin resultados para los filtros aplicados.</p>
+          ) : filtrado.map(m => (
+            <button key={m.id} onClick={() => abrirDetalle(m)}
+              className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-900 truncate">{m.nombre_completo}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  #{m.codigo}
+                  {m.regional && <> · <span className="text-gray-500">{m.regional}</span></>}
+                  {m.nucleo   && <> · {m.nucleo}</>}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {m.confirmacion_intencion ? (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${INTENCION_COLOR_P[m.confirmacion_intencion]}`}>
+                    {INTENCION_LABEL_P[m.confirmacion_intencion]}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-gray-300">Pendiente</span>
+                )}
+                {m.tiene_deuda && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Deuda</span>}
+                {m.pensionado  && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>}
+              </div>
+              <span className="text-gray-300 text-lg shrink-0">›</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Panel de detalle — pantalla completa */}
+      {detalle && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'var(--color-fondo)' }}>
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 bg-white shrink-0">
+            <button onClick={() => setDetalle(null)}
+              className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800">
+              ‹ Volver al padrón
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-xl mx-auto px-4 py-6 space-y-5">
+
+              {/* Cabecera */}
+              <div className="rounded-2xl overflow-hidden shadow-sm">
+                <div className="px-6 py-5" style={{ backgroundColor: 'var(--color-marino)' }}>
+                  <p className="text-white font-bold text-lg leading-tight">{detalle.nombre_completo}</p>
+                  <p className="text-blue-200 text-sm mt-1">Colegiatura #{detalle.codigo}</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {detalle.pensionado       && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-400 text-white">Pensionado</span>}
+                    {detalle.nuevo_integrante && <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-400 text-white">Nuevo integrante</span>}
+                  </div>
+                </div>
+
+                {/* Datos personales */}
+                <div className="bg-white px-6 py-4 space-y-3">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Datos personales</p>
+                  <div className="space-y-2">
+                    {detalle.cedula   && <FilaDato label="Cédula"    valor={detalle.cedula} />}
+                    {detalle.celular  && <FilaDato label="Celular"   valor={detalle.celular} />}
+                    {detalle.telefono && <FilaDato label="Teléfono"  valor={detalle.telefono} />}
+                  </div>
+                </div>
+
+                {/* Datos CODIA */}
+                <div className="bg-gray-50 px-6 py-4 space-y-3 border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Datos CODIA</p>
+                  <div className="space-y-2">
+                    {detalle.carrera   && <FilaDato label="Profesión" valor={detalle.carrera} />}
+                    {detalle.nucleo    && <FilaDato label="Núcleo"    valor={detalle.nucleo} />}
+                    {detalle.regional  && <FilaDato label="Regional"  valor={detalle.regional} />}
+                    {detalle.provincia && <FilaDato label="Provincia" valor={detalle.provincia} />}
+                  </div>
+                </div>
+
+                {/* Deuda */}
+                <div className="bg-white px-6 py-4 border-t border-gray-100 space-y-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estado de deuda</p>
+                  {!detalle.cedula ? (
+                    <p className="text-sm text-gray-400">Sin cédula registrada.</p>
+                  ) : cargandoDeuda ? (
+                    <p className="text-sm text-gray-400 animate-pulse">Consultando CODIA en línea…</p>
+                  ) : detalleDeuda ? (
+                    detalleDeuda.monto > 0 ? (
+                      <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                        <p className="text-orange-800 font-bold text-sm">⚠ Deuda activa</p>
+                        <p className="text-orange-900 font-black text-2xl mt-0.5">RD$ {detalleDeuda.monto.toLocaleString()}</p>
+                      </div>
+                    ) : detalleDeuda.encontrado ? (
+                      <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                        <p className="text-green-800 font-semibold text-sm">✅ Sin deuda en CODIA en línea</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No encontrado en el sistema de deuda.</p>
+                    )
+                  ) : detalle.monto_deuda > 0 ? (
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                      <p className="text-orange-800 font-bold text-sm">⚠ Deuda registrada</p>
+                      <p className="text-orange-900 font-black text-2xl mt-0.5">RD$ {detalle.monto_deuda.toLocaleString()}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">Sin información de deuda.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Intención de voto */}
+              {detalle.confirmado_por ? (
+                <div className={`rounded-2xl px-6 py-5 text-center space-y-1 ${detalle.confirmacion_intencion ? INTENCION_COLOR_P[detalle.confirmacion_intencion] : 'bg-gray-100 text-gray-600'}`}>
+                  <p className="font-bold text-base">
+                    {detalle.confirmacion_intencion ? INTENCION_LABEL_P[detalle.confirmacion_intencion] : '✓ Confirmado'}
+                  </p>
+                  <p className="text-sm opacity-80">Por: {detalle.confirmado_por}</p>
+                  {detalle.confirmacion_at && (
+                    <p className="text-xs opacity-60">{fmt(detalle.confirmacion_at)}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 space-y-4">
+                  <p className="text-sm font-bold text-gray-700">¿Cuál es la intención de este colegiado?</p>
+                  <div className="space-y-2">
+                    {(['favorable', 'indeciso', 'en_contra'] as const).map(val => (
+                      <button key={val} onClick={() => setDetalleIntencion(val)}
+                        className={`w-full py-3.5 rounded-xl font-semibold text-sm border-2 transition-all ${detalleIntencion === val ? INTENCION_ACTIVE_P[val] : INTENCION_BORDER_P[val] + ' hover:opacity-80'}`}
+                      >
+                        {val === 'favorable' ? '✓ Favorable a George Richardson'
+                         : val === 'indeciso' ? '~ Indeciso / Por decidir'
+                         : '✗ En contra / Otra preferencia'}
+                      </button>
+                    ))}
+                  </div>
+                  {detalleError && (
+                    <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-3 py-2">{detalleError}</p>
+                  )}
+                  <button onClick={guardarDetalle} disabled={detalleGuardando || !detalleIntencion}
+                    className="w-full py-3.5 rounded-xl text-white font-bold text-sm disabled:opacity-40 transition-opacity"
+                    style={{ backgroundColor: 'var(--color-marino)' }}
+                  >
+                    {detalleGuardando ? 'Guardando…' : 'Confirmar intención'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Tab: Simpatizantes por regularizar ──────────────────────────────────────
 
 interface SimpatizanteRow {
@@ -1488,7 +1816,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
 
         {/* Contenido del tab activo */}
         {tab === 'resumen'      && <TabResumen metricas={metricas} padron={padron} simpatizantesVerificate={simpatizantesVerificate} />}
-        {tab === 'padron'       && <TabPadron filas={padron} colaboradoras={colaboradoras} />}
+        {tab === 'padron'       && <TabPadronActivo nombreUsuario={nombreUsuario} />}
         {tab === 'nucleos'      && <TabNucleos />}
         {tab === 'regularizar'  && <TabRegularizar />}
         {tab === 'confirmados'  && <TabConfirmadosPresidente />}
