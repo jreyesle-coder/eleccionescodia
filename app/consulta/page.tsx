@@ -1,4 +1,4 @@
-import BuscadorPublico from '@/components/consulta/BuscadorPublico'
+import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -26,5 +26,5 @@ export const metadata: Metadata = {
 }
 
 export default function ConsultaPage() {
-  return <BuscadorPublico />
+  redirect('/home')
 }
