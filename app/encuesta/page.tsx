@@ -65,11 +65,11 @@ function SeccionHeader({ num, titulo, color = 'var(--color-marino)' }: { num: nu
   )
 }
 
-function Pregunta({ num, texto, children }: { num: number; texto: string; children: React.ReactNode }) {
+function Pregunta({ num, texto, children, dark }: { num: number; texto: string; children: React.ReactNode; dark?: boolean }) {
   return (
     <div className="space-y-3">
-      <p className="text-sm font-semibold text-gray-800">
-        <span style={{ color: 'var(--color-marino)' }}>{num}.</span> {texto}
+      <p className={`text-sm font-semibold ${dark ? 'text-white' : 'text-gray-800'}`}>
+        <span style={{ color: dark ? 'var(--color-dorado)' : 'var(--color-marino)' }}>{num}.</span> {texto}
       </p>
       <div className="pl-1 space-y-2">{children}</div>
     </div>
@@ -626,7 +626,7 @@ export default function EncuestaPage() {
             </h2>
           </div>
 
-          <Pregunta num={28} texto="¿Cuáles considera que deben ser las tres principales prioridades de la próxima gestión nacional del CODIA? (Seleccione hasta 3)">
+          <Pregunta dark num={28} texto="¿Cuáles considera que deben ser las tres principales prioridades de la próxima gestión nacional del CODIA? (Seleccione hasta 3)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 'Defensa del ejercicio profesional',
