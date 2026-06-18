@@ -199,7 +199,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
                   <div className="flex flex-col items-end gap-1">
                     {habil ? (
                       <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
-                        ✓ Hábil para votar
+                        ✓ Miembro Activo
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 bg-red-100 text-red-700 text-xs font-semibold px-3 py-1 rounded-full">
