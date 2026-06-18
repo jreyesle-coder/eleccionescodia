@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 }, { status: 400 })
     }
 
+    // codiaenlinea.com espera la cédula sin guiones
+    const cedulaLimpia = cedula.replace(/-/g, '')
+
     // ── Paso 1: Login en codiaenlinea.com ────────────────────────────────────
     const loginRes = await fetch(`${BASE}/Home/Login`, {
       method: 'POST',
@@ -40,7 +43,7 @@ export async function POST(req: NextRequest) {
         'Referer': `${BASE}/`,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
-      body: JSON.stringify({ Cedula: cedula, Codigo: codigo }),
+      body: JSON.stringify({ Cedula: cedulaLimpia, Codigo: codigo }),
       redirect: 'manual',
     })
 
@@ -52,7 +55,8 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join('; ')
 
-    if (!cookieHeader && loginRes.status >= 400) {
+    // 302 sin cookie = login rechazado
+    if (!cookieHeader) {
       return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
 
