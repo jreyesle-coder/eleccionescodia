@@ -3,32 +3,31 @@ import { createClient } from '@supabase/supabase-js'
 
 const BASE = 'https://www.codiaenlinea.com'
 
-// Cliente Supabase server-side (anon key — solo llama RPCs con security definer)
-const supabaseAdmin = createClient(
+// Cliente Supabase server-side (anon key — llama RPCs con security definer)
+const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 /**
  * POST /api/consulta-deuda
- * Body: { cedula: string, codigo: string, actualizarBd?: boolean }
- * Returns: { monto: number, encontrado: boolean, error?: string }
+ * Body: { cedula: string, codigo: string }
+ * Returns: { monto: number, habilitado: boolean, encontrado: boolean, error?: string }
  *
- * Consulta la deuda de un colegiado en codiaenlinea.com.
- * Se llama en dos momentos:
- *   1. Cuando un dirigente confirma un colegiado (actualizarBd: false, cliente actualiza via RPC auth)
- *   2. Cuando un colegiado registra preferencia en Verifícate (actualizarBd: true, servidor actualiza via set_deuda_verificate)
+ * Consulta la deuda real de un colegiado en codiaenlinea.com y
+ * actualiza monto_deuda en la BD. Se llama en background desde:
+ *   - BuscadorPublico (Verifícate): al mostrar resultados de búsqueda
+ *   - PanelDirigente: al confirmar intención de un colegiado
  */
 export async function POST(req: NextRequest) {
   try {
-    const { cedula, codigo, actualizarBd } = await req.json() as {
+    const { cedula, codigo } = await req.json() as {
       cedula?: string
       codigo?: string
-      actualizarBd?: boolean
     }
 
     if (!cedula || !codigo) {
-      return NextResponse.json({ encontrado: false, monto: 0, error: 'Faltan cedula o codigo' }, { status: 400 })
+      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 }, { status: 400 })
     }
 
     // ── Paso 1: Login en codiaenlinea.com ────────────────────────────────────
@@ -53,17 +52,16 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join('; ')
 
-    // Si el login falló (no hay cookie de sesión útil)
     if (!cookieHeader && loginRes.status >= 400) {
-      return NextResponse.json({ encontrado: false, monto: 0, error: 'Credenciales no válidas en CODIA en línea' })
+      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
 
-    // Algunos sistemas responden con JSON indicando éxito/fallo
+    // Verificar si el sistema devolvió JSON de error
     const contentType = loginRes.headers.get('content-type') ?? ''
     if (contentType.includes('application/json')) {
       const loginJson = await loginRes.json().catch(() => null)
       if (loginJson && loginJson.success === false) {
-        return NextResponse.json({ encontrado: false, monto: 0, error: 'Colegiado no encontrado en CODIA en línea' })
+        return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
       }
     }
 
@@ -77,50 +75,41 @@ export async function POST(req: NextRequest) {
     })
 
     if (!profileRes.ok) {
-      return NextResponse.json({ encontrado: false, monto: 0, error: 'No se pudo acceder al perfil' })
+      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
 
     const html = await profileRes.text()
 
     // ── Paso 3: Parsear el balance ────────────────────────────────────────────
     const monto = parsearBalance(html)
+    const habilitado = monto === 0  // sin deuda = habilitado
 
-    // Si viene del flujo de Verifícate, actualizar BD desde el servidor
-    // usando set_deuda_verificate (security definer, solo aplica a simpatizantes)
-    if (actualizarBd && monto > 0) {
-      await supabaseAdmin.rpc('set_deuda_verificate', {
-        p_codigo: codigo,
-        p_monto:  monto,
-      })
-    }
+    // ── Paso 4: Actualizar BD siempre (monto 0 también limpia deudas pagadas) ─
+    await supabaseServer.rpc('set_deuda_lookup', {
+      p_codigo: String(codigo),
+      p_monto:  monto,
+    })
 
-    return NextResponse.json({ encontrado: true, monto })
+    return NextResponse.json({ encontrado: true, habilitado, monto })
 
   } catch (err) {
     console.error('[consulta-deuda]', err)
-    return NextResponse.json({ encontrado: false, monto: 0, error: 'Error interno al consultar CODIA en línea' }, { status: 500 })
+    return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 }, { status: 500 })
   }
 }
 
 /**
  * Extrae el monto de deuda del HTML de IndexUser.
- * Busca patrones como: $ 300, $300.00, value="$300.00"
+ * Orden de prioridad: Sub Total → Balance → CUOTA
  */
 function parsearBalance(html: string): number {
-  // Patrón 1: Sub Total: $ XXX
   const subTotal = html.match(/Sub\s*Total\s*:\s*\$\s*([\d,\.]+)/i)
   if (subTotal) return parseMonto(subTotal[1])
 
-  // Patrón 2: Balance</td> ... $XXX
-  const balance = html.match(/[Bb]alance[^<]*<[^>]+>\s*\$?\s*([\d,\.]+)/i)
+  const balance = html.match(/[Bb]alance[^<]{0,20}<[^>]+>\s*\$?\s*([\d,\.]+)/i)
   if (balance) return parseMonto(balance[1])
 
-  // Patrón 3: input value="$300.00" visible en la página
-  const inputVal = html.match(/value=["']\$\s*([\d,\.]+)["']/i)
-  if (inputVal) return parseMonto(inputVal[1])
-
-  // Patrón 4: CUOTA $ 300
-  const cuota = html.match(/CUOTA\s*\$\s*([\d,\.]+)/i)
+  const cuota = html.match(/CUOTA[^$]*\$\s*([\d,\.]+)/i)
   if (cuota) return parseMonto(cuota[1])
 
   return 0

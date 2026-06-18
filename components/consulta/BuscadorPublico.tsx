@@ -36,6 +36,32 @@ export default function BuscadorPublico() {
   const [votoGuardado, setVotoGuardado]       = useState<string | null>(null)
   const [errorVoto, setErrorVoto]             = useState<string | null>(null)
 
+  const consultarDeudaEnBackground = useCallback((lista: ResultadoBusqueda[]) => {
+    // Por cada resultado que tenga cédula, consultar CODIA en línea en background.
+    // El monto retornado actualiza la BD (via set_deuda_lookup) y el estado local.
+    // El usuario NUNCA ve el monto — solo si está hábil o no.
+    for (const r of lista) {
+      const cedula = r.cedula
+      if (!cedula) continue
+      fetch('/api/consulta-deuda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cedula, codigo: String(r.codigo) }),
+      })
+        .then(res => res.json())
+        .then((d: { encontrado: boolean; habilitado: boolean; monto: number }) => {
+          if (!d.encontrado) return
+          // Actualizar estado local: si tiene deuda → no hábil → tiene_deuda = true
+          setResultados(prev => prev.map(p =>
+            p.id === r.id
+              ? { ...p, tiene_deuda: d.monto > 0 }
+              : p
+          ))
+        })
+        .catch(() => { /* fallo silencioso */ })
+    }
+  }, [])
+
   const buscar = useCallback(async (texto: string) => {
     const q = texto.trim()
     if (q.length < 3) return
@@ -54,8 +80,11 @@ export default function BuscadorPublico() {
       setResultados([])
       return
     }
-    setResultados((data as ResultadoBusqueda[]) ?? [])
-  }, [supabase])
+    const lista = (data as ResultadoBusqueda[]) ?? []
+    setResultados(lista)
+    // Consultar deuda real en CODIA en línea para cada resultado
+    consultarDeudaEnBackground(lista)
+  }, [supabase, consultarDeudaEnBackground])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
