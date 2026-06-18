@@ -27,6 +27,7 @@ interface MiembroPadron {
   nombre_completo: string
   nucleo: string | null
   carrera: string | null
+  cedula: string | null
   telefono: string | null
   celular: string | null
   pensionado: boolean
@@ -79,7 +80,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   const [buscando, setBuscando]       = useState(false)
   const [buscado, setBuscado]         = useState(false)
 
-  // Confirmación
+  // Confirmación (modal compartido)
   const [colegiadoActivo, setColegiadoActivo] = useState<Colegiado | null>(null)
   const [intencion, setIntencion]             = useState<string | null>(null)
   const [guardando, setGuardando]             = useState(false)
@@ -90,10 +91,12 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   const [consultandoDeuda, setConsultandoDeuda] = useState(false)
   const [deudaInfo, setDeudaInfo] = useState<{ monto: number; encontrado: boolean } | null>(null)
 
-  // Lista mis confirmaciones
+  // Pestañas
+  const [pestañaActiva, setPestañaActiva] = useState<'buscar' | 'padron' | 'mis_confirmados'>('buscar')
+
+  // Mis confirmados
   const [misConfirmados, setMisConfirmados] = useState<Confirmado[]>([])
   const [cargandoMios, setCargandoMios]     = useState(false)
-  const [pestañaActiva, setPestañaActiva]   = useState<'buscar' | 'mis_confirmados' | 'padron'>('buscar')
 
   // Padrón de la zona
   const [padronZona, setPadronZona]         = useState<MiembroPadron[]>([])
@@ -102,6 +105,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   const [filtroNucleo, setFiltroNucleo]     = useState('')
   const [busquedaPadron, setBusquedaPadron] = useState('')
 
+  // ── Búsqueda ──────────────────────────────────────────────────────────
   const buscar = useCallback(async (q: string) => {
     if (q.trim().length < 3) return
     setBuscando(true)
@@ -117,6 +121,36 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     buscar(busqueda)
   }
 
+  // ── Padrón zona ───────────────────────────────────────────────────────
+  async function cargarPadronZona() {
+    if (padronCargado) return
+    setCargandoPadron(true)
+    const { data } = await supabase.rpc('padron_zona_dirigente')
+    setCargandoPadron(false)
+    setPadronCargado(true)
+    setPadronZona((data as MiembroPadron[]) ?? [])
+  }
+
+  // Abre el modal de confirmación desde una fila del padrón
+  function abrirDesdePadron(m: MiembroPadron) {
+    abrirConfirmacion({
+      id: m.id,
+      codigo: m.codigo,
+      nombre_completo: m.nombre_completo,
+      cedula: m.cedula,
+      telefono: m.telefono,
+      celular: m.celular,
+      regional: null,
+      nucleo: m.nucleo,
+      carrera: m.carrera,
+      pensionado: m.pensionado,
+      nuevo_integrante: false,
+      tiene_deuda: m.tiene_deuda,
+      confirmado_por: m.confirmado_por,
+    })
+  }
+
+  // ── Mis confirmados ───────────────────────────────────────────────────
   async function cargarMisConfirmados() {
     setCargandoMios(true)
     const { data } = await supabase.rpc('listar_confirmados_dirigente', { p_dirigente: nombre })
@@ -124,25 +158,26 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     setMisConfirmados((data as Confirmado[]) ?? [])
   }
 
+  // ── Modal confirmación ────────────────────────────────────────────────
   function abrirConfirmacion(c: Colegiado) {
     setColegiadoActivo(c)
     setIntencion(null)
     setErrorConfirm(null)
     setConfirmadoNombre(null)
+    setDeudaInfo(null)
   }
 
   async function guardarConfirmacion() {
     if (!colegiadoActivo || !intencion || guardando) return
     setGuardando(true)
     setErrorConfirm(null)
-    setDeudaInfo(null)
 
-    // Confirmar intención en la BD
     const { error } = await supabase.rpc('confirmar_colegiado', {
       p_codigo:    colegiadoActivo.codigo,
       p_intencion: intencion,
     })
     setGuardando(false)
+
     if (error) {
       const msg = error.message ?? ''
       if (msg.startsWith('Ya confirmado por')) {
@@ -155,7 +190,16 @@ export default function PanelDirigente({ nombre, rol }: Props) {
       return
     }
 
-    // Si tiene cedula, consultar deuda en CODIA en línea (en paralelo, no bloqueante)
+    // Actualizar lista local del padrón para reflejar la confirmación en vivo
+    const codigoConfirmado = colegiadoActivo.codigo
+    const intencionConfirmada = intencion
+    setPadronZona(prev => prev.map(m =>
+      m.codigo === codigoConfirmado
+        ? { ...m, confirmado_por: nombre, confirmacion_intencion: intencionConfirmada }
+        : m
+    ))
+
+    // Consultar deuda en CODIA en línea si tiene cédula
     if (colegiadoActivo.cedula) {
       setConsultandoDeuda(true)
       try {
@@ -166,7 +210,6 @@ export default function PanelDirigente({ nombre, rol }: Props) {
         })
         const data = await res.json() as { encontrado: boolean; monto: number }
         setDeudaInfo(data)
-        // Si tiene deuda, actualizar en la BD
         if (data.encontrado && data.monto > 0) {
           await supabase.rpc('actualizar_deuda', {
             p_codigo:      colegiadoActivo.codigo,
@@ -185,21 +228,16 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     setIntencion(null)
   }
 
-  async function cargarPadronZona() {
-    if (padronCargado) return
-    setCargandoPadron(true)
-    const { data } = await supabase.rpc('padron_zona_dirigente')
-    setCargandoPadron(false)
-    setPadronCargado(true)
-    setPadronZona((data as MiembroPadron[]) ?? [])
-  }
-
-  function cambiarPestaña(p: 'buscar' | 'mis_confirmados' | 'padron') {
+  // ── Navegación pestañas ───────────────────────────────────────────────
+  function cambiarPestaña(p: 'buscar' | 'padron' | 'mis_confirmados') {
     setPestañaActiva(p)
+    setConfirmadoNombre(null)
+    setDeudaInfo(null)
     if (p === 'mis_confirmados') cargarMisConfirmados()
     if (p === 'padron') cargarPadronZona()
   }
 
+  // ── Filtros padrón ────────────────────────────────────────────────────
   const nucleos = Array.from(
     new Set(padronZona.map(m => m.nucleo ?? '').filter(Boolean))
   ).sort()
@@ -213,6 +251,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     return coincideNucleo && coincideBusqueda
   })
 
+  // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-fondo)' }}>
       <AppHeader nombreUsuario={nombre} rol={rol === 'colaborador' ? 'Colaborador' : 'Dirigente'} />
@@ -222,10 +261,10 @@ export default function PanelDirigente({ nombre, rol }: Props) {
         {/* Pestañas */}
         <div className="flex border-b border-gray-200 overflow-x-auto">
           {([
-            { key: 'buscar',          label: 'Confirmar' },
+            { key: 'buscar',          label: 'Buscar' },
             { key: 'padron',          label: 'Padrón de mi zona' },
             { key: 'mis_confirmados', label: 'Mis confirmados' },
-          ] as { key: 'buscar' | 'mis_confirmados' | 'padron'; label: string }[]).map(({ key, label }) => (
+          ] as { key: 'buscar' | 'padron' | 'mis_confirmados'; label: string }[]).map(({ key, label }) => (
             <button
               key={key}
               onClick={() => cambiarPestaña(key)}
@@ -239,28 +278,29 @@ export default function PanelDirigente({ nombre, rol }: Props) {
           ))}
         </div>
 
+        {/* Toast de confirmación exitosa — visible en cualquier pestaña */}
+        {confirmadoNombre && (
+          <div className="bg-green-50 border border-green-200 text-green-800 rounded-2xl px-5 py-4 text-sm space-y-1.5">
+            <p className="font-semibold">✓ Confirmado: <strong>{confirmadoNombre}</strong></p>
+            {consultandoDeuda && (
+              <p className="text-xs text-green-600 animate-pulse">🔍 Consultando deuda en CODIA en línea…</p>
+            )}
+            {!consultandoDeuda && deudaInfo && (
+              deudaInfo.monto > 0 ? (
+                <p className="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5">
+                  ⚠ Deuda encontrada: <span className="text-base font-black">RD$ {deudaInfo.monto.toLocaleString()}</span>
+                  {' '}— registrada automáticamente en el sistema.
+                </p>
+              ) : deudaInfo.encontrado ? (
+                <p className="text-xs text-green-700">✅ Sin deuda en CODIA en línea.</p>
+              ) : null
+            )}
+          </div>
+        )}
+
         {/* ── TAB: BUSCAR ── */}
         {pestañaActiva === 'buscar' && (
           <>
-            {confirmadoNombre && (
-              <div className="bg-green-50 border border-green-200 text-green-800 rounded-2xl px-5 py-4 text-sm space-y-1.5">
-                <p className="font-semibold">✓ Confirmado: <strong>{confirmadoNombre}</strong></p>
-                {consultandoDeuda && (
-                  <p className="text-xs text-green-600 animate-pulse">🔍 Consultando deuda en CODIA en línea…</p>
-                )}
-                {!consultandoDeuda && deudaInfo && (
-                  deudaInfo.monto > 0 ? (
-                    <p className="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-1.5">
-                      ⚠ Deuda encontrada: <span className="text-base font-black">RD$ {deudaInfo.monto.toLocaleString()}</span>
-                      {' '}— registrada automáticamente en el sistema.
-                    </p>
-                  ) : deudaInfo.encontrado ? (
-                    <p className="text-xs text-green-700">✅ Sin deuda en CODIA en línea.</p>
-                  ) : null
-                )}
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
                 type="text"
@@ -384,35 +424,52 @@ export default function PanelDirigente({ nombre, rol }: Props) {
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                   <div className="divide-y divide-gray-50">
                     {padronFiltrado.map(m => (
-                      <div key={m.id} className="px-5 py-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">{m.nombre_completo}</p>
-                          <p className="text-xs text-gray-400">
-                            #{m.codigo}
-                            {m.nucleo && <> · <span className="text-gray-600">{m.nucleo}</span></>}
+                      <div key={m.id} className="px-5 py-4 space-y-2">
+                        {/* Cabecera del miembro */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 text-sm">{m.nombre_completo}</p>
+                            <p className="text-xs text-gray-400">
+                              #{m.codigo}
+                              {m.nucleo  && <> · {m.nucleo}</>}
+                              {m.carrera && <> · {m.carrera}</>}
+                            </p>
                             {(m.telefono || m.celular) && (
-                              <> · {m.celular ?? m.telefono}</>
+                              <p className="text-xs text-gray-400 mt-0.5">{m.celular ?? m.telefono}</p>
                             )}
-                          </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {m.pensionado && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
+                            )}
+                            {m.tiene_deuda && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Con deuda</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          {m.confirmacion_intencion ? (
-                            <span className={cn(
-                              'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                              INTENCION_COLOR[m.confirmacion_intencion] ?? 'bg-gray-100 text-gray-600'
-                            )}>
-                              {INTENCION_LABEL[m.confirmacion_intencion] ?? m.confirmacion_intencion}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-gray-300 font-medium">Sin confirmar</span>
-                          )}
-                          {m.pensionado && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
-                          )}
-                          {m.tiene_deuda && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Con deuda</span>
-                          )}
-                        </div>
+
+                        {/* Botón de acción o estado */}
+                        {m.confirmado_por ? (
+                          <div className={cn(
+                            'w-full py-2 rounded-xl text-xs font-semibold text-center border',
+                            m.confirmacion_intencion
+                              ? cn(INTENCION_COLOR[m.confirmacion_intencion], 'border-transparent')
+                              : 'bg-gray-100 text-gray-500 border-gray-200'
+                          )}>
+                            {m.confirmacion_intencion
+                              ? `${INTENCION_LABEL[m.confirmacion_intencion]} · confirmado por ${m.confirmado_por}`
+                              : `✓ Confirmado por ${m.confirmado_por}`
+                            }
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => abrirDesdePadron(m)}
+                            className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 transition-all hover:opacity-90"
+                            style={{ borderColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
+                          >
+                            Marcar intención →
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -472,9 +529,18 @@ export default function PanelDirigente({ nombre, rol }: Props) {
             className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="px-6 py-4" style={{ backgroundColor: 'var(--color-marino)' }}>
+            {/* Cabecera del modal con info del colegiado */}
+            <div className="px-6 py-4 space-y-1" style={{ backgroundColor: 'var(--color-marino)' }}>
               <p className="text-white font-bold text-base">{colegiadoActivo.nombre_completo}</p>
               <p className="text-blue-200 text-sm">Colegiatura {colegiadoActivo.codigo}</p>
+              {colegiadoActivo.nucleo && (
+                <p className="text-blue-200 text-xs">{colegiadoActivo.nucleo}</p>
+              )}
+              {colegiadoActivo.tiene_deuda && (
+                <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-400 text-white mt-1">
+                  ⚠ Tiene deuda registrada
+                </span>
+              )}
             </div>
 
             <div className="px-6 py-5 space-y-5">

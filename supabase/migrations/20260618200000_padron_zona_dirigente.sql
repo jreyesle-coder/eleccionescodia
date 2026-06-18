@@ -1,7 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════
 -- Padrón completo de la zona para dirigentes/colaboradores
--- Retorna el padrón filtrado por regional_asignada del caller.
--- Campos mínimos para la vista del dirigente: nombre, núcleo, contacto, estado confirmación.
 -- ════════════════════════════════════════════════════════════════════════
 
 drop function if exists public.padron_zona_dirigente();
@@ -12,6 +10,7 @@ returns table (
   nombre_completo        text,
   nucleo                 text,
   carrera                text,
+  cedula                 text,
   telefono               text,
   celular                text,
   pensionado             boolean,
@@ -40,6 +39,7 @@ begin
       p.nombre_completo,
       p.nucleo,
       p.carrera,
+      p.cedula,
       p.telefono,
       p.celular,
       p.pensionado,
