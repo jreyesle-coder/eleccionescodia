@@ -62,8 +62,17 @@ export default function BuscadorPublico() {
     }
   }, [])
 
+  function normalizarQuery(texto: string): string {
+    const solo = texto.trim().replace(/[\s-]/g, '')
+    // 11 dígitos → formato cédula RD: 000-0000000-0
+    if (/^\d{11}$/.test(solo)) {
+      return `${solo.slice(0, 3)}-${solo.slice(3, 10)}-${solo.slice(10)}`
+    }
+    return texto.trim()
+  }
+
   const buscar = useCallback(async (texto: string) => {
-    const q = texto.trim()
+    const q = normalizarQuery(texto)
     if (q.length < 3) return
     setBuscando(true)
     setError(null)
