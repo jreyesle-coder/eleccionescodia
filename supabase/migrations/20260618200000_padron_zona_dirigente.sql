@@ -1,7 +1,7 @@
 -- ════════════════════════════════════════════════════════════════════════
 -- Padrón completo de la zona para dirigentes/colaboradores
 -- Retorna el padrón filtrado por regional_asignada del caller.
--- Campos mínimos para la vista del dirigente: nombre, profesión, contacto, estado confirmación.
+-- Campos mínimos para la vista del dirigente: nombre, núcleo, contacto, estado confirmación.
 -- ════════════════════════════════════════════════════════════════════════
 
 drop function if exists public.padron_zona_dirigente();
@@ -10,6 +10,7 @@ returns table (
   id                     bigint,
   codigo                 text,
   nombre_completo        text,
+  nucleo                 text,
   carrera                text,
   telefono               text,
   celular                text,
@@ -37,6 +38,7 @@ begin
       p.id,
       p.codigo::text,
       p.nombre_completo,
+      p.nucleo,
       p.carrera,
       p.telefono,
       p.celular,
@@ -48,12 +50,11 @@ begin
       p.confirmacion_intencion
     from public.padron p
     where (
-      -- dirigentes/colaboradores solo ven su regional asignada
       v_rol not in ('dirigente','colaborador')
       or v_regional_asignada is null
       or p.regional = v_regional_asignada
     )
-    order by p.carrera nulls last, p.nombre_completo;
+    order by p.nucleo nulls last, p.nombre_completo;
 end;
 $$;
 grant execute on function public.padron_zona_dirigente() to authenticated;

@@ -25,6 +25,7 @@ interface MiembroPadron {
   id: number
   codigo: string
   nombre_completo: string
+  nucleo: string | null
   carrera: string | null
   telefono: string | null
   celular: string | null
@@ -98,7 +99,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   const [padronZona, setPadronZona]         = useState<MiembroPadron[]>([])
   const [cargandoPadron, setCargandoPadron] = useState(false)
   const [padronCargado, setPadronCargado]   = useState(false)
-  const [filtroProfesion, setFiltroProfesion] = useState('')
+  const [filtroNucleo, setFiltroNucleo]     = useState('')
   const [busquedaPadron, setBusquedaPadron] = useState('')
 
   const buscar = useCallback(async (q: string) => {
@@ -199,17 +200,17 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     if (p === 'padron') cargarPadronZona()
   }
 
-  const profesiones = Array.from(
-    new Set(padronZona.map(m => m.carrera ?? '').filter(Boolean))
+  const nucleos = Array.from(
+    new Set(padronZona.map(m => m.nucleo ?? '').filter(Boolean))
   ).sort()
 
   const padronFiltrado = padronZona.filter(m => {
-    const coincideProfesion = !filtroProfesion || m.carrera === filtroProfesion
+    const coincideNucleo = !filtroNucleo || m.nucleo === filtroNucleo
     const q = busquedaPadron.trim().toLowerCase()
     const coincideBusqueda = !q ||
       m.nombre_completo.toLowerCase().includes(q) ||
       m.codigo.includes(q)
-    return coincideProfesion && coincideBusqueda
+    return coincideNucleo && coincideBusqueda
   })
 
   return (
@@ -348,14 +349,14 @@ export default function PanelDirigente({ nombre, rol }: Props) {
                   style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
                 />
                 <select
-                  value={filtroProfesion}
-                  onChange={e => setFiltroProfesion(e.target.value)}
+                  value={filtroNucleo}
+                  onChange={e => setFiltroNucleo(e.target.value)}
                   className="text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 bg-white"
                   style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
                 >
-                  <option value="">Todas las profesiones</option>
-                  {profesiones.map(p => (
-                    <option key={p} value={p}>{p}</option>
+                  <option value="">Todos los núcleos</option>
+                  {nucleos.map(n => (
+                    <option key={n} value={n}>{n}</option>
                   ))}
                 </select>
               </div>
@@ -364,11 +365,11 @@ export default function PanelDirigente({ nombre, rol }: Props) {
               <div className="flex items-center justify-between px-1">
                 <p className="text-xs text-gray-500">
                   {padronFiltrado.length} de {padronZona.length} colegiados
-                  {filtroProfesion && <> · <span className="font-semibold text-gray-700">{filtroProfesion}</span></>}
+                  {filtroNucleo && <> · <span className="font-semibold text-gray-700">{filtroNucleo}</span></>}
                 </p>
-                {(busquedaPadron || filtroProfesion) && (
+                {(busquedaPadron || filtroNucleo) && (
                   <button
-                    onClick={() => { setBusquedaPadron(''); setFiltroProfesion('') }}
+                    onClick={() => { setBusquedaPadron(''); setFiltroNucleo('') }}
                     className="text-xs text-blue-600 hover:underline"
                   >Limpiar filtros</button>
                 )}
@@ -388,7 +389,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
                           <p className="text-sm font-medium text-gray-900 truncate">{m.nombre_completo}</p>
                           <p className="text-xs text-gray-400">
                             #{m.codigo}
-                            {m.carrera && <> · <span className="text-gray-600">{m.carrera}</span></>}
+                            {m.nucleo && <> · <span className="text-gray-600">{m.nucleo}</span></>}
                             {(m.telefono || m.celular) && (
                               <> · {m.celular ?? m.telefono}</>
                             )}
