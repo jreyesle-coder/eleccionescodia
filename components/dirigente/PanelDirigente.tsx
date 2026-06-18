@@ -18,6 +18,20 @@ interface Colegiado {
   pensionado: boolean
   nuevo_integrante: boolean
   tiene_deuda: boolean
+  confirmado_por: string | null
+}
+
+interface MiembroPadron {
+  id: number
+  codigo: string
+  nombre_completo: string
+  carrera: string | null
+  telefono: string | null
+  celular: string | null
+  pensionado: boolean
+  tiene_deuda: boolean
+  confirmado_por: string | null
+  confirmacion_intencion: string | null
 }
 
 interface Confirmado {
@@ -78,7 +92,14 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   // Lista mis confirmaciones
   const [misConfirmados, setMisConfirmados] = useState<Confirmado[]>([])
   const [cargandoMios, setCargandoMios]     = useState(false)
-  const [pestañaActiva, setPestañaActiva]   = useState<'buscar' | 'mis_confirmados'>('buscar')
+  const [pestañaActiva, setPestañaActiva]   = useState<'buscar' | 'mis_confirmados' | 'padron'>('buscar')
+
+  // Padrón de la zona
+  const [padronZona, setPadronZona]         = useState<MiembroPadron[]>([])
+  const [cargandoPadron, setCargandoPadron] = useState(false)
+  const [padronCargado, setPadronCargado]   = useState(false)
+  const [filtroProfesion, setFiltroProfesion] = useState('')
+  const [busquedaPadron, setBusquedaPadron] = useState('')
 
   const buscar = useCallback(async (q: string) => {
     if (q.trim().length < 3) return
@@ -122,7 +143,14 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     })
     setGuardando(false)
     if (error) {
-      setErrorConfirm('No se pudo guardar. Intenta de nuevo.')
+      const msg = error.message ?? ''
+      if (msg.startsWith('Ya confirmado por')) {
+        setErrorConfirm(msg + '. No puedes re-confirmar a este colegiado.')
+      } else if (msg.includes('pertenece a otra regional')) {
+        setErrorConfirm('Este colegiado no pertenece a tu regional asignada.')
+      } else {
+        setErrorConfirm('No se pudo guardar. Intenta de nuevo.')
+      }
       return
     }
 
@@ -156,10 +184,33 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     setIntencion(null)
   }
 
-  function cambiarPestaña(p: 'buscar' | 'mis_confirmados') {
+  async function cargarPadronZona() {
+    if (padronCargado) return
+    setCargandoPadron(true)
+    const { data } = await supabase.rpc('padron_zona_dirigente')
+    setCargandoPadron(false)
+    setPadronCargado(true)
+    setPadronZona((data as MiembroPadron[]) ?? [])
+  }
+
+  function cambiarPestaña(p: 'buscar' | 'mis_confirmados' | 'padron') {
     setPestañaActiva(p)
     if (p === 'mis_confirmados') cargarMisConfirmados()
+    if (p === 'padron') cargarPadronZona()
   }
+
+  const profesiones = Array.from(
+    new Set(padronZona.map(m => m.carrera ?? '').filter(Boolean))
+  ).sort()
+
+  const padronFiltrado = padronZona.filter(m => {
+    const coincideProfesion = !filtroProfesion || m.carrera === filtroProfesion
+    const q = busquedaPadron.trim().toLowerCase()
+    const coincideBusqueda = !q ||
+      m.nombre_completo.toLowerCase().includes(q) ||
+      m.codigo.includes(q)
+    return coincideProfesion && coincideBusqueda
+  })
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-fondo)' }}>
@@ -168,16 +219,17 @@ export default function PanelDirigente({ nombre, rol }: Props) {
       <div className="max-w-xl mx-auto px-4 py-6 space-y-5">
 
         {/* Pestañas */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-gray-200 overflow-x-auto">
           {([
-            { key: 'buscar',          label: 'Confirmar colegiado' },
+            { key: 'buscar',          label: 'Confirmar' },
+            { key: 'padron',          label: 'Padrón de mi zona' },
             { key: 'mis_confirmados', label: 'Mis confirmados' },
-          ] as { key: 'buscar' | 'mis_confirmados'; label: string }[]).map(({ key, label }) => (
+          ] as { key: 'buscar' | 'mis_confirmados' | 'padron'; label: string }[]).map(({ key, label }) => (
             <button
               key={key}
               onClick={() => cambiarPestaña(key)}
               className={cn(
-                'px-5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors',
+                'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap',
                 pestañaActiva === key
                   ? 'border-blue-600 text-blue-700'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -258,19 +310,115 @@ export default function PanelDirigente({ nombre, rol }: Props) {
                         {r.regional && <span>Regional: <span className="font-medium text-gray-700">{r.regional}</span></span>}
                         {r.nucleo   && <span>Núcleo: <span className="font-medium text-gray-700">{r.nucleo}</span></span>}
                       </div>
-                      <button
-                        onClick={() => abrirConfirmacion(r)}
-                        className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 transition-all hover:opacity-90"
-                        style={{ borderColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
-                      >
-                        Marcar intención →
-                      </button>
+                      {r.confirmado_por ? (
+                        <div className="w-full py-2 rounded-xl text-xs font-semibold text-center bg-gray-100 text-gray-500 border border-gray-200">
+                          ✓ Ya confirmado por {r.confirmado_por}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => abrirConfirmacion(r)}
+                          className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 transition-all hover:opacity-90"
+                          style={{ borderColor: 'var(--color-marino)', color: 'var(--color-marino)' }}
+                        >
+                          Marcar intención →
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
           </>
+        )}
+
+        {/* ── TAB: PADRÓN DE MI ZONA ── */}
+        {pestañaActiva === 'padron' && (
+          cargandoPadron ? (
+            <p className="text-center text-gray-400 py-10">Cargando padrón…</p>
+          ) : (
+            <div className="space-y-3">
+              {/* Filtros */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={busquedaPadron}
+                  onChange={e => setBusquedaPadron(e.target.value)}
+                  placeholder="Buscar por nombre o colegiatura…"
+                  className="flex-1 text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2"
+                  style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+                />
+                <select
+                  value={filtroProfesion}
+                  onChange={e => setFiltroProfesion(e.target.value)}
+                  className="text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 bg-white"
+                  style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+                >
+                  <option value="">Todas las profesiones</option>
+                  {profesiones.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Contador */}
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs text-gray-500">
+                  {padronFiltrado.length} de {padronZona.length} colegiados
+                  {filtroProfesion && <> · <span className="font-semibold text-gray-700">{filtroProfesion}</span></>}
+                </p>
+                {(busquedaPadron || filtroProfesion) && (
+                  <button
+                    onClick={() => { setBusquedaPadron(''); setFiltroProfesion('') }}
+                    className="text-xs text-blue-600 hover:underline"
+                  >Limpiar filtros</button>
+                )}
+              </div>
+
+              {/* Lista */}
+              {padronCargado && padronFiltrado.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-10 text-center">
+                  <p className="text-gray-400 text-sm">No hay resultados para estos filtros.</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="divide-y divide-gray-50">
+                    {padronFiltrado.map(m => (
+                      <div key={m.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">{m.nombre_completo}</p>
+                          <p className="text-xs text-gray-400">
+                            #{m.codigo}
+                            {m.carrera && <> · <span className="text-gray-600">{m.carrera}</span></>}
+                            {(m.telefono || m.celular) && (
+                              <> · {m.celular ?? m.telefono}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {m.confirmacion_intencion ? (
+                            <span className={cn(
+                              'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                              INTENCION_COLOR[m.confirmacion_intencion] ?? 'bg-gray-100 text-gray-600'
+                            )}>
+                              {INTENCION_LABEL[m.confirmacion_intencion] ?? m.confirmacion_intencion}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-300 font-medium">Sin confirmar</span>
+                          )}
+                          {m.pensionado && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
+                          )}
+                          {m.tiene_deuda && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Con deuda</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
         )}
 
         {/* ── TAB: MIS CONFIRMADOS ── */}
