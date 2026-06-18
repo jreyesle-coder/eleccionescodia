@@ -8,12 +8,12 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col md:flex-row">
 
       {/* ── Columna izquierda: foto campaña ── */}
-      <div className="hidden md:flex md:w-1/2 sticky top-0 h-screen overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 sticky top-0 h-screen items-center justify-center" style={{ backgroundColor: '#0a1832' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/Logo 4.jpg"
           alt="Arq. Richardson Presidente"
-          className="w-full h-full object-cover object-center"
+          className="w-full h-full object-contain"
         />
       </div>
 
@@ -48,7 +48,7 @@ export default function HomePage() {
               Asegura tu participación en las elecciones 2026 del CODIA.
             </p>
             <div className="pt-1">
-              <div className="h-0.5 w-36 mx-auto rounded-full" style={{ backgroundColor: 'var(--color-dorado)' }} />
+              <div className="h-0.5 w-full rounded-full" style={{ backgroundColor: 'var(--color-dorado)' }} />
             </div>
           </div>
 
@@ -73,7 +73,7 @@ export default function HomePage() {
             >
               Operación de Campaña
             </Link>
-            <div className="h-0.5 w-36 mx-auto rounded-full" style={{ backgroundColor: 'var(--color-dorado)' }} />
+            <div className="h-0.5 w-full rounded-full" style={{ backgroundColor: 'var(--color-dorado)' }} />
           </div>
 
           {/* Disclaimer de seguridad */}
