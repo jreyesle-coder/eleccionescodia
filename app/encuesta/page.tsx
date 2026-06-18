@@ -83,7 +83,7 @@ function Divider() {
 // ─── Estado inicial ────────────────────────────────────────────────────────────
 
 type Estado = {
-  q1: string; q2: string; q3: string; q4: string
+  q1: string; q1_otra: string; q2: string; q3: string; q4: string
   q5: string; q6: string; q7: string; q8: string[]
   q9: string; q10: string; q11: string; q12: string
   q13: string; q14: string[]; q15: string; q16: string
@@ -94,7 +94,7 @@ type Estado = {
 }
 
 const INICIAL: Estado = {
-  q1: '', q2: '', q3: '', q4: '',
+  q1: '', q1_otra: '', q2: '', q3: '', q4: '',
   q5: '', q6: '', q7: '', q8: [],
   q9: '', q10: '', q11: '', q12: '',
   q13: '', q14: [], q15: '', q16: '',
@@ -128,6 +128,7 @@ export default function EncuestaPage() {
     setError(null)
     const { error: err } = await supabase.from('encuesta_respuestas').insert({
       q1_area: form.q1 || null,
+      q1_area_otra: form.q1_otra || null,
       q2_regional: form.q2 || null,
       q3_edad: form.q3 || null,
       q4_tiempo_colegiado: form.q4 || null,
@@ -251,6 +252,16 @@ export default function EncuestaPage() {
                 <Radio key={v} name="q1" value={v} label={v} checked={form.q1 === v} onChange={() => set('q1', v)} />
               ))}
             </div>
+            {form.q1 === 'Otra' && (
+              <input
+                type="text"
+                placeholder="Indique su carrera"
+                value={form.q1_otra}
+                onChange={e => set('q1_otra', e.target.value)}
+                className="mt-2 w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+              />
+            )}
           </Pregunta>
 
           <Divider />
@@ -457,8 +468,8 @@ export default function EncuestaPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 'Seguro médico o planes especiales', 'Bolsa de empleo',
-                'Descuentos en farmacias', 'Asesoría legal',
-                'Descuentos en ferreterías', 'Financiamiento para proyectos',
+                'Beneficios a través del carnet', 'Asesoría legal',
+                'Financiamiento para proyectos',
                 'Convenios con universidades', 'Becas nacionales e internacionales',
                 'Otro',
               ].map(v => (

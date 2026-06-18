@@ -6,6 +6,7 @@ create table if not exists encuesta_respuestas (
 
   -- Sección 1: Datos Generales
   q1_area                  text,          -- radio: Ingeniería | Arquitectura | Agrimensura | Otra
+  q1_area_otra             text,          -- texto libre cuando q1_area = Otra
   q2_regional              text,          -- texto libre
   q3_edad                  text,          -- radio: 20-30 | 31-40 | 41-50 | 51-60 | Más de 60
   q4_tiempo_colegiado      text,          -- radio: Menos de 1 año | 1-5 años | 6-10 años | Más de 10 años
