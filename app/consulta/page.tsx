@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
     images: [
       {
-        url: '/Logo 4.jpg',
+        url: 'https://eleccionescodia.rogapps.com/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'Verifícate para Votar — CODIA 2026',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Verifícate para Votar — CODIA 2026',
     description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
-    images: ['/Logo 4.jpg'],
+    images: ['https://eleccionescodia.rogapps.com/og-image.jpg'],
   },
 }
 
