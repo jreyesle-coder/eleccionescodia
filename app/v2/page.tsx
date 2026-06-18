@@ -1,33 +1,30 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import V2Redirect from './redirect'
 
 export const metadata: Metadata = {
-  title: 'Arq. Richardson Presidente – CODIA 2026',
-  description: 'Verifícate para votar en las elecciones 2026 del CODIA. Consulta tu número de colegiado o cédula.',
+  title: 'Verifícate para Votar — CODIA 2026',
+  description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
   openGraph: {
-    title: 'Arq. Richardson Presidente – CODIA 2026',
-    description: 'Verifícate para votar en las elecciones 2026 del CODIA.',
-    url: 'https://eleccionescodia.rogapps.com/v2',
-    siteName: 'Elecciones CODIA 2026',
+    title: 'Verifícate para Votar — CODIA 2026',
+    description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
     images: [
       {
-        url: 'https://eleccionescodia.rogapps.com/og-image.jpg',
+        url: 'https://eleccionescodia.rogapps.com/og-banner.jpg',
         width: 1200,
         height: 630,
-        alt: 'Arq. Richardson Presidente CODIA 2026',
+        alt: 'Arq. Richardson Presidente — CODIA 2026',
       },
     ],
-    locale: 'es_DO',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Arq. Richardson Presidente – CODIA 2026',
-    description: 'Verifícate para votar en las elecciones 2026 del CODIA.',
-    images: ['https://eleccionescodia.rogapps.com/og-image.jpg'],
+    title: 'Verifícate para Votar — CODIA 2026',
+    description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
+    images: ['https://eleccionescodia.rogapps.com/og-banner.jpg'],
   },
 }
 
 export default function V2Page() {
-  redirect('/home')
+  return <V2Redirect />
 }

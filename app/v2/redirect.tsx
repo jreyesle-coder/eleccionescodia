@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function VerificaRedirect() {
+export default function V2Redirect() {
   const router = useRouter()
   useEffect(() => {
     router.replace('/home')
