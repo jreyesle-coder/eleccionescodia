@@ -516,8 +516,11 @@ function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: M
 
 // ─── Tab: Padrón en vivo ──────────────────────────────────────────────────────
 
+// TabPadron conservado por referencia pero no usado en el render
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PAGE_PADRON = 100
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TabPadron({ filas, colaboradoras }: { filas: PadronVivoRow[]; colaboradoras: string[] }) {
   const [buscar, setBuscar] = useState('')
   const [filtroDistrito, setFiltroDistrito] = useState('')
@@ -1724,6 +1727,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
     return () => { supabase.removeChannel(canal) }
   }, [supabase, cargar])
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const colaboradoras = Array.from(
     new Set(padron.filter(f => f.asignado_a).map(f => f.asignado_a as string))
   ).sort()
