@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
     images: [
       {
-        url: '/presidente.jpg',
+        url: 'https://eleccionescodia.rogapps.com/presidente.jpg',
         width: 1200,
         height: 630,
         alt: 'Arq. Richardson Presidente — CODIA 2026',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Verifícate para Votar — CODIA 2026',
     description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
-    images: ['/presidente.jpg'],
+    images: ['https://eleccionescodia.rogapps.com/presidente.jpg'],
   },
 }
 
