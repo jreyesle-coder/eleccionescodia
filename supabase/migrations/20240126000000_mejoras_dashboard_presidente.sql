@@ -50,7 +50,12 @@ language sql security definer stable set search_path = public as $$
          where dv.codigo = p.codigo
       )
     ) as tiene_deuda,
-    coalesce(p.monto_deuda, 0) as monto_deuda,
+    -- Usa monto de padron si existe, si no usa deudas_votantes como fallback
+    coalesce(
+      nullif(p.monto_deuda, 0),
+      (select dv.monto from public.deudas_votantes dv where dv.codigo = p.codigo limit 1),
+      0
+    ) as monto_deuda,
     p.voto_verificate_at
   from public.padron p
   where p.simpatiza_verificate = true
@@ -64,7 +69,11 @@ language sql security definer stable set search_path = public as $$
       'supervisor','gerente','presidente','dirigente','colaborador'
     )
   order by
-    coalesce(p.monto_deuda, 0) asc,
+    coalesce(
+      nullif(p.monto_deuda, 0),
+      (select dv.monto from public.deudas_votantes dv where dv.codigo = p.codigo limit 1),
+      0
+    ) asc,
     p.pensionado asc,
     p.nombre_completo asc;
 $$;
