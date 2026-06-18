@@ -103,18 +103,19 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Extrae el monto de deuda del HTML de IndexUser.
- * Orden de prioridad: Sub Total → Balance → CUOTA
+ * Extrae el monto del campo Balance del HTML de codiaenlinea.com/Home/IndexUser.
+ * El campo Balance refleja la deuda real del colegiado.
+ * Los conceptos como CUOTAS son opcionales y NO representan deuda pendiente.
  */
 function parsearBalance(html: string): number {
-  const subTotal = html.match(/Sub\s*Total\s*:\s*\$\s*([\d,\.]+)/i)
-  if (subTotal) return parseMonto(subTotal[1])
-
-  const balance = html.match(/[Bb]alance[^<]{0,20}<[^>]+>\s*\$?\s*([\d,\.]+)/i)
+  // Patrón principal: "Balance:" seguido de cualquier contenido hasta el signo $
+  // Cubre: "Balance: $0.00", "Balance:</td><td>$300.00", etc.
+  const balance = html.match(/Balance\s*:?[^$]{0,200}\$\s*([\d,\.]+)/i)
   if (balance) return parseMonto(balance[1])
 
-  const cuota = html.match(/CUOTA[^$]*\$\s*([\d,\.]+)/i)
-  if (cuota) return parseMonto(cuota[1])
+  // Fallback: Sub Total explícito
+  const subTotal = html.match(/Sub\s*Total\s*:\s*\$\s*([\d,\.]+)/i)
+  if (subTotal) return parseMonto(subTotal[1])
 
   return 0
 }

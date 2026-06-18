@@ -31,13 +31,15 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && pathname !== '/login' && pathname !== '/consulta') {
+  const publicPaths = ['/home', '/acceso', '/consulta', '/login']
+  if (!user && !publicPaths.includes(pathname)) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/home'
     return NextResponse.redirect(url)
   }
 
-  if (user && pathname === '/login') {
+  // Redirigir usuarios autenticados fuera de las páginas públicas
+  if (user && (pathname === '/home' || pathname === '/acceso' || pathname === '/login')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
