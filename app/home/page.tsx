@@ -67,8 +67,8 @@ export default function HomePage() {
               className="block w-full text-center text-sm font-semibold py-3 px-4 rounded-xl border-2 transition-all hover:opacity-80"
               style={{
                 borderColor: 'var(--color-marino)',
-                color: 'var(--color-marino)',
-                backgroundColor: 'transparent',
+                color: 'white',
+                backgroundColor: 'var(--color-marino)',
               }}
             >
               Operación de Campaña
