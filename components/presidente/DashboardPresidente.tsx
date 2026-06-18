@@ -1002,8 +1002,26 @@ function TabRegularizar() {
 
   useEffect(() => {
     supabase.rpc('simpatizantes_por_regularizar').then(({ data }) => {
-      setLista((data as SimpatizanteRow[]) ?? [])
+      const rows = (data as SimpatizanteRow[]) ?? []
+      setLista(rows)
       setCargando(false)
+      // Para cada colegiado sin monto conocido, consultar CODIA en línea en background
+      for (const r of rows) {
+        if (!r.cedula || r.monto_deuda > 0) continue
+        fetch('/api/consulta-deuda', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cedula: r.cedula, codigo: r.codigo }),
+        })
+          .then(res => res.json())
+          .then((d: { encontrado: boolean; monto: number }) => {
+            if (!d.encontrado || d.monto === 0) return
+            setLista(prev => prev.map(p =>
+              p.id === r.id ? { ...p, monto_deuda: d.monto, tiene_deuda: true } : p
+            ))
+          })
+          .catch(() => {})
+      }
     })
   }, [supabase])
 
