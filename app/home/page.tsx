@@ -76,6 +76,15 @@ export default function HomePage() {
             <div className="h-0.5 w-full rounded-full" style={{ backgroundColor: 'var(--color-dorado)' }} />
           </div>
 
+          {/* Encuesta de diagnóstico */}
+          <Link
+            href="/encuesta"
+            className="block w-full text-center text-sm font-bold py-3 px-4 rounded-xl transition-all hover:opacity-90"
+            style={{ backgroundColor: 'var(--color-dorado)', color: 'var(--color-marino)' }}
+          >
+            📋 Encuesta de Diagnóstico CODIA
+          </Link>
+
           {/* Disclaimer de seguridad */}
           <div className="flex items-start gap-3 rounded-xl px-4 py-3" style={{ backgroundColor: '#f4f6fb' }}>
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mt-0.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="currentColor">

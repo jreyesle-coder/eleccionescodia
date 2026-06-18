@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const publicPaths = ['/home', '/acceso', '/consulta', '/login']
+  const publicPaths = ['/home', '/acceso', '/consulta', '/login', '/encuesta']
   if (!user && !publicPaths.includes(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/home'

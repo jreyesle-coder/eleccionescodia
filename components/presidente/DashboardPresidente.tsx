@@ -7,6 +7,7 @@ import {
   PieChart, Pie, Cell, Tooltip, Legend,
 } from 'recharts'
 import AppHeader from '@/components/app-header'
+import TabEncuesta from '@/components/presidente/TabEncuesta'
 import type {
   MetricaDistrito,
   PadronVivoRow,
@@ -53,7 +54,7 @@ const ETIQUETA_RESULTADO: Record<string, string> = {
   rechaza:              'Rechaza',
 }
 
-type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar' | 'confirmados' | 'dia_eleccion'
+type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar' | 'confirmados' | 'dia_eleccion' | 'encuesta'
 
 
 function fmt(d: string | null) {
@@ -1406,6 +1407,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
     { id: 'regularizar',  label: '⭐ Por regularizar' },
     { id: 'confirmados',  label: '✓ Confirmados' },
     { id: 'dia_eleccion', label: '🗳 Día de Elección' },
+    { id: 'encuesta',     label: '📋 Encuesta' },
   ]
 
   if (cargando) {
@@ -1491,6 +1493,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         {tab === 'regularizar'  && <TabRegularizar />}
         {tab === 'confirmados'  && <TabConfirmadosPresidente />}
         {tab === 'dia_eleccion' && <TabDiaEleccion />}
+        {tab === 'encuesta'     && <TabEncuesta />}
       </div>
     </div>
   )
