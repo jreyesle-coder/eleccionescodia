@@ -6,16 +6,16 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Verifícate para Votar — CODIA 2026',
-  description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
+  description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
   openGraph: {
     title: 'Verifícate para Votar — CODIA 2026',
-    description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
+    description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
     images: [
       {
-        url: '/Logo 4.jpg',
+        url: '/presidente.jpg',
         width: 1200,
         height: 630,
-        alt: 'Verifícate para Votar — CODIA 2026',
+        alt: 'Arq. Richardson Presidente — CODIA 2026',
       },
     ],
     type: 'website',
@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Verifícate para Votar — CODIA 2026',
-    description: 'Por un CODIA más fuerte, moderno y transparente. Arq. Richardson Presidente.',
-    images: ['/Logo 4.jpg'],
+    description: 'Vota por el Arq. Richardson en estas próximas elecciones.',
+    images: ['/presidente.jpg'],
   },
 }
 
@@ -107,8 +107,8 @@ export default async function RootPage() {
             className="block w-full text-center text-sm font-semibold py-3 px-4 rounded-xl border-2 transition-all hover:opacity-80"
             style={{
               borderColor: 'var(--color-marino)',
-              color: 'var(--color-marino)',
-              backgroundColor: 'transparent',
+              color: 'white',
+              backgroundColor: 'var(--color-marino)',
             }}
           >
             Operación de Campaña
