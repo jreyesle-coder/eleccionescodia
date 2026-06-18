@@ -2,10 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from 'recharts'
-
 // ─── tipos ────────────────────────────────────────────────────────────────────
 
 interface Row {
