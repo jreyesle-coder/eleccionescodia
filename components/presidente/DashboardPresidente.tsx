@@ -1069,9 +1069,7 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
       setNucleosPorRegional([])
       return
     }
-    supabase.rpc('opciones_padron').then(({ data }) => {
-      // nucleos que pertenecen a esta regional según los datos cargados
-      // como no tenemos esa relación en opciones_padron, usamos todos
+    supabase.rpc('opciones_padron').then(() => {
       setNucleosPorRegional([])
     })
   }, [filtroRegional, supabase])
