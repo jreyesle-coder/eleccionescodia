@@ -19,14 +19,7 @@ function Radio({
           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--color-marino)' }} />
         )}
       </span>
-      <input
-        type="radio"
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={onChange}
-        className="sr-only"
-      />
+      <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="sr-only" />
       <span className="text-sm text-gray-700 group-hover:text-gray-900">{label}</span>
     </label>
   )
@@ -65,14 +58,23 @@ function SeccionHeader({ num, titulo, color = 'var(--color-marino)' }: { num: nu
   )
 }
 
-function Pregunta({ num, texto, children, dark }: { num: number; texto: string; children: React.ReactNode; dark?: boolean }) {
+function Pregunta({ num, texto, children, dark, sub }: { num: number; texto: string; children: React.ReactNode; dark?: boolean; sub?: boolean }) {
   return (
     <div className="space-y-3">
       <p className={`text-sm font-semibold ${dark ? 'text-white' : 'text-gray-800'}`}>
-        <span style={{ color: dark ? 'var(--color-dorado)' : 'var(--color-marino)' }}>{num}.</span> {texto}
+        {!sub && <span style={{ color: dark ? 'var(--color-dorado)' : 'var(--color-marino)' }}>{num}. </span>}
+        {texto}
       </p>
       <div className="pl-1 space-y-2">{children}</div>
     </div>
+  )
+}
+
+function SubLabel({ texto, dark }: { texto: string; dark?: boolean }) {
+  return (
+    <p className={`text-xs font-semibold uppercase tracking-wide mt-4 mb-1 ${dark ? 'text-blue-300' : 'text-gray-500'}`}>
+      {texto}
+    </p>
   )
 }
 
@@ -127,35 +129,35 @@ export default function EncuestaPage() {
     setEnviando(true)
     setError(null)
     const { error: err } = await supabase.from('encuesta_respuestas').insert({
-      q1_area: form.q1 || null,
-      q1_area_otra: form.q1_otra || null,
-      q2_regional: form.q2 || null,
-      q3_edad: form.q3 || null,
-      q4_tiempo_colegiado: form.q4 || null,
-      q5_situacion_laboral: form.q5 || null,
+      q1_area:                form.q1 || null,
+      q1_area_otra:           form.q1_otra || null,
+      q2_regional:            form.q2 || null,
+      q3_edad:                form.q3 || null,
+      q4_tiempo_colegiado:    form.q4 || null,
+      q5_situacion_laboral:   form.q5 || null,
       q6_necesidad_principal: form.q6 || null,
       q7_dificultades_ejercer: form.q7 || null,
       q8_cuales_dificultades: form.q8.length ? form.q8 : null,
-      q9_calificacion: form.q9 || null,
-      q10_representa: form.q10 || null,
-      q11_area_fortalecer: form.q11 || null,
-      q12_nivel_informacion: form.q12 || null,
+      q9_calificacion:        form.q9 || null,
+      q10_representa:         form.q10 || null,
+      q11_area_fortalecer:    form.q11 || null,
+      q12_nivel_informacion:  form.q12 || null,
       q13_formacion_continua: form.q13 || null,
       q14_tipo_capacitaciones: form.q14.length ? form.q14 : null,
-      q15_modalidad: form.q15 || null,
-      q16_frecuencia: form.q16 || null,
-      q17_beneficios: form.q17.length ? form.q17 : null,
-      q18_feria_empleos: form.q18 || null,
+      q15_modalidad:          form.q15 || null,
+      q16_frecuencia:         form.q16 || null,
+      q17_beneficios:         form.q17.length ? form.q17 : null,
+      q18_feria_empleos:      form.q18 || null,
       q19_plataforma_digital: form.q19 || null,
       q20_funciones_plataforma: form.q20.length ? form.q20 : null,
-      q21_participacion: form.q21 || null,
-      q22_motivacion: form.q22.length ? form.q22 : null,
-      q23_limitacion: form.q23 || null,
+      q21_participacion:      form.q21 || null,
+      q22_motivacion:         form.q22.length ? form.q22 : null,
+      q23_limitacion:         form.q23 || null,
       q24_proyecto_prioridad: form.q24 || null,
-      q25_servicio_nuevo: form.q25 || null,
-      q26_recomendaciones: form.q26 || null,
-      q27_frase: form.q27 || null,
-      q28_prioridades: form.q28.length ? form.q28 : null,
+      q25_servicio_nuevo:     null,
+      q26_recomendaciones:    null,
+      q27_frase:              null,
+      q28_prioridades:        form.q28.length ? form.q28 : null,
     })
     setEnviando(false)
     if (err) { setError('Ocurrió un error al enviar. Por favor intenta de nuevo.'); return }
@@ -191,7 +193,6 @@ export default function EncuestaPage() {
             </h1>
             <p className="text-gray-600 text-sm leading-relaxed">
               Tu opinión es fundamental para construir un CODIA más fuerte, moderno y transparente.
-              Juntos construiremos un CODIA más fuerte, moderno y transparente.
             </p>
             <div
               className="rounded-2xl p-4 text-sm font-semibold"
@@ -210,7 +211,6 @@ export default function EncuestaPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-fondo)' }}>
 
-      {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="px-5 py-3 flex items-center justify-between">
           <Marca />
@@ -222,7 +222,6 @@ export default function EncuestaPage() {
         </div>
       </header>
 
-      {/* Hero */}
       <div className="text-white py-10 px-5 text-center" style={{ background: 'linear-gradient(135deg, var(--color-marino), var(--color-real))' }}>
         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--color-dorado)' }}>
           ARQ. RICHARDSON PRESIDENTE — GESTIÓN 2026-2027
@@ -239,7 +238,6 @@ export default function EncuestaPage() {
         </p>
       </div>
 
-      {/* Formulario */}
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto px-4 py-8 space-y-6">
 
         {/* ── Sección 1: Datos Generales ─────────────────────────────────── */}
@@ -338,7 +336,7 @@ export default function EncuestaPage() {
           {form.q7 === 'si' && (
             <>
               <Divider />
-              <Pregunta num={8} texto="Si respondió sí, ¿cuáles dificultades ha enfrentado?">
+              <Pregunta num={8} texto="¿Cuáles dificultades ha enfrentado?">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     'Baja remuneración', 'Falta de apoyo institucional',
@@ -361,17 +359,15 @@ export default function EncuestaPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <SeccionHeader num={3} titulo="Valoración Institucional del CODIA" />
 
-          <Pregunta num={9} texto="¿Cómo califica los servicios que actualmente ofrece el CODIA?">
+          {/* P9 + P10 fusionadas */}
+          <Pregunta num={9} texto="Valora el CODIA en estos dos aspectos:">
+            <SubLabel texto="¿Cómo califica los servicios que ofrece el CODIA?" />
             <div className="flex flex-wrap gap-4">
               {['Excelentes', 'Buenos', 'Regulares', 'Deficientes'].map(v => (
                 <Radio key={v} name="q9" value={v} label={v} checked={form.q9 === v} onChange={() => set('q9', v)} />
               ))}
             </div>
-          </Pregunta>
-
-          <Divider />
-
-          <Pregunta num={10} texto="¿Siente que el CODIA representa adecuadamente los intereses de los colegiados?">
+            <SubLabel texto="¿El CODIA representa adecuadamente a los colegiados?" />
             <div className="flex flex-wrap gap-4">
               {['Sí, totalmente', 'En parte', 'Muy poco', 'No'].map(v => (
                 <Radio key={v} name="q10" value={v} label={v} checked={form.q10 === v} onChange={() => set('q10', v)} />
@@ -381,7 +377,8 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={11} texto="¿Qué área considera que debe fortalecerse con mayor urgencia?">
+          {/* P11 + P12 agrupadas */}
+          <Pregunta num={10} texto="¿Qué área considera que debe fortalecerse con mayor urgencia?">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 'Defensa gremial y legal', 'Gestión de beneficios y convenios',
@@ -394,9 +391,7 @@ export default function EncuestaPage() {
             </div>
           </Pregunta>
 
-          <Divider />
-
-          <Pregunta num={12} texto="¿Qué tan informado(a) se siente sobre las actividades y gestiones del CODIA?">
+          <Pregunta num={11} texto="¿Qué tan informado(a) se siente sobre las actividades y gestiones del CODIA?">
             <div className="flex flex-wrap gap-4">
               {['Muy informado(a)', 'Informado(a)', 'Poco informado(a)', 'Nada informado(a)'].map(v => (
                 <Radio key={v} name="q12" value={v} label={v} checked={form.q12 === v} onChange={() => set('q12', v)} />
@@ -409,7 +404,7 @@ export default function EncuestaPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <SeccionHeader num={4} titulo="Capacitación y Desarrollo Profesional" />
 
-          <Pregunta num={13} texto="¿Le interesa participar en programas de formación continua?">
+          <Pregunta num={12} texto="¿Le interesa participar en programas de formación continua?">
             <div className="flex gap-6">
               {[{ v: 'si', l: 'Sí' }, { v: 'no', l: 'No' }].map(({ v, l }) => (
                 <Radio key={v} name="q13" value={v} label={l} checked={form.q13 === v} onChange={() => set('q13', v)} />
@@ -419,7 +414,7 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={14} texto="¿Qué tipo de capacitaciones le gustaría recibir? (Seleccione hasta 3)">
+          <Pregunta num={13} texto="¿Qué tipo de capacitaciones le gustaría recibir? (Seleccione hasta 3)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 'Diseño y tecnología', 'Presupuesto y cubicaciones',
@@ -441,17 +436,15 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={15} texto="¿Qué modalidad prefiere para las capacitaciones?">
+          {/* P15 + P16 fusionadas */}
+          <Pregunta num={14} texto="Preferencias de capacitación:">
+            <SubLabel texto="Modalidad preferida" />
             <div className="flex flex-wrap gap-4">
               {['Presencial', 'Virtual', 'Híbrida'].map(v => (
                 <Radio key={v} name="q15" value={v} label={v} checked={form.q15 === v} onChange={() => set('q15', v)} />
               ))}
             </div>
-          </Pregunta>
-
-          <Divider />
-
-          <Pregunta num={16} texto="¿Con qué frecuencia le gustaría que el CODIA realizara capacitaciones?">
+            <SubLabel texto="Frecuencia deseada" />
             <div className="flex flex-wrap gap-4">
               {['Semanal', 'Quincenal', 'Mensual', 'Trimestral'].map(v => (
                 <Radio key={v} name="q16" value={v} label={v} checked={form.q16 === v} onChange={() => set('q16', v)} />
@@ -464,7 +457,7 @@ export default function EncuestaPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <SeccionHeader num={5} titulo="Beneficios y Servicios" />
 
-          <Pregunta num={17} texto="¿Cuáles beneficios le gustaría que gestionara el CODIA? (Seleccione hasta 3)">
+          <Pregunta num={15} texto="¿Cuáles beneficios le gustaría que gestionara el CODIA? (Seleccione hasta 3)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 'Seguro médico o planes especiales', 'Bolsa de empleo',
@@ -486,7 +479,7 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={18} texto="¿Considera importante que el CODIA gestione una feria de empleos?">
+          <Pregunta num={16} texto="¿Considera importante que el CODIA gestione una feria de empleos?">
             <div className="flex flex-wrap gap-4">
               {['Sí', 'No', 'Tal vez'].map(v => (
                 <Radio key={v} name="q18" value={v} label={v} checked={form.q18 === v} onChange={() => set('q18', v)} />
@@ -496,33 +489,34 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={19} texto="¿Le gustaría que el CODIA cuente con una plataforma digital o app para colegiados?">
+          {/* P19 + P20 condicional */}
+          <Pregunta num={17} texto="¿Le gustaría que el CODIA cuente con una plataforma digital o app para colegiados?">
             <div className="flex gap-6">
               {[{ v: 'si', l: 'Sí' }, { v: 'no', l: 'No' }].map(({ v, l }) => (
                 <Radio key={v} name="q19" value={v} label={l} checked={form.q19 === v} onChange={() => set('q19', v)} />
               ))}
             </div>
-          </Pregunta>
-
-          <Divider />
-
-          <Pregunta num={20} texto="¿Qué funciones le gustaría que tuviera esa plataforma? (Seleccione hasta 3)">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {[
-                'Pago de colegiatura', 'Bolsa de empleo',
-                'Acceso a carnet digital', 'Capacitaciones virtuales',
-                'Noticias y actividades', 'Directorio de colegiados',
-                'Denuncias de obras ilegales', 'Otro',
-              ].map(v => (
-                <Checkbox
-                  key={v} value={v} label={v}
-                  checked={form.q20.includes(v)}
-                  disabled={!form.q20.includes(v) && form.q20.length >= 3}
-                  onChange={() => setForm(f => ({ ...f, q20: toggleArr(f.q20, v, 3) }))}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-gray-400">{form.q20.length}/3 seleccionadas</p>
+            {form.q19 === 'si' && (
+              <>
+                <SubLabel texto="¿Qué funciones le gustaría que tuviera? (Seleccione hasta 3)" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    'Pago de colegiatura', 'Bolsa de empleo',
+                    'Acceso a carnet digital', 'Capacitaciones virtuales',
+                    'Noticias y actividades', 'Directorio de colegiados',
+                    'Denuncias de obras ilegales', 'Otro',
+                  ].map(v => (
+                    <Checkbox
+                      key={v} value={v} label={v}
+                      checked={form.q20.includes(v)}
+                      disabled={!form.q20.includes(v) && form.q20.length >= 3}
+                      onChange={() => setForm(f => ({ ...f, q20: toggleArr(f.q20, v, 3) }))}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400">{form.q20.length}/3 seleccionadas</p>
+              </>
+            )}
           </Pregunta>
         </div>
 
@@ -530,7 +524,7 @@ export default function EncuestaPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <SeccionHeader num={6} titulo="Participación Gremial" />
 
-          <Pregunta num={21} texto="¿Participa activamente en actividades del CODIA?">
+          <Pregunta num={18} texto="¿Participa activamente en actividades del CODIA?">
             <div className="flex flex-wrap gap-4">
               {['Sí, con frecuencia', 'Algunas veces', 'Rara vez', 'Nunca'].map(v => (
                 <Radio key={v} name="q21" value={v} label={v} checked={form.q21 === v} onChange={() => set('q21', v)} />
@@ -540,7 +534,7 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={22} texto="¿Qué le motiva a participar más en el CODIA? (Seleccione hasta 2)">
+          <Pregunta num={19} texto="¿Qué le motiva a participar más en el CODIA? (Seleccione hasta 2)">
             <div className="grid grid-cols-2 gap-2">
               {[
                 'Formación', 'Beneficios directos',
@@ -560,7 +554,7 @@ export default function EncuestaPage() {
 
           <Divider />
 
-          <Pregunta num={23} texto="¿Qué limita su participación?">
+          <Pregunta num={20} texto="¿Qué limita su participación?">
             <div className="grid grid-cols-2 gap-2">
               {[
                 'Falta de tiempo', 'Distancia',
@@ -577,52 +571,13 @@ export default function EncuestaPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
           <SeccionHeader num={7} titulo="Propuestas y Opinión Abierta" />
 
-          <Pregunta num={24} texto="¿Qué proyecto o iniciativa considera prioritaria para mejorar el CODIA?">
+          <Pregunta num={21} texto="¿Qué propones para fortalecer el CODIA y apoyar mejor a los colegiados? (proyectos, servicios nuevos, recomendaciones)">
             <textarea
-              rows={3}
+              rows={4}
               value={form.q24}
               onChange={e => set('q24', e.target.value)}
-              placeholder="Escribe tu propuesta…"
+              placeholder="Escribe tus propuestas y recomendaciones…"
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none"
-              style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
-            />
-          </Pregunta>
-
-          <Divider />
-
-          <Pregunta num={25} texto="¿Qué servicio nuevo le gustaría que implemente el CODIA?">
-            <textarea
-              rows={3}
-              value={form.q25}
-              onChange={e => set('q25', e.target.value)}
-              placeholder="Escribe tu sugerencia…"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none"
-              style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
-            />
-          </Pregunta>
-
-          <Divider />
-
-          <Pregunta num={26} texto="¿Qué recomendaciones tiene para fortalecer el gremio y apoyar mejor a los colegiados?">
-            <textarea
-              rows={3}
-              value={form.q26}
-              onChange={e => set('q26', e.target.value)}
-              placeholder="Tus recomendaciones…"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none"
-              style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
-            />
-          </Pregunta>
-
-          <Divider />
-
-          <Pregunta num={27} texto="En una sola frase, ¿qué necesita hoy el colegiado del CODIA?">
-            <input
-              type="text"
-              value={form.q27}
-              onChange={e => set('q27', e.target.value)}
-              placeholder="Una frase poderosa…"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
               style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
             />
           </Pregunta>
@@ -637,7 +592,7 @@ export default function EncuestaPage() {
             </h2>
           </div>
 
-          <Pregunta dark num={28} texto="¿Cuáles considera que deben ser las tres principales prioridades de la próxima gestión nacional del CODIA? (Seleccione hasta 3)">
+          <Pregunta dark num={22} texto="¿Cuáles deben ser las tres principales prioridades de la próxima gestión? (Seleccione hasta 3)">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 'Defensa del ejercicio profesional',
@@ -676,14 +631,12 @@ export default function EncuestaPage() {
           </Pregunta>
         </div>
 
-        {/* ── Error ───────────────────────────────────────────────────────── */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
             <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
 
-        {/* ── Botón enviar ────────────────────────────────────────────────── */}
         <button
           type="submit"
           disabled={enviando}
@@ -693,7 +646,6 @@ export default function EncuestaPage() {
           {enviando ? 'Enviando…' : '¡Enviar mi respuesta!'}
         </button>
 
-        {/* Footer */}
         <p className="text-center text-xs text-gray-400 pb-4">
           ¡Gracias por tu participación! · ARQ. RICHARDSON PRESIDENTE · CODIA 2026-2027
         </p>
