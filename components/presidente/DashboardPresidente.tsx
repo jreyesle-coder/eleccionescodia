@@ -720,20 +720,26 @@ interface ConfirmadoNucleoRow {
 
 function TabNucleos() {
   const supabase = createClient()
-  const [datos, setDatos]           = useState<NucleoAgrupado[]>([])
-  const [cargando, setCargando]     = useState(true)
-  const [error, setError]           = useState<string | null>(null)
-  const [abiertos, setAbiertos]     = useState<Set<string>>(new Set())
-  const [drilldown, setDrilldown]   = useState<{ nucleo: string; carrera: string | null } | null>(null)
-  const [detalle, setDetalle]       = useState<ConfirmadoNucleoRow[]>([])
-  const [cargandoDrill, setCargandoDrill] = useState(false)
+  const [datos, setDatos]                     = useState<NucleoAgrupado[]>([])
+  const [totalGlobalReal, setTotalGlobalReal] = useState<number | null>(null)
+  const [cargando, setCargando]               = useState(true)
+  const [error, setError]                     = useState<string | null>(null)
+  const [abiertos, setAbiertos]               = useState<Set<string>>(new Set())
+  const [drilldown, setDrilldown]             = useState<{ nucleo: string; carrera: string | null } | null>(null)
+  const [detalle, setDetalle]                 = useState<ConfirmadoNucleoRow[]>([])
+  const [cargandoDrill, setCargandoDrill]     = useState(false)
 
   useEffect(() => {
-    supabase.rpc('stats_nucleos').then(({ data, error: err }) => {
+    Promise.all([
+      supabase.rpc('stats_nucleos'),
+      supabase.rpc('confirmados_total_global'),
+    ]).then(([{ data, error: err }, { data: totalData }]) => {
+      setTotalGlobalReal(Number(totalData ?? 0))
       if (err) { setError('No se pudo cargar la vista por núcleos.'); setCargando(false); return }
       const filas = (data as NucleoCarreraRow[]) ?? []
 
       const mapa = new Map<string, NucleoAgrupado>()
+
       for (const f of filas) {
         const n = mapa.get(f.nucleo) ?? {
           nucleo: f.nucleo,
@@ -784,8 +790,10 @@ function TabNucleos() {
     setCargandoDrill(false)
   }
 
-  const totalGlobal      = datos.reduce((s, n) => s + n.totalNucleo, 0)
-  const totalConfGlobal  = datos.reduce((s, n) => s + n.totalConfirmados, 0)
+  const totalGlobal     = datos.reduce((s, n) => s + n.totalNucleo, 0)
+  // totalGlobalReal viene de la BD deduplicado; la suma por núcleos puede contar
+  // una persona varias veces si tiene carreras en núcleos distintos.
+  const totalConfGlobal = totalGlobalReal ?? datos.reduce((s, n) => s + n.totalConfirmados, 0)
 
   if (cargando) return <p className="text-center text-gray-400 py-12">Cargando núcleos…</p>
   if (error)    return <p className="text-center text-red-500 py-12">{error}</p>
@@ -1466,12 +1474,143 @@ interface ConfirmadoResumen {
   ultima_confirmacion: string | null
 }
 
+interface ConfirmadoDetalleRow {
+  codigo: string
+  nombre_completo: string
+  regional: string | null
+  nucleo: string | null
+  carrera: string | null
+  via_verificate: boolean
+  via_callcenter: boolean
+  via_dirigente: boolean
+  confirmado_por: string | null
+}
+
+type ModalVia = 'verificate' | 'callcenter' | 'dirigente' | 'todos'
+
+function ModalConfirmados({
+  titulo,
+  via,
+  onCerrar,
+}: {
+  titulo: string
+  via: ModalVia
+  onCerrar: () => void
+}) {
+  const supabase = createClient()
+  const [lista, setLista]       = useState<ConfirmadoDetalleRow[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [buscar, setBuscar]     = useState('')
+
+  useEffect(() => {
+    let activo = true
+    supabase.rpc('listar_confirmados_detalle', { p_via: via }).then(({ data }) => {
+      if (activo) {
+        setLista((data as ConfirmadoDetalleRow[]) ?? [])
+        setCargando(false)
+      }
+    })
+    return () => { activo = false }
+  }, [via]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtrada = lista.filter(r => {
+    const q = buscar.toLowerCase()
+    return !q || r.nombre_completo.toLowerCase().includes(q) || r.codigo.includes(q)
+  })
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(14,28,66,0.5)' }}
+      onClick={onCerrar}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Cabecera */}
+        <div className="px-6 py-4 flex items-start justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+          <div>
+            <p className="font-bold text-base">{titulo}</p>
+            {!cargando && <p className="text-blue-200 text-sm">{lista.length} persona{lista.length !== 1 ? 's' : ''}</p>}
+          </div>
+          <button onClick={onCerrar} className="text-blue-200 hover:text-white text-xl font-bold ml-4">✕</button>
+        </div>
+
+        {/* Buscador */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <input
+            type="text"
+            placeholder="Buscar por nombre o colegiatura…"
+            value={buscar}
+            onChange={e => setBuscar(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
+        </div>
+
+        {/* Lista */}
+        <div className="flex-1 overflow-y-auto">
+          {cargando ? (
+            <p className="text-center text-gray-400 py-10">Cargando…</p>
+          ) : filtrada.length === 0 ? (
+            <p className="text-center text-gray-400 py-10">{buscar ? 'Sin resultados.' : 'Sin registros.'}</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs uppercase text-gray-500 bg-gray-50 border-b sticky top-0">
+                  <th className="text-left px-5 py-2">Nombre</th>
+                  <th className="text-left px-5 py-2 hidden sm:table-cell">Colegiatura</th>
+                  <th className="text-left px-5 py-2">Vía</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtrada.map(r => (
+                  <tr key={r.codigo} className="hover:bg-blue-50/20">
+                    <td className="px-5 py-2.5">
+                      <p className="font-medium text-gray-900">{r.nombre_completo}</p>
+                      {(r.regional || r.nucleo) && (
+                        <p className="text-xs text-gray-400">{[r.regional, r.nucleo].filter(Boolean).join(' · ')}</p>
+                      )}
+                    </td>
+                    <td className="px-5 py-2.5 text-gray-500 hidden sm:table-cell">{r.codigo}</td>
+                    <td className="px-5 py-2.5">
+                      <div className="flex flex-wrap gap-1">
+                        {r.via_verificate && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">🌐 Verifícate</span>
+                        )}
+                        {r.via_callcenter && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">📞 Call center</span>
+                        )}
+                        {r.via_dirigente && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                            👤 {r.confirmado_por ?? 'Dirigente'}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
+          {!cargando && `${filtrada.length} de ${lista.length} confirmados`}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TabConfirmadosPresidente() {
   const supabase = createClient()
-  const [resumen, setResumen]         = useState<ConfirmadoResumen[]>([])
-  const [totalVerif, setTotalVerif]   = useState(0)
+  const [resumen, setResumen]                 = useState<ConfirmadoResumen[]>([])
+  const [totalVerif, setTotalVerif]           = useState(0)
   const [totalCallCenter, setTotalCallCenter] = useState(0)
-  const [cargando, setCargando]       = useState(true)
+  const [cargando, setCargando]               = useState(true)
+  const [modalVia, setModalVia]               = useState<ModalVia | null>(null)
+  const [modalTitulo, setModalTitulo]         = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -1490,22 +1629,35 @@ function TabConfirmadosPresidente() {
   const totalConfirmados = resumen.reduce((s, r) => s + r.total, 0)
   const totalFavorables  = resumen.reduce((s, r) => s + r.favorables, 0) + totalVerif + totalCallCenter
 
+  function abrirModal(via: ModalVia, titulo: string) {
+    setModalVia(via)
+    setModalTitulo(titulo)
+  }
+
   if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
+
+  const tarjetas: { titulo: string; valor: number; color: string; via: ModalVia }[] = [
+    { titulo: 'Total confirmados (dirigentes)', valor: totalConfirmados, color: 'var(--color-marino)', via: 'dirigente' },
+    { titulo: 'Via Verifícate (simpatizantes)', valor: totalVerif,       color: '#16a34a',            via: 'verificate' },
+    { titulo: 'Via Call Center',                valor: totalCallCenter,  color: '#2563eb',            via: 'callcenter' },
+    { titulo: 'Favorables totales',             valor: totalFavorables,  color: '#ca8a04',            via: 'todos' },
+  ]
 
   return (
     <div className="space-y-5">
-      {/* KPIs */}
+      {/* KPIs — clickables */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { titulo: 'Total confirmados (dirigentes)', valor: totalConfirmados, color: 'var(--color-marino)' },
-          { titulo: 'Via Verifícate (simpatizantes)', valor: totalVerif, color: '#16a34a' },
-          { titulo: 'Via Call Center', valor: totalCallCenter, color: '#2563eb' },
-          { titulo: 'Favorables totales', valor: totalFavorables, color: '#ca8a04' },
-        ].map(({ titulo, valor, color }) => (
-          <div key={titulo} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4" style={{ borderTopColor: color }}>
+        {tarjetas.map(({ titulo, valor, color, via }) => (
+          <button
+            key={titulo}
+            onClick={() => abrirModal(via, titulo)}
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4 text-left hover:shadow-md active:scale-95 transition-all"
+            style={{ borderTopColor: color }}
+          >
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{titulo}</p>
             <p className="text-3xl font-black mt-1 tabular-nums" style={{ color }}>{valor.toLocaleString()}</p>
-          </div>
+            <p className="text-[10px] text-gray-300 mt-1">Toca para ver lista →</p>
+          </button>
         ))}
       </div>
 
@@ -1558,6 +1710,15 @@ function TabConfirmadosPresidente() {
           </div>
         )}
       </div>
+
+      {/* Modal drilldown */}
+      {modalVia && (
+        <ModalConfirmados
+          titulo={modalTitulo}
+          via={modalVia}
+          onCerrar={() => setModalVia(null)}
+        />
+      )}
     </div>
   )
 }
