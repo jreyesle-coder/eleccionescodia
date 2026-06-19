@@ -1723,7 +1723,13 @@ function TabConfirmadosPresidente() {
   )
 }
 
-// ─── Tab: Día de Elección (tiempo real) ──────────────────────────────────────
+// ─── Tab: Día de Elección (resultados A Favor / No A Favor) ──────────────────
+
+interface RegionalResultado {
+  a_favor:    number
+  no_a_favor: number
+  total:      number
+}
 
 interface AlertaDoble {
   codigo: string
@@ -1742,11 +1748,13 @@ interface AlertaNoHab {
 
 function TabDiaEleccion() {
   const supabase = createClient()
-  const [totalVotos, setTotalVotos]       = useState(0)
-  const [porMesa, setPorMesa]             = useState<Record<string, number>>({})
-  const [alertasDoble, setAlertasDoble]   = useState<AlertaDoble[]>([])
-  const [alertasNoHab, setAlertasNoHab]   = useState<AlertaNoHab[]>([])
-  const [cargando, setCargando]           = useState(true)
+  const [totalVotos, setTotalVotos]     = useState(0)
+  const [aFavor, setAFavor]             = useState(0)
+  const [noAFavor, setNoAFavor]         = useState(0)
+  const [porRegional, setPorRegional]   = useState<Record<string, RegionalResultado>>({})
+  const [alertasDoble, setAlertasDoble] = useState<AlertaDoble[]>([])
+  const [alertasNoHab, setAlertasNoHab] = useState<AlertaNoHab[]>([])
+  const [cargando, setCargando]         = useState(true)
 
   const cargar = useCallback(async () => {
     const [resConteo, resDoble, resNoHab] = await Promise.all([
@@ -1756,8 +1764,10 @@ function TabDiaEleccion() {
     ])
     const c = Array.isArray(resConteo.data) ? resConteo.data[0] : resConteo.data
     if (c) {
-      setTotalVotos(c.total_votos ?? 0)
-      setPorMesa((c.por_mesa as Record<string, number>) ?? {})
+      setTotalVotos(Number(c.total_votos ?? 0))
+      setAFavor(Number(c.a_favor ?? 0))
+      setNoAFavor(Number(c.no_a_favor ?? 0))
+      setPorRegional((c.por_regional as Record<string, RegionalResultado>) ?? {})
     }
     setAlertasDoble((resDoble.data as AlertaDoble[]) ?? [])
     setAlertasNoHab((resNoHab.data as AlertaNoHab[]) ?? [])
@@ -1766,7 +1776,6 @@ function TabDiaEleccion() {
 
   useEffect(() => {
     cargar()
-    // Realtime en votos_dia
     const canal = supabase
       .channel('dia-eleccion-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'votos_dia' }, () => cargar())
@@ -1776,37 +1785,146 @@ function TabDiaEleccion() {
 
   if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
 
-  const mesasSorted = Object.entries(porMesa).sort(([a], [b]) => a.localeCompare(b))
+  const totalValidos = aFavor + noAFavor
+  const pctFavor     = totalValidos > 0 ? (aFavor   / totalValidos * 100) : 0
+  const pctNoFavor   = totalValidos > 0 ? (noAFavor / totalValidos * 100) : 0
+  const diferencia   = aFavor - noAFavor
+  const vamosGanando = diferencia >= 0
+
+  const regionalesOrdenadas = Object.entries(porRegional).sort(([a], [b]) => a.localeCompare(b))
 
   return (
     <div className="space-y-5">
-      {/* Contador total */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center border-t-4"
-        style={{ borderTopColor: 'var(--color-marino)' }}>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Votos registrados</p>
-        <p className="text-7xl font-black mt-2 tabular-nums" style={{ color: 'var(--color-marino)' }}>
-          {totalVotos.toLocaleString()}
-        </p>
-      </div>
 
-      {/* Votos por mesa */}
-      {mesasSorted.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100">
-            <p className="text-sm font-semibold text-gray-700">Por mesa</p>
+      {/* ── Banner ganador ─────────────────────────────────────────────────── */}
+      {totalVotos > 0 && (
+        <div
+          className="rounded-2xl p-6 text-white flex items-center justify-between gap-4 flex-wrap"
+          style={{ background: vamosGanando
+            ? 'linear-gradient(135deg, #0F1B33, #1F3A6B)'
+            : 'linear-gradient(135deg, #7f1d1d, #991b1b)'
+          }}
+        >
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">
+              {vamosGanando ? 'VA GANANDO' : 'VA PERDIENDO'}
+            </p>
+            <p className="text-3xl font-black">
+              {vamosGanando ? '✓ A Favor' : '✗ No A Favor'}
+            </p>
+            <p className="text-blue-200 text-sm mt-1">
+              {(vamosGanando ? aFavor : noAFavor).toLocaleString()} votos
+            </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-0 divide-x divide-y divide-gray-100">
-            {mesasSorted.map(([mesa, cnt]) => (
-              <div key={mesa} className="p-4 text-center">
-                <p className="text-xs text-gray-400 font-semibold">Mesa {mesa}</p>
-                <p className="text-3xl font-black tabular-nums" style={{ color: 'var(--color-marino)' }}>{cnt}</p>
-              </div>
-            ))}
+          <div
+            className="text-center rounded-xl px-6 py-4 shrink-0"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}
+          >
+            <p className="font-black text-3xl tabular-nums">
+              {(vamosGanando ? pctFavor : pctNoFavor).toFixed(1)}%
+            </p>
+            <p className="text-xs opacity-70 mt-1">de votos válidos</p>
           </div>
         </div>
       )}
 
-      {/* Alertas doble voto */}
+      {/* ── Tarjetas A Favor / No A Favor ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-3" style={{ borderColor: '#16a34a' }}>
+          <p className="text-xs font-bold uppercase tracking-wide text-green-700">✓ A Favor</p>
+          <p className="text-5xl font-black tabular-nums text-green-700">{aFavor.toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{pctFavor.toFixed(1)}% de votos válidos</p>
+          <div className="bg-gray-100 rounded-full h-2">
+            <div className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${pctFavor}%`, backgroundColor: '#16a34a' }} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-3" style={{ borderColor: '#dc2626' }}>
+          <p className="text-xs font-bold uppercase tracking-wide text-red-600">✗ No A Favor</p>
+          <p className="text-5xl font-black tabular-nums text-red-600">{noAFavor.toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{pctNoFavor.toFixed(1)}% de votos válidos</p>
+          <div className="bg-gray-100 rounded-full h-2">
+            <div className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${pctNoFavor}%`, backgroundColor: '#dc2626' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Métricas clave ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Diferencia</p>
+          <p className="text-3xl font-black tabular-nums mt-1"
+            style={{ color: diferencia >= 0 ? '#16a34a' : '#dc2626' }}>
+            {diferencia >= 0 ? '+' : ''}{diferencia.toLocaleString()}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">votos</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total emitidos</p>
+          <p className="text-3xl font-black tabular-nums mt-1" style={{ color: 'var(--color-marino)' }}>
+            {totalVotos.toLocaleString()}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">votos registrados</p>
+        </div>
+      </div>
+
+      {totalVotos === 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center">
+          <p className="text-gray-300 text-lg font-bold">0</p>
+          <p className="text-xs text-gray-400 mt-1">Votos registrados</p>
+          <p className="text-xs text-gray-300 mt-3">Esperando primeros votos del día de elección…</p>
+        </div>
+      )}
+
+      {/* ── Resultados por regional ───────────────────────────────────────── */}
+      {regionalesOrdenadas.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-gray-700">Resultados por regional</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {regionalesOrdenadas.map(([regional, datos]) => {
+              const totalReg = datos.total
+              const pctF = totalReg > 0 ? (datos.a_favor    / totalReg * 100) : 0
+              const pctN = totalReg > 0 ? (datos.no_a_favor / totalReg * 100) : 0
+              const lideraFavor = datos.a_favor >= datos.no_a_favor
+              return (
+                <div key={regional} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 flex items-center justify-between"
+                    style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+                    <p className="font-bold text-base">{regional}</p>
+                    <p className="text-blue-200 text-sm">{totalReg.toLocaleString()} votos</p>
+                  </div>
+                  <div className="px-5 py-2 text-xs font-bold border-b border-gray-100"
+                    style={{ color: lideraFavor ? '#16a34a' : '#dc2626' }}>
+                    Lidera: {lideraFavor ? '✓ A Favor' : '✗ No A Favor'} · {(lideraFavor ? pctF : pctN).toFixed(1)}%
+                  </div>
+                  <div className="px-5 py-4 space-y-3">
+                    {[
+                      { label: '✓ A Favor',    val: datos.a_favor,    pct: pctF, color: '#16a34a' },
+                      { label: '✗ No A Favor', val: datos.no_a_favor, pct: pctN, color: '#dc2626' },
+                    ].map(({ label, val, pct, color }) => (
+                      <div key={label}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="font-medium" style={{ color }}>{label}</span>
+                          <span className="font-bold tabular-nums text-gray-800">
+                            {val.toLocaleString()} <span className="text-xs text-gray-400">({pct.toFixed(1)}%)</span>
+                          </span>
+                        </div>
+                        <div className="bg-gray-100 rounded-full h-1.5">
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Alertas ───────────────────────────────────────────────────────── */}
       {alertasDoble.length > 0 && (
         <div className="bg-red-50 border border-red-300 rounded-2xl overflow-hidden">
           <div className="px-5 py-3 border-b border-red-200 bg-red-100">
@@ -1823,7 +1941,6 @@ function TabDiaEleccion() {
         </div>
       )}
 
-      {/* Alertas no habilitado */}
       {alertasNoHab.length > 0 && (
         <div className="bg-orange-50 border border-orange-300 rounded-2xl overflow-hidden">
           <div className="px-5 py-3 border-b border-orange-200 bg-orange-100">
