@@ -1039,10 +1039,13 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
 
   const [padron, setPadron]             = useState<MiembroPadronActivo[]>([])
   const [cargando, setCargando]         = useState(false)
-  const [cargado, setCargado]           = useState(false)
   const [busqueda, setBusqueda]         = useState('')
   const [filtroRegional, setFiltroRegional] = useState('')
   const [filtroNucleo, setFiltroNucleo] = useState('')
+
+  const [todasRegionales, setTodasRegionales] = useState<string[]>([])
+  const [todosNucleos, setTodosNucleos]       = useState<string[]>([])
+  const [nucleosPorRegional, setNucleosPorRegional] = useState<string[]>([])
 
   const [detalle, setDetalle]                       = useState<MiembroPadronActivo | null>(null)
   const [detalleDeuda, setDetalleDeuda]             = useState<DeudaAPI | null>(null)
@@ -1051,28 +1054,48 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
   const [detalleGuardando, setDetalleGuardando]     = useState(false)
   const [detalleError, setDetalleError]             = useState<string | null>(null)
 
+  // Carga opciones de filtro (liviano, sin límite de 1000 filas)
   useEffect(() => {
-    if (cargado) return
+    supabase.rpc('opciones_padron').then(({ data }) => {
+      const rows = (data as { tipo: string; valor: string }[]) ?? []
+      setTodasRegionales(rows.filter(r => r.tipo === 'regional').map(r => r.valor).sort())
+      setTodosNucleos(rows.filter(r => r.tipo === 'nucleo').map(r => r.valor).sort())
+    })
+  }, [supabase])
+
+  // Cuando cambia la regional, actualiza los núcleos disponibles
+  useEffect(() => {
+    if (!filtroRegional) {
+      setNucleosPorRegional([])
+      return
+    }
+    supabase.rpc('opciones_padron').then(({ data }) => {
+      // nucleos que pertenecen a esta regional según los datos cargados
+      // como no tenemos esa relación en opciones_padron, usamos todos
+      setNucleosPorRegional([])
+    })
+  }, [filtroRegional, supabase])
+
+  // Carga el padrón filtrado del servidor cada vez que cambia un filtro
+  useEffect(() => {
+    const q = busqueda.trim()
+    if (!filtroRegional && !filtroNucleo && q.length < 3) {
+      setPadron([])
+      return
+    }
     setCargando(true)
-    supabase.rpc('padron_zona_dirigente').limit(60000).then(({ data }) => {
+    supabase.rpc('buscar_padron_presidente', {
+      p_regional: filtroRegional || null,
+      p_nucleo:   filtroNucleo   || null,
+      p_q:        q.length >= 3 ? q : null,
+    }).then(({ data }) => {
       setPadron((data as MiembroPadronActivo[]) ?? [])
       setCargando(false)
-      setCargado(true)
     })
-  }, [supabase, cargado])
+  }, [supabase, filtroRegional, filtroNucleo, busqueda])
 
-  const regionales = Array.from(new Set(padron.map(m => m.regional ?? '').filter(Boolean))).sort()
-  const nucleos    = Array.from(new Set(
-    padron.filter(m => !filtroRegional || m.regional === filtroRegional).map(m => m.nucleo ?? '').filter(Boolean)
-  )).sort()
-
-  const filtrado = padron.filter(m => {
-    if (filtroRegional && m.regional !== filtroRegional) return false
-    if (filtroNucleo   && m.nucleo   !== filtroNucleo)   return false
-    const q = busqueda.trim().toLowerCase()
-    if (q && !m.nombre_completo.toLowerCase().includes(q) && !m.codigo.includes(q)) return false
-    return true
-  })
+  const nucleos = filtroRegional ? nucleosPorRegional.length > 0 ? nucleosPorRegional : todosNucleos : todosNucleos
+  const filtrado = padron
 
   async function abrirDetalle(m: MiembroPadronActivo) {
     setDetalle(m)
@@ -1120,8 +1143,6 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
     setDetalleIntencion(null)
   }
 
-  if (cargando) return <p className="text-center text-gray-400 py-16">Cargando padrón…</p>
-
   return (
     <div className="space-y-4">
       {/* Filtros */}
@@ -1137,7 +1158,7 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
           className="text-sm px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
         >
           <option value="">Todas las regionales</option>
-          {regionales.map(r => <option key={r} value={r}>{r}</option>)}
+          {todasRegionales.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         <select value={filtroNucleo} onChange={e => setFiltroNucleo(e.target.value)}
           className="text-sm px-4 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -1150,15 +1171,21 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
             className="text-sm text-blue-600 hover:underline px-2">Limpiar</button>
         )}
         <p className="w-full text-xs text-gray-400">
-          {filtrado.length.toLocaleString()} de {padron.length.toLocaleString()} colegiados
+          {filtroRegional || filtroNucleo || busqueda.trim().length >= 3
+            ? `${filtrado.length.toLocaleString()} colegiados`
+            : 'Selecciona una regional, núcleo o escribe al menos 3 letras para buscar'}
         </p>
       </div>
 
       {/* Lista */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-50">
-          {filtrado.length === 0 ? (
-            <p className="text-center text-gray-400 text-sm py-12">Sin resultados para los filtros aplicados.</p>
+          {cargando ? (
+            <p className="text-center text-gray-400 text-sm py-12">Cargando…</p>
+          ) : !filtroRegional && !filtroNucleo && busqueda.trim().length < 3 ? (
+            <p className="text-center text-gray-400 text-sm py-12">Selecciona una regional o núcleo para ver los colegiados.</p>
+          ) : filtrado.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-12">Sin resultados.</p>
           ) : filtrado.map(m => (
             <button key={m.id} onClick={() => abrirDetalle(m)}
               className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
