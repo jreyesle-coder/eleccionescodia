@@ -17,6 +17,7 @@ declare
   v_habilitado     boolean;
   v_simpatizante   boolean;
   v_rol            text;
+  v_codigo_int     integer;
 begin
   -- Verificar rol
   select rol, mesa into v_rol, v_mesa
@@ -31,32 +32,25 @@ begin
     return jsonb_build_object('ok', false, 'error', 'No tienes mesa asignada');
   end if;
 
-  -- Obtener estado del colegiado (habilitado y simpatizante por cualquier vía)
+  -- Obtener estado del colegiado: buscar por código numérico o cédula
   select
+    codigo,
     votante_habilitado,
-    (simpatiza_verificate = true or confirmacion_intencion = 'favorable')
-  into v_habilitado, v_simpatizante
+    (coalesce(simpatiza_verificate, false) or confirmacion_intencion = 'favorable')
+  into v_codigo_int, v_habilitado, v_simpatizante
     from public.padron
-   where codigo = p_codigo::integer;
+   where codigo::text = p_codigo
+      or cedula = p_codigo
+   limit 1;
 
-  if not found then
-    -- Intentar con cédula
-    select
-      votante_habilitado,
-      (simpatiza_verificate = true or confirmacion_intencion = 'favorable')
-    into v_habilitado, v_simpatizante
-      from public.padron
-     where cedula = p_codigo;
-  end if;
-
-  if not found then
+  if v_codigo_int is null then
     return jsonb_build_object('ok', false, 'error', 'Colegiado no encontrado');
   end if;
 
   -- Insertar voto
   insert into public.votos_dia (codigo, mesa, registrado_por, estaba_habilitado, es_simpatizante)
   values (
-    p_codigo,
+    v_codigo_int,
     v_mesa,
     auth.uid(),
     coalesce(v_habilitado, false),
@@ -64,10 +58,10 @@ begin
   );
 
   return jsonb_build_object(
-    'ok',            true,
-    'habilitado',    coalesce(v_habilitado, false),
-    'simpatizante',  coalesce(v_simpatizante, false),
-    'mesa',          v_mesa
+    'ok',           true,
+    'habilitado',   coalesce(v_habilitado, false),
+    'simpatizante', coalesce(v_simpatizante, false),
+    'mesa',         v_mesa
   );
 end;
 $$;
@@ -98,12 +92,12 @@ language sql security definer stable set search_path = public as $$
           select
             coalesce(p.regional, 'Sin regional') as regional,
             jsonb_build_object(
-              'a_favor',   count(*) filter (where v.es_simpatizante = true),
+              'a_favor',    count(*) filter (where v.es_simpatizante = true),
               'no_a_favor', count(*) filter (where v.es_simpatizante = false),
-              'total',     count(*)
+              'total',      count(*)
             ) as datos
           from public.votos_dia v
-          join public.padron p on p.codigo::text = v.codigo
+          join public.padron p on p.codigo = v.codigo
          group by p.regional
         ) x
     ) as por_regional,
