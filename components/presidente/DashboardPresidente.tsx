@@ -1077,10 +1077,6 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
   // Carga el padrón filtrado del servidor cada vez que cambia un filtro
   useEffect(() => {
     const q = busqueda.trim()
-    if (!filtroRegional && !filtroNucleo && q.length < 3) {
-      setPadron([])
-      return
-    }
     setCargando(true)
     supabase.rpc('buscar_padron_presidente', {
       p_regional: filtroRegional || null,
@@ -1169,9 +1165,7 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
             className="text-sm text-blue-600 hover:underline px-2">Limpiar</button>
         )}
         <p className="w-full text-xs text-gray-400">
-          {filtroRegional || filtroNucleo || busqueda.trim().length >= 3
-            ? `${filtrado.length.toLocaleString()} colegiados`
-            : 'Selecciona una regional, núcleo o escribe al menos 3 letras para buscar'}
+          {filtrado.length.toLocaleString()} colegiados{!filtroRegional && !filtroNucleo && !busqueda.trim() ? ' (primeros 2,000 — filtra para ver más)' : ''}
         </p>
       </div>
 
@@ -1180,8 +1174,6 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
         <div className="divide-y divide-gray-50">
           {cargando ? (
             <p className="text-center text-gray-400 text-sm py-12">Cargando…</p>
-          ) : !filtroRegional && !filtroNucleo && busqueda.trim().length < 3 ? (
-            <p className="text-center text-gray-400 text-sm py-12">Selecciona una regional o núcleo para ver los colegiados.</p>
           ) : filtrado.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-12">Sin resultados.</p>
           ) : filtrado.map(m => (
