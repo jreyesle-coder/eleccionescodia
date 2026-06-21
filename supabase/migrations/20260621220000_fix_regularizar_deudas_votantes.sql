@@ -2,9 +2,10 @@
 -- FIX: simpatizantes_por_regularizar
 -- Lógica correcta:
 --   1. Solo simpatizantes de nuestra candidatura (simpatiza_verificate = true)
---   2. Que tengan deuda conocida (monto_deuda > 0 o pensionado)
---      O cuya deuda nunca se ha consultado (monto_deuda IS NULL)
---      → los NULL aparecen para que el background fetch al CODIA los evalúe
+--   2. Que tengan deuda confirmada (monto_deuda > 0 o pensionado)
+--      La deuda se consulta al CODIA solo cuando el colegiado pasa por
+--      Verifícate él mismo, o cuando un dirigente/gerente/presidente lo
+--      consulta individualmente. No se hace consulta masiva desde este tab.
 --   3. NO se usa deudas_votantes (tabla desactualizada)
 -- ════════════════════════════════════════════════════════════════════════
 
@@ -47,7 +48,6 @@ language sql security definer stable set search_path = public as $$
     and (
       p.pensionado = true
       or coalesce(p.monto_deuda, 0) > 0
-      or p.monto_deuda is null
     )
     and public.mi_rol() in (
       'supervisor','gerente','presidente','dirigente','colaborador'
