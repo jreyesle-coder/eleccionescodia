@@ -178,7 +178,7 @@ function TabMiNucleo() {
   function toggleNucleo(nucleo: string) {
     setAbiertos(prev => {
       const next = new Set(prev)
-      next.has(nucleo) ? next.delete(nucleo) : next.add(nucleo)
+      if (next.has(nucleo)) { next.delete(nucleo) } else { next.add(nucleo) }
       return next
     })
   }
