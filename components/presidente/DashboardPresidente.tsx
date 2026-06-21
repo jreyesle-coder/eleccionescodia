@@ -1103,7 +1103,7 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
         <input
           type="text" value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre o colegiatura…"
+          placeholder="Buscar por nombre, colegiatura o cédula…"
           className="flex-1 min-w-[200px] text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
         />
         <select value={filtroRegional}
