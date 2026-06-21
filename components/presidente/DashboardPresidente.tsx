@@ -246,48 +246,7 @@ function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: M
 
   return (
     <div className="space-y-6">
-      {/* Diagrama circular distribución general */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">
-          Distribución general por estado
-          <span className="ml-2 text-xs font-normal text-gray-400">
-            — {total.total.toLocaleString()} colegiados en total
-          </span>
-        </h2>
-        {dataDona.length > 0 ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie
-                data={dataDona}
-                cx="50%"
-                cy="50%"
-                innerRadius={75}
-                outerRadius={120}
-                paddingAngle={2}
-                dataKey="value"
-                label={({ percent }) =>
-                  percent != null && percent > 0.01
-                    ? `${(percent * 100).toFixed(0)}%`
-                    : ''
-                }
-                labelLine={false}
-              >
-                {dataDona.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(val) => [typeof val === 'number' ? val.toLocaleString() : val, '']}
-              />
-              <Legend iconType="circle" iconSize={9} />
-            </PieChart>
-          </ResponsiveContainer>
-        ) : (
-          <p className="text-gray-400 text-sm text-center py-16">Sin datos disponibles</p>
-        )}
-      </div>
-
-      {/* Tarjeta destacada global Plancha 1 */}
+      {/* Tarjeta destacada global George Richardson */}
       <div
         className="rounded-2xl p-6 text-white flex flex-col sm:flex-row items-start sm:items-center gap-4"
         style={{ background: 'linear-gradient(135deg, var(--color-marino), var(--color-real))' }}
