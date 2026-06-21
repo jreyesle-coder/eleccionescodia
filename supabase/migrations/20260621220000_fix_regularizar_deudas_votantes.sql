@@ -44,7 +44,10 @@ language sql security definer stable set search_path = public as $$
     coalesce(p.monto_deuda, 0)      as monto_deuda,
     p.voto_verificate_at
   from public.padron p
-  where p.simpatiza_verificate = true
+  where (
+      p.simpatiza_verificate = true
+      or p.confirmacion_intencion = 'favorable'
+    )
     and (
       p.pensionado = true
       or coalesce(p.monto_deuda, 0) > 0
