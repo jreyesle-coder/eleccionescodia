@@ -73,29 +73,6 @@ interface MiembroPadronActivo {
   confirmacion_at: string | null
 }
 
-interface ConfirmadoResumen {
-  dirigente: string
-  total: number
-  favorables: number
-  indecisos: number
-  en_contra: number
-  ultima_confirmacion: string | null
-}
-
-interface ConfirmadoDetalleRow {
-  codigo: string
-  nombre_completo: string
-  regional: string | null
-  nucleo: string | null
-  carrera: string | null
-  via_verificate: boolean
-  via_callcenter: boolean
-  via_dirigente: boolean
-  confirmado_por: string | null
-}
-
-type ModalVia = 'verificate' | 'callcenter' | 'dirigente' | 'todos'
-
 // ─── Helpers UI ───────────────────────────────────────────────────────────────
 
 const INTENCION_LABEL: Record<string, string> = {
