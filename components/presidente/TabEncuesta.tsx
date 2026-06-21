@@ -142,6 +142,55 @@ function GraficaCircular({
   )
 }
 
+function Top5Regional({
+  datos, total,
+}: { datos: { name: string; total: number }[]; total: number }) {
+  const top = datos.slice(0, 5)
+  const otrasTotal = datos.slice(5).reduce((s, d) => s + d.total, 0)
+
+  if (datos.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p className="text-xs font-semibold text-gray-700 mb-3">P2 · Regional</p>
+        <p className="text-sm text-gray-400 text-center py-6">Sin respuestas</p>
+      </div>
+    )
+  }
+
+  const filas = otrasTotal > 0
+    ? [...top, { name: `Otras (${datos.length - 5})`, total: otrasTotal }]
+    : top
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <p className="text-xs font-semibold text-gray-700 mb-4">P2 · Regional</p>
+      <div className="space-y-2">
+        {filas.map((d, i) => {
+          const isOtras = i >= top.length
+          const color = isOtras ? '#CBD5E1' : PALETTE[i % PALETTE.length]
+          return (
+            <div key={d.name} className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between text-xs mb-0.5">
+                  <span className={`truncate pr-2 ${isOtras ? 'text-gray-400 italic' : 'text-gray-600'}`}>{d.name}</span>
+                  <span className="font-bold tabular-nums shrink-0">{d.total} <span className="text-gray-400 font-normal">({total > 0 ? Math.round(d.total / total * 100) : 0}%)</span></span>
+                </div>
+                <div className="bg-gray-100 rounded-full h-2">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${total > 0 ? (d.total / filas[0].total) * 100 : 0}%`, backgroundColor: color }}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function GraficaBarras({
   titulo, datos, total,
 }: { titulo: string; datos: { name: string; total: number }[]; total: number }) {
@@ -271,7 +320,7 @@ export default function TabEncuesta() {
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <GraficaCircular titulo="P1 · Área profesional" datos={tabular(datos, 'q1_area')} total={total} />
-        <GraficaCircular titulo="P2 · Regional" datos={tabularNormalizado(datos, 'q2_regional')} total={total} />
+        <Top5Regional datos={tabularNormalizado(datos, 'q2_regional')} total={total} />
         <GraficaCircular titulo="P3 · Rango de edad" datos={tabular(datos, 'q3_edad')} total={total} />
         <GraficaCircular titulo="P4 · Tiempo como colegiado" datos={tabular(datos, 'q4_tiempo_colegiado')} total={total} />
       </div>
