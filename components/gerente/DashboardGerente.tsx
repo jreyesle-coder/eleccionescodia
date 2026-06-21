@@ -631,21 +631,29 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
   )
 }
 
-// ─── Tab: Confirmados ─────────────────────────────────────────────────────────
+// ─── Tab: Confirmados (solo mi CDN) ──────────────────────────────────────────
 
-function ModalConfirmados({ titulo, via, onCerrar }: { titulo: string; via: ModalVia; onCerrar: () => void }) {
+function ModalConfirmadosMiCDN({
+  titulo,
+  nucleo,
+  onCerrar,
+}: {
+  titulo: string
+  nucleo: string
+  onCerrar: () => void
+}) {
   const supabase = createClient()
-  const [lista, setLista]       = useState<ConfirmadoDetalleRow[]>([])
+  const [lista, setLista]       = useState<ConfirmadoNucleoRow[]>([])
   const [cargando, setCargando] = useState(true)
   const [buscar, setBuscar]     = useState('')
 
   useEffect(() => {
     let activo = true
-    supabase.rpc('listar_confirmados_detalle', { p_via: via }).then(({ data }) => {
-      if (activo) { setLista((data as ConfirmadoDetalleRow[]) ?? []); setCargando(false) }
+    supabase.rpc('listar_confirmados_nucleo', { p_nucleo: nucleo, p_carrera: null }).then(({ data }) => {
+      if (activo) { setLista((data as ConfirmadoNucleoRow[]) ?? []); setCargando(false) }
     })
     return () => { activo = false }
-  }, [via]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [nucleo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtrada = lista.filter(r => {
     const q = buscar.toLowerCase()
@@ -661,7 +669,7 @@ function ModalConfirmados({ titulo, via, onCerrar }: { titulo: string; via: Moda
         <div className="px-6 py-4 flex items-start justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
           <div>
             <p className="font-bold text-base">{titulo}</p>
-            {!cargando && <p className="text-blue-200 text-sm">{lista.length} persona{lista.length !== 1 ? 's' : ''}</p>}
+            {!cargando && <p className="text-blue-200 text-sm">{lista.length} persona{lista.length !== 1 ? 's' : ''} · {nucleo}</p>}
           </div>
           <button onClick={onCerrar} className="text-blue-200 hover:text-white text-xl font-bold ml-4">✕</button>
         </div>
@@ -674,7 +682,7 @@ function ModalConfirmados({ titulo, via, onCerrar }: { titulo: string; via: Moda
           {cargando ? (
             <p className="text-center text-gray-400 py-10">Cargando…</p>
           ) : filtrada.length === 0 ? (
-            <p className="text-center text-gray-400 py-10">{buscar ? 'Sin resultados.' : 'Sin registros.'}</p>
+            <p className="text-center text-gray-400 py-10">{buscar ? 'Sin resultados.' : 'Sin confirmados en este CDN.'}</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -689,9 +697,7 @@ function ModalConfirmados({ titulo, via, onCerrar }: { titulo: string; via: Moda
                   <tr key={r.codigo} className="hover:bg-blue-50/20">
                     <td className="px-5 py-2.5">
                       <p className="font-medium text-gray-900">{r.nombre_completo}</p>
-                      {(r.regional || r.nucleo) && (
-                        <p className="text-xs text-gray-400">{[r.regional, r.nucleo].filter(Boolean).join(' · ')}</p>
-                      )}
+                      {r.nucleo && <p className="text-xs text-gray-400">{r.nucleo}{r.carrera ? ` · ${r.carrera}` : ''}</p>}
                     </td>
                     <td className="px-5 py-2.5 text-gray-500 hidden sm:table-cell">{r.codigo}</td>
                     <td className="px-5 py-2.5">
@@ -708,105 +714,77 @@ function ModalConfirmados({ titulo, via, onCerrar }: { titulo: string; via: Moda
           )}
         </div>
         <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
-          {!cargando && `${filtrada.length} de ${lista.length} confirmados`}
+          {!cargando && `${filtrada.length} de ${lista.length} confirmados en ${nucleo}`}
         </div>
       </div>
     </div>
   )
 }
 
-function TabConfirmados() {
+function TabConfirmados({ nucleoGerente }: { nucleoGerente: string | null }) {
   const supabase = createClient()
-  const [resumen, setResumen]             = useState<ConfirmadoResumen[]>([])
-  const [totalVerif, setTotalVerif]       = useState(0)
-  const [totalCC, setTotalCC]             = useState(0)
-  const [cargando, setCargando]           = useState(true)
-  const [modalVia, setModalVia]           = useState<ModalVia | null>(null)
-  const [modalTitulo, setModalTitulo]     = useState('')
+  const [filas, setFilas]       = useState<NucleoCarreraRow[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [modalAbierto, setModalAbierto] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('v_confirmados_por_dirigente').select('*'),
-      supabase.rpc('confirmados_verificate_count'),
-      supabase.rpc('confirmados_callcenter_count'),
-    ]).then(([{ data }, { data: verifData }, { data: ccData }]) => {
-      setResumen((data as ConfirmadoResumen[]) ?? [])
-      setTotalVerif(Number(verifData ?? 0))
-      setTotalCC(Number(ccData ?? 0))
+    supabase.rpc('stats_mi_nucleo').then(({ data }) => {
+      setFilas((data as NucleoCarreraRow[]) ?? [])
       setCargando(false)
     })
   }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalDirigentes = resumen.reduce((s, r) => s + r.total, 0)
-  const totalFavorables = resumen.reduce((s, r) => s + r.favorables, 0) + totalVerif + totalCC
+  const totalDirigentes = filas.reduce((s, f) => s + Number(f.confirmados_dirigente), 0)
+  const totalVerif      = filas.reduce((s, f) => s + Number(f.confirmados_verificate), 0)
+  const totalCC         = filas.reduce((s, f) => s + Number(f.confirmados_callcenter), 0)
+  const totalFavorables = filas.reduce((s, f) => s + Number(f.confirmados), 0)
 
   if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
 
-  const tarjetas: { titulo: string; valor: number; color: string; via: ModalVia }[] = [
-    { titulo: 'Confirmados por dirigentes', valor: totalDirigentes, color: 'var(--color-marino)', via: 'dirigente'  },
-    { titulo: 'Vía Verifícate',             valor: totalVerif,      color: '#16a34a',            via: 'verificate' },
-    { titulo: 'Vía Call Center',            valor: totalCC,         color: '#2563eb',            via: 'callcenter' },
-    { titulo: 'Favorables totales',         valor: totalFavorables, color: '#ca8a04',            via: 'todos'      },
+  const tarjetas: { titulo: string; valor: number; color: string }[] = [
+    { titulo: 'Vía dirigentes', valor: totalDirigentes, color: 'var(--color-marino)' },
+    { titulo: 'Vía Verifícate', valor: totalVerif,      color: '#16a34a'             },
+    { titulo: 'Vía Call Center', valor: totalCC,        color: '#2563eb'             },
+    { titulo: 'Total confirmados', valor: totalFavorables, color: '#ca8a04'          },
   ]
 
   return (
     <div className="space-y-5">
+      {nucleoGerente && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+          Mostrando confirmados de tu CDN: <span className="font-bold">{nucleoGerente}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {tarjetas.map(({ titulo, valor, color, via }) => (
-          <button key={titulo} onClick={() => { setModalVia(via); setModalTitulo(titulo) }}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4 text-left hover:shadow-md active:scale-95 transition-all"
+        {tarjetas.map(({ titulo, valor, color }) => (
+          <div key={titulo}
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4"
             style={{ borderTopColor: color }}>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{titulo}</p>
             <p className="text-3xl font-black mt-1 tabular-nums" style={{ color }}>{valor.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-300 mt-1">Toca para ver lista →</p>
-          </button>
+          </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100">
-          <p className="text-sm font-semibold text-gray-700">Por dirigente</p>
+      {nucleoGerente && totalFavorables > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+          <button
+            onClick={() => setModalAbierto(true)}
+            className="text-sm font-semibold text-green-700 hover:underline"
+          >
+            ★ Ver los {totalFavorables} confirmados de {nucleoGerente} →
+          </button>
         </div>
-        {resumen.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-10">Sin confirmaciones de dirigentes todavía.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs uppercase tracking-wide text-gray-500 bg-gray-50 border-b">
-                  <th className="text-left px-4 py-3">Dirigente</th>
-                  <th className="text-right px-4 py-3">Total</th>
-                  <th className="text-right px-4 py-3 text-green-700">Favorables</th>
-                  <th className="text-right px-4 py-3 text-yellow-700">Indecisos</th>
-                  <th className="text-right px-4 py-3 text-red-600">En contra</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {resumen.map(r => (
-                  <tr key={r.dirigente} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{r.dirigente}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums">{r.total}</td>
-                    <td className="px-4 py-3 text-right text-green-700 font-semibold tabular-nums">{r.favorables}</td>
-                    <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">{r.indecisos}</td>
-                    <td className="px-4 py-3 text-right text-red-600 tabular-nums">{r.en_contra}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-200 font-bold">
-                  <td className="px-4 py-3 text-gray-700">Total</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{totalDirigentes}</td>
-                  <td className="px-4 py-3 text-right text-green-700 tabular-nums">{resumen.reduce((s, r) => s + r.favorables, 0)}</td>
-                  <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">{resumen.reduce((s, r) => s + r.indecisos, 0)}</td>
-                  <td className="px-4 py-3 text-right text-red-600 tabular-nums">{resumen.reduce((s, r) => s + r.en_contra, 0)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
 
-      {modalVia && <ModalConfirmados titulo={modalTitulo} via={modalVia} onCerrar={() => setModalVia(null)} />}
+      {modalAbierto && nucleoGerente && (
+        <ModalConfirmadosMiCDN
+          titulo="Confirmados de mi CDN"
+          nucleo={nucleoGerente}
+          onCerrar={() => setModalAbierto(false)}
+        />
+      )}
     </div>
   )
 }
@@ -881,7 +859,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
         {/* Contenido */}
         {tab === 'nucleo'      && <TabMiNucleo />}
         {tab === 'padron'      && <TabPadronActivo nombreUsuario={nombreUsuario} nucleoGerente={nucleoGerente} />}
-        {tab === 'confirmados' && <TabConfirmados />}
+        {tab === 'confirmados' && <TabConfirmados nucleoGerente={nucleoGerente} />}
       </div>
     </div>
   )
