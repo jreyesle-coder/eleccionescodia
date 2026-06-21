@@ -180,7 +180,7 @@ function ModalDetalle({
                     className="inline-block text-xs font-bold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'var(--color-dorado)', color: '#0F1B33' }}
                   >
-                    ★ Confirma Plancha 1
+                    ★ Confirma George Richardson
                   </span>
                 )}
                 {ll.motivo && (
@@ -294,7 +294,7 @@ function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: M
       >
         <div className="flex-1 space-y-1">
           <p className="text-blue-200 text-sm font-semibold uppercase tracking-wide">
-            Total confirmados — Plancha #1
+            Total confirmados — George Richardson
           </p>
           <p className="text-5xl font-bold tabular-nums" style={{ color: 'var(--color-dorado)' }}>
             {total.confirmados_plancha1.toLocaleString()}
@@ -314,7 +314,7 @@ function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: M
 
       {/* ── Gráfico de aceptación ── */}
       {(() => {
-        // confirmados_plancha1 = colegiados con al menos una llamada resultado 'efectiva_confirma'
+        // confirmados_plancha1 = confirmados por cualquier vía (verificate, dirigente, callcenter)
         // simpatizantesVerificate = colegiados con simpatiza_verificate = true
         // Usamos el mayor de los dos para no duplicar si coinciden
         const simpatiza = Math.max(total.confirmados_plancha1, simpatizantesVerificate)
@@ -391,7 +391,7 @@ function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: M
               className="px-5 py-4 flex items-center justify-between border-b border-gray-100"
               style={{ backgroundColor: 'rgba(231,178,40,0.07)' }}
             >
-              <p className="text-sm font-semibold text-gray-700">★ Confirmados Plancha 1</p>
+              <p className="text-sm font-semibold text-gray-700">★ Confirmados George Richardson</p>
               <div className="text-right">
                 <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--color-dorado)' }}>
                   {m.confirmados_plancha1.toLocaleString()}
@@ -1615,12 +1615,11 @@ function TabConfirmadosPresidente() {
   useEffect(() => {
     Promise.all([
       supabase.from('v_confirmados_por_dirigente').select('*'),
-      supabase.from('padron').select('codigo', { count: 'exact', head: true })
-        .eq('simpatiza_verificate', true),
+      supabase.rpc('confirmados_verificate_count'),
       supabase.rpc('confirmados_callcenter_count'),
-    ]).then(([{ data }, { count }, { data: ccData }]) => {
+    ]).then(([{ data }, { data: verifData }, { data: ccData }]) => {
       setResumen((data as ConfirmadoResumen[]) ?? [])
-      setTotalVerif(count ?? 0)
+      setTotalVerif(Number(verifData ?? 0))
       setTotalCallCenter(Number(ccData ?? 0))
       setCargando(false)
     })
