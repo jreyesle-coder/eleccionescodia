@@ -1306,16 +1306,17 @@ interface SimpatizanteRow {
 
 function TabRegularizar() {
   const supabase = createClient()
-  const [lista, setLista] = useState<SimpatizanteRow[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [filtro, setFiltro] = useState('')
+  const [lista, setLista]         = useState<SimpatizanteRow[]>([])
+  const [cargando, setCargando]   = useState(true)
+  const [filtro, setFiltro]       = useState('')
+  const [confirmando, setConfirmando] = useState<string | null>(null)
+  const [guardando, setGuardando]     = useState<string | null>(null)
 
   useEffect(() => {
     supabase.rpc('simpatizantes_por_regularizar').then(({ data }) => {
       const rows = (data as SimpatizanteRow[]) ?? []
       setLista(rows)
       setCargando(false)
-      // Para cada colegiado sin monto conocido, consultar CODIA en línea en background
       for (const r of rows) {
         if (!r.cedula || r.monto_deuda > 0) continue
         fetch('/api/consulta-deuda', {
@@ -1333,7 +1334,17 @@ function TabRegularizar() {
           .catch(() => {})
       }
     })
-  }, [supabase])
+  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saldarDeuda(codigo: string) {
+    setGuardando(codigo)
+    const { error } = await supabase.rpc('saldar_deuda_colegiado', { p_codigo: codigo })
+    setGuardando(null)
+    setConfirmando(null)
+    if (!error) {
+      setLista(prev => prev.filter(r => r.codigo !== codigo))
+    }
+  }
 
   const filtrados = lista.filter(r => {
     const q = filtro.toLowerCase()
@@ -1348,7 +1359,7 @@ function TabRegularizar() {
         <p className="text-sm font-bold text-green-800">⭐ Simpatizantes que necesitan regularizarse</p>
         <p className="text-xs text-green-700 mt-0.5">
           Estos colegiados marcaron preferencia por George Richardson en el portal de Verifícate,
-          pero tienen deuda o son pensionados. Contáctalos para regularizar su situación antes del 12 de junio.
+          pero tienen deuda o son pensionados. Contáctalos para regularizar su situación antes del día de elección.
         </p>
       </div>
 
@@ -1377,7 +1388,7 @@ function TabRegularizar() {
           </div>
           <div className="divide-y divide-gray-50">
             {filtrados.map(r => (
-              <div key={r.id} className="px-5 py-4 space-y-1.5">
+              <div key={r.id} className="px-5 py-4 space-y-2">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <p className="font-semibold text-sm text-gray-900">{r.nombre_completo}</p>
@@ -1397,6 +1408,7 @@ function TabRegularizar() {
                     )}
                   </div>
                 </div>
+
                 <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
                   {r.carrera  && <span>Profesión: <span className="font-medium text-gray-700">{r.carrera}</span></span>}
                   {r.regional && <span>Regional: <span className="font-medium text-gray-700">{r.regional}</span></span>}
@@ -1405,6 +1417,35 @@ function TabRegularizar() {
                     <span>Tel: <span className="font-medium text-gray-700">{r.celular ?? r.telefono}</span></span>
                   )}
                 </div>
+
+                {/* Botón / confirmación inline */}
+                {confirmando === r.codigo ? (
+                  <div className="flex items-center gap-2 pt-1">
+                    <p className="text-xs text-gray-600 flex-1">¿Confirmas que la deuda fue saldada y habilitar este colegiado para votar?</p>
+                    <button
+                      onClick={() => saldarDeuda(r.codigo)}
+                      disabled={guardando === r.codigo}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-opacity disabled:opacity-50"
+                      style={{ backgroundColor: '#16a34a' }}
+                    >
+                      {guardando === r.codigo ? 'Guardando…' : 'Sí, habilitar'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmando(null)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmando(r.codigo)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors hover:bg-green-50"
+                    style={{ borderColor: '#16a34a', color: '#16a34a' }}
+                  >
+                    ✓ Deuda saldada — Habilitar para votar
+                  </button>
+                )}
               </div>
             ))}
           </div>
