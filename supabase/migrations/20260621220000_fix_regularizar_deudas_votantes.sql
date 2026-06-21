@@ -1,10 +1,11 @@
 -- ════════════════════════════════════════════════════════════════════════
 -- FIX: simpatizantes_por_regularizar
--- Problema: la migración opcion_c eliminó la verificación contra la tabla
--- deudas_votantes. Colegiados con deuda importada en esa tabla pero con
--- monto_deuda = 0 en padron no aparecían en la pestaña "Por regularizar".
--- Solución: reintroducir el check de deudas_votantes Y ampliar para incluir
--- también a simpatizantes confirmados por dirigente (no solo Verifícate).
+-- Lógica correcta:
+--   1. Solo simpatizantes de nuestra candidatura (simpatiza_verificate = true)
+--   2. Que tengan deuda conocida (monto_deuda > 0 o pensionado)
+--      O cuya deuda nunca se ha consultado (monto_deuda IS NULL)
+--      → los NULL aparecen para que el background fetch al CODIA los evalúe
+--   3. NO se usa deudas_votantes (tabla desactualizada)
 -- ════════════════════════════════════════════════════════════════════════
 
 drop function if exists public.simpatizantes_por_regularizar();
@@ -38,24 +39,15 @@ language sql security definer stable set search_path = public as $$
     p.nucleo,
     p.carrera,
     p.pensionado,
-    (
-      coalesce(p.monto_deuda, 0) > 0
-      or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo)
-    )                            as tiene_deuda,
-    coalesce(p.monto_deuda, 0)  as monto_deuda,
+    coalesce(p.monto_deuda, 0) > 0  as tiene_deuda,
+    coalesce(p.monto_deuda, 0)      as monto_deuda,
     p.voto_verificate_at
   from public.padron p
-  where
-    -- Marcó intención en Verifícate o fue confirmado por un dirigente
-    (
-      p.simpatiza_verificate = true
-      or p.confirmacion_intencion = 'si'
-    )
-    -- Tiene deuda real o es pensionado (necesita regularizarse)
+  where p.simpatiza_verificate = true
     and (
       p.pensionado = true
       or coalesce(p.monto_deuda, 0) > 0
-      or exists (select 1 from public.deudas_votantes d where d.codigo = p.codigo)
+      or p.monto_deuda is null
     )
     and public.mi_rol() in (
       'supervisor','gerente','presidente','dirigente','colaborador'
