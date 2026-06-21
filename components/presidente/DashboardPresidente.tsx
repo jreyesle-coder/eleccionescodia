@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   ResponsiveContainer,
-  PieChart, Pie, Cell, Tooltip, Legend,
+  PieChart, Pie, Cell, Tooltip,
 } from 'recharts'
 import AppHeader from '@/components/app-header'
 import TabEncuesta from '@/components/presidente/TabEncuesta'
@@ -235,14 +235,6 @@ function TabResumen({ metricas, padron, simpatizantesVerificate }: { metricas: M
     return a.distrito.localeCompare(b.distrito)    // resto: alfabético
   })
   const columnas = [...visiblesOrdenados, total]
-
-  const dataDona = [
-    { name: 'Pendientes',       value: total.pendientes,       fill: '#94a3b8' },
-    { name: 'En proceso',       value: total.en_proceso,       fill: '#2A407A' },
-    { name: 'Contactados',      value: total.contactados,      fill: '#1F9D55' },
-    { name: 'Sin comunicación', value: total.sin_comunicacion, fill: '#B61F2E' },
-    { name: 'Cerrados',         value: total.cerrados,         fill: '#16285A' },
-  ].filter(d => d.value > 0)
 
   return (
     <div className="space-y-6">
