@@ -1554,24 +1554,30 @@ function ModalConfirmados({
   )
 }
 
-function TabConfirmadosPresidente() {
+function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () => void }) {
   const supabase = createClient()
-  const [resumen, setResumen]                 = useState<ConfirmadoResumen[]>([])
-  const [totalVerif, setTotalVerif]           = useState(0)
-  const [totalCallCenter, setTotalCallCenter] = useState(0)
-  const [cargando, setCargando]               = useState(true)
-  const [modalVia, setModalVia]               = useState<ModalVia | null>(null)
-  const [modalTitulo, setModalTitulo]         = useState('')
+  const [resumen, setResumen]                       = useState<ConfirmadoResumen[]>([])
+  const [totalVerif, setTotalVerif]                 = useState(0)
+  const [totalCallCenter, setTotalCallCenter]       = useState(0)
+  const [pensionadosTotal, setPensionadosTotal]     = useState(0)
+  const [pensionadosConfirm, setPensionadosConfirm] = useState(0)
+  const [cargando, setCargando]                     = useState(true)
+  const [modalVia, setModalVia]                     = useState<ModalVia | null>(null)
+  const [modalTitulo, setModalTitulo]               = useState('')
 
   useEffect(() => {
     Promise.all([
       supabase.from('v_confirmados_por_dirigente').select('*'),
       supabase.rpc('confirmados_verificate_count'),
       supabase.rpc('confirmados_callcenter_count'),
-    ]).then(([{ data }, { data: verifData }, { data: ccData }]) => {
+      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true),
+      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true).eq('confirmacion_intencion', 'favorable'),
+    ]).then(([{ data }, { data: verifData }, { data: ccData }, resTotal, resConfirm]) => {
       setResumen((data as ConfirmadoResumen[]) ?? [])
       setTotalVerif(Number(verifData ?? 0))
       setTotalCallCenter(Number(ccData ?? 0))
+      setPensionadosTotal(resTotal.count ?? 0)
+      setPensionadosConfirm(resConfirm.count ?? 0)
       setCargando(false)
     })
   }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1593,6 +1599,8 @@ function TabConfirmadosPresidente() {
     { titulo: 'Favorables totales',             valor: totalFavorables,  color: '#ca8a04',            via: 'todos' },
   ]
 
+  const pctPensionados = pensionadosTotal > 0 ? Math.round(pensionadosConfirm / pensionadosTotal * 100) : 0
+
   return (
     <div className="space-y-5">
       {/* KPIs — clickables */}
@@ -1610,6 +1618,35 @@ function TabConfirmadosPresidente() {
           </button>
         ))}
       </div>
+
+      {/* Tarjeta Pensionados Votantes */}
+      <button
+        onClick={onVerPensionados}
+        className="w-full rounded-2xl border-t-4 shadow-sm p-4 text-left hover:shadow-md active:scale-[0.99] transition-all flex items-center justify-between gap-4"
+        style={{ borderTopColor: '#7c3aed', background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)' }}
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6d28d9' }}>
+            🟣 Pensionados Votantes ISES-CODIA
+          </p>
+          <p className="text-3xl font-black mt-1 tabular-nums" style={{ color: '#4c1d95' }}>
+            {pensionadosConfirm.toLocaleString()}
+            <span className="text-base font-semibold text-purple-400 ml-2">
+              de {pensionadosTotal.toLocaleString()}
+            </span>
+          </p>
+          <p className="text-xs mt-1" style={{ color: '#7c3aed' }}>
+            {pctPensionados}% confirmados · Toca para gestionar →
+          </p>
+        </div>
+        <div
+          className="rounded-xl px-4 py-3 text-center shrink-0"
+          style={{ backgroundColor: '#7c3aed', color: 'white' }}
+        >
+          <p className="text-2xl font-black tabular-nums">{pctPensionados}%</p>
+          <p className="text-[10px] opacity-80 mt-0.5">confirmado</p>
+        </div>
+      </button>
 
       {/* Tabla por dirigente */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -2370,7 +2407,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         {tab === 'padron'       && <TabPadronActivo nombreUsuario={nombreUsuario} />}
         {tab === 'nucleos'      && <TabNucleos />}
         {tab === 'regularizar'  && <TabRegularizar />}
-        {tab === 'confirmados'  && <TabConfirmadosPresidente />}
+        {tab === 'confirmados'  && <TabConfirmadosPresidente onVerPensionados={() => setTab('pensionados')} />}
         {tab === 'pensionados'  && <TabPensionadosVotantes nombreUsuario={nombreUsuario} />}
         {tab === 'dia_eleccion' && <TabDiaEleccion />}
         {tab === 'encuesta'     && <TabEncuesta />}
