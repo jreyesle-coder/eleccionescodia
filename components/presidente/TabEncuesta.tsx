@@ -61,29 +61,50 @@ const PALETTE = [
   '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
 ]
 
-// ─── normaliza regionales agrupando variantes del mismo nombre ─────────────────
+// ─── clasifica cualquier texto de regional en 4 macroregiones CODIA ──────────
 
-function normalizarRegional(val: string): string {
-  return val.trim().replace(/\s+/g, ' ')
+type Macroregion = 'Sede Central' | 'Norte' | 'Sur' | 'Este'
+
+function clasificarRegion(val: string): Macroregion {
+  const v = val.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+  // Este — antes de "santo domingo" genérico para capturar SD Este
+  if (/\beste\b/.test(v))                                    return 'Este'
+  if (/\b(la romana|altagracia|higuey|higüey|san pedro|el seibo|hato mayor|samana|nagua|maria trinidad)\b/.test(v)) return 'Este'
+
+  // Sede Central — Distrito Nacional, SD sin calificador, Sede
+  if (/\b(distrito nacional|d\.?n\.?|sede|nacional)\b/.test(v)) return 'Sede Central'
+  if (/santo domingo/.test(v))                               return 'Sede Central'
+
+  // Norte — Cibao y Atlántico Norte
+  if (/\b(santiago|la vega|puerto plata|valverde|mao|montecristi|dajab|cibao|san francisco|espaillat|bonao|cotui|norte|salcedo|hermanas mirabal)\b/.test(v)) return 'Norte'
+
+  // Sur — resto del país
+  if (/\b(san cristobal|barahona|azua|peravia|pedernales|independencia|san juan|neiba|bahoruco|bani|ocoa|sur)\b/.test(v)) return 'Sur'
+
+  // Fallback: si no se reconoce, va a Sede Central
+  return 'Sede Central'
 }
 
-function tabularNormalizado(datos: Row[], campo: keyof Row): { name: string; total: number }[] {
-  const conteo: Record<string, { display: string; total: number }> = {}
+const REGION_ORDER: Macroregion[] = ['Sede Central', 'Norte', 'Este', 'Sur']
+const REGION_COLOR: Record<Macroregion, string> = {
+  'Sede Central': '#16285A',
+  'Norte':        '#C8961E',
+  'Este':         '#1F9D55',
+  'Sur':          '#B61F2E',
+}
+
+function tabularRegiones(datos: Row[]): { name: Macroregion; total: number }[] {
+  const conteo: Record<Macroregion, number> = { 'Sede Central': 0, Norte: 0, Este: 0, Sur: 0 }
   for (const r of datos) {
-    const val = r[campo]
+    const val = r.q2_regional
     if (!val) continue
-    const valores = Array.isArray(val) ? val : [val as string]
-    for (const v of valores) {
-      const key = normalizarRegional(v).toLowerCase()
-      if (!conteo[key]) {
-        conteo[key] = { display: normalizarRegional(v), total: 0 }
-      }
-      conteo[key].total += 1
-    }
+    const region = clasificarRegion(val)
+    conteo[region] += 1
   }
-  return Object.values(conteo)
-    .map(({ display, total }) => ({ name: display, total }))
-    .sort((a, b) => b.total - a.total)
+  return REGION_ORDER
+    .map(name => ({ name, total: conteo[name] }))
+    .filter(d => d.total > 0)
 }
 
 // ─── Gráfica de pastel (SVG puro) ─────────────────────────────────────────────
@@ -142,13 +163,11 @@ function GraficaCircular({
   )
 }
 
-function Top5Regional({
-  datos, total,
-}: { datos: { name: string; total: number }[]; total: number }) {
-  const top = datos.slice(0, 5)
-  const otrasTotal = datos.slice(5).reduce((s, d) => s + d.total, 0)
+function RegionesCard({ datos }: { datos: Row[] }) {
+  const filas = tabularRegiones(datos)
+  const total = filas.reduce((s, d) => s + d.total, 0)
 
-  if (datos.length === 0) {
+  if (total === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <p className="text-xs font-semibold text-gray-700 mb-3">P2 · Regional</p>
@@ -157,30 +176,24 @@ function Top5Regional({
     )
   }
 
-  const filas = otrasTotal > 0
-    ? [...top, { name: `Otras (${datos.length - 5})`, total: otrasTotal }]
-    : top
+  const max = filas[0]?.total ?? 1
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <p className="text-xs font-semibold text-gray-700 mb-4">P2 · Regional</p>
       <div className="space-y-2">
-        {filas.map((d, i) => {
-          const isOtras = i >= top.length
-          const color = isOtras ? '#CBD5E1' : PALETTE[i % PALETTE.length]
+        {filas.map(d => {
+          const color = REGION_COLOR[d.name]
           return (
             <div key={d.name} className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between text-xs mb-0.5">
-                  <span className={`truncate pr-2 ${isOtras ? 'text-gray-400 italic' : 'text-gray-600'}`}>{d.name}</span>
-                  <span className="font-bold tabular-nums shrink-0">{d.total} <span className="text-gray-400 font-normal">({total > 0 ? Math.round(d.total / total * 100) : 0}%)</span></span>
+                  <span className="text-gray-600 truncate pr-2">{d.name}</span>
+                  <span className="font-bold tabular-nums shrink-0">{d.total} <span className="text-gray-400 font-normal">({Math.round(d.total / total * 100)}%)</span></span>
                 </div>
                 <div className="bg-gray-100 rounded-full h-2">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${total > 0 ? (d.total / filas[0].total) * 100 : 0}%`, backgroundColor: color }}
-                  />
+                  <div className="h-full rounded-full transition-all" style={{ width: `${(d.total / max) * 100}%`, backgroundColor: color }} />
                 </div>
               </div>
             </div>
@@ -320,7 +333,7 @@ export default function TabEncuesta() {
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <GraficaCircular titulo="P1 · Área profesional" datos={tabular(datos, 'q1_area')} total={total} />
-        <Top5Regional datos={tabularNormalizado(datos, 'q2_regional')} total={total} />
+        <RegionesCard datos={datos} />
         <GraficaCircular titulo="P3 · Rango de edad" datos={tabular(datos, 'q3_edad')} total={total} />
         <GraficaCircular titulo="P4 · Tiempo como colegiado" datos={tabular(datos, 'q4_tiempo_colegiado')} total={total} />
       </div>
