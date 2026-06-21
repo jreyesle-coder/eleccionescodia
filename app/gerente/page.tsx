@@ -10,7 +10,7 @@ export default async function GerentePage() {
 
   return (
     <DashboardGerente
-      nombreGerente={session.nombre}
+      nombreUsuario={session.nombre}
       rol={session.rol}
     />
   )
