@@ -51,6 +51,8 @@ interface Confirmado {
   nucleo: string | null
   confirmacion_intencion: string | null
   confirmacion_at: string | null
+  tiene_deuda: boolean
+  monto_deuda: number
 }
 
 interface DeudaAPI {
@@ -499,11 +501,18 @@ export default function PanelDirigente({ nombre, rol }: Props) {
                         {c.confirmacion_at && ` · ${fmtFecha(c.confirmacion_at)}`}
                       </p>
                     </div>
-                    {c.confirmacion_intencion && (
-                      <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full shrink-0', INTENCION_COLOR[c.confirmacion_intencion] ?? 'bg-gray-100 text-gray-600')}>
-                        {INTENCION_LABEL[c.confirmacion_intencion] ?? c.confirmacion_intencion}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {c.tiene_deuda && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                          ⚠ RD$ {c.monto_deuda.toLocaleString()}
+                        </span>
+                      )}
+                      {c.confirmacion_intencion && (
+                        <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', INTENCION_COLOR[c.confirmacion_intencion] ?? 'bg-gray-100 text-gray-600')}>
+                          {INTENCION_LABEL[c.confirmacion_intencion] ?? c.confirmacion_intencion}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
