@@ -2007,6 +2007,8 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
   const [filtroRegional, setFiltroRegional] = useState('')
 
   const [todasRegionales, setTodasRegionales] = useState<string[]>([])
+  const [totalCount, setTotalCount]           = useState(0)
+  const [confirmadosCount, setConfirmadosCount] = useState(0)
 
   const [detalle, setDetalle]                       = useState<MiembroPadronActivo | null>(null)
   const [detalleDeuda, setDetalleDeuda]             = useState<DeudaAPI | null>(null)
@@ -2019,6 +2021,14 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
     supabase.rpc('opciones_padron').then(({ data }) => {
       const rows = (data as { tipo: string; valor: string }[]) ?? []
       setTodasRegionales(rows.filter(r => r.tipo === 'regional').map(r => r.valor).sort())
+    })
+    // Conteos autoritativos — misma fuente que la tarjeta en tab Confirmados
+    Promise.all([
+      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true),
+      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true).eq('confirmacion_intencion', 'favorable'),
+    ]).then(([resTotal, resConfirm]) => {
+      setTotalCount(resTotal.count ?? 0)
+      setConfirmadosCount(resConfirm.count ?? 0)
     })
   }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2081,8 +2091,7 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
     setDetalleIntencion(null)
   }
 
-  const confirmados = padron.filter(m => m.confirmacion_intencion === 'favorable').length
-  const pendientes  = padron.filter(m => !m.confirmacion_intencion).length
+  const pctConfirmado = totalCount > 0 ? Math.round(confirmadosCount / totalCount * 100) : 0
 
   return (
     <div className="space-y-4">
@@ -2094,18 +2103,18 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
         <div>
           <p className="text-white font-bold text-base">Pensionados Votantes — ISES-CODIA</p>
           <p className="text-purple-200 text-xs mt-0.5">
-            {padron.length} pensionados habilitados · {confirmados} confirmados · {pendientes} pendientes
+            {totalCount.toLocaleString()} pensionados habilitados · {confirmadosCount} confirmados · {totalCount - confirmadosCount} pendientes
           </p>
         </div>
         <div className="flex gap-3 shrink-0">
           <div className="text-center bg-white/10 rounded-xl px-4 py-2">
             <p className="text-purple-200 text-[10px] uppercase font-bold">Confirmados</p>
-            <p className="text-white font-black text-xl tabular-nums">{confirmados}</p>
+            <p className="text-white font-black text-xl tabular-nums">{confirmadosCount}</p>
           </div>
           <div className="text-center bg-white/10 rounded-xl px-4 py-2">
             <p className="text-purple-200 text-[10px] uppercase font-bold">% confirmado</p>
             <p className="text-white font-black text-xl tabular-nums">
-              {padron.length > 0 ? Math.round(confirmados / padron.length * 100) : 0}%
+              {pctConfirmado}%
             </p>
           </div>
         </div>
