@@ -61,6 +61,87 @@ const PALETTE = [
   '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316',
 ]
 
+// ─── normaliza regionales agrupando variantes del mismo nombre ─────────────────
+
+function normalizarRegional(val: string): string {
+  return val.trim().replace(/\s+/g, ' ')
+}
+
+function tabularNormalizado(datos: Row[], campo: keyof Row): { name: string; total: number }[] {
+  const conteo: Record<string, { display: string; total: number }> = {}
+  for (const r of datos) {
+    const val = r[campo]
+    if (!val) continue
+    const valores = Array.isArray(val) ? val : [val as string]
+    for (const v of valores) {
+      const key = normalizarRegional(v).toLowerCase()
+      if (!conteo[key]) {
+        conteo[key] = { display: normalizarRegional(v), total: 0 }
+      }
+      conteo[key].total += 1
+    }
+  }
+  return Object.values(conteo)
+    .map(({ display, total }) => ({ name: display, total }))
+    .sort((a, b) => b.total - a.total)
+}
+
+// ─── Gráfica de pastel (SVG puro) ─────────────────────────────────────────────
+
+function GraficaCircular({
+  titulo, datos, total,
+}: { titulo: string; datos: { name: string; total: number }[]; total: number }) {
+  if (datos.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p className="text-xs font-semibold text-gray-700 mb-3">{titulo}</p>
+        <p className="text-sm text-gray-400 text-center py-6">Sin respuestas</p>
+      </div>
+    )
+  }
+
+  const cx = 80, cy = 80, r = 72
+  let startAngle = -Math.PI / 2
+  const slices = datos.map((d, i) => {
+    const angle = (d.total / total) * 2 * Math.PI
+    const x1 = cx + r * Math.cos(startAngle)
+    const y1 = cy + r * Math.sin(startAngle)
+    startAngle += angle
+    const x2 = cx + r * Math.cos(startAngle)
+    const y2 = cy + r * Math.sin(startAngle)
+    const large = angle > Math.PI ? 1 : 0
+    return {
+      d: `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`,
+      color: PALETTE[i % PALETTE.length],
+      pct: Math.round((d.total / total) * 100),
+      name: d.name,
+      count: d.total,
+    }
+  })
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <p className="text-xs font-semibold text-gray-700 mb-4">{titulo}</p>
+      <div className="flex flex-col sm:flex-row items-center gap-4">
+        <svg width="160" height="160" viewBox="0 0 160 160" className="shrink-0">
+          {slices.map((s, i) => (
+            <path key={i} d={s.d} fill={s.color} stroke="white" strokeWidth="1.5" />
+          ))}
+        </svg>
+        <ul className="space-y-1.5 flex-1 min-w-0">
+          {slices.map((s, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs">
+              <span className="mt-0.5 w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+              <span className="text-gray-600 flex-1 leading-tight">{s.name}</span>
+              <span className="font-bold tabular-nums shrink-0">{s.pct}%</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 function GraficaBarras({
   titulo, datos, total,
 }: { titulo: string; datos: { name: string; total: number }[]; total: number }) {
@@ -189,23 +270,10 @@ export default function TabEncuesta() {
         1 · Datos Generales
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <GraficaBarras titulo="P1 · Área profesional" datos={tabular(datos, 'q1_area')} total={total} />
-        <GraficaBarras titulo="P3 · Rango de edad" datos={tabular(datos, 'q3_edad')} total={total} />
-        <GraficaBarras titulo="P4 · Tiempo como colegiado" datos={tabular(datos, 'q4_tiempo_colegiado')} total={total} />
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-700 mb-3">P2 · Regionales mencionadas</p>
-          {(() => {
-            const reg = tabular(datos, 'q2_regional')
-            return reg.length === 0
-              ? <p className="text-sm text-gray-400 text-center py-4">Sin respuestas</p>
-              : <ul className="space-y-1 text-sm">{reg.map(r => (
-                  <li key={r.name} className="flex justify-between">
-                    <span className="text-gray-600">{r.name}</span>
-                    <span className="font-bold">{r.total}</span>
-                  </li>
-                ))}</ul>
-          })()}
-        </div>
+        <GraficaCircular titulo="P1 · Área profesional" datos={tabular(datos, 'q1_area')} total={total} />
+        <GraficaCircular titulo="P2 · Regional" datos={tabularNormalizado(datos, 'q2_regional')} total={total} />
+        <GraficaCircular titulo="P3 · Rango de edad" datos={tabular(datos, 'q3_edad')} total={total} />
+        <GraficaCircular titulo="P4 · Tiempo como colegiado" datos={tabular(datos, 'q4_tiempo_colegiado')} total={total} />
       </div>
 
       {/* ── Sección 2: Situación Profesional ── */}
