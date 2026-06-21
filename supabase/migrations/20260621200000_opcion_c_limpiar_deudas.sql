@@ -1,16 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- OPCIÓN C: Limpiar deuda estática — fuente única = consulta en línea
--- 1. Vaciar tabla deudas_votantes
--- 2. Resetear monto_deuda en padron (se re-consulta en línea al abrir perfil)
--- 3. Reescribir todos los RPCs que referenciaban deudas_votantes
+-- 1. Vaciar tabla deudas_votantes (monto_deuda consultado en línea se preserva)
+-- 2. Reescribir todos los RPCs que referenciaban deudas_votantes
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- 1. Vaciar la tabla de deudas estáticas
+--    monto_deuda en padron NO se toca: preserva los montos ya consultados en línea
 truncate table public.deudas_votantes;
-
--- 2. Resetear monto_deuda a NULL en toda la tabla padron
---    (la consulta en línea los irá poblando conforme se abran perfiles)
-update public.padron set monto_deuda = null;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 3. Reescribir RPCs — quitar todas las referencias a deudas_votantes
