@@ -1600,6 +1600,7 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
   const [resumen, setResumen]                       = useState<ConfirmadoResumen[]>([])
   const [totalVerif, setTotalVerif]                 = useState(0)
   const [totalCallCenter, setTotalCallCenter]       = useState(0)
+  const [totalFavorables, setTotalFavorables]       = useState(0)
   const [pensionadosTotal, setPensionadosTotal]     = useState(0)
   const [pensionadosConfirm, setPensionadosConfirm] = useState(0)
   const [cargando, setCargando]                     = useState(true)
@@ -1611,12 +1612,14 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
       supabase.from('v_confirmados_por_dirigente').select('*'),
       supabase.rpc('confirmados_verificate_count'),
       supabase.rpc('confirmados_callcenter_count'),
+      supabase.rpc('confirmados_total_global'),
       supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true),
       supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true).eq('confirmacion_intencion', 'favorable'),
-    ]).then(([{ data }, { data: verifData }, { data: ccData }, resTotal, resConfirm]) => {
+    ]).then(([{ data }, { data: verifData }, { data: ccData }, { data: totalData }, resTotal, resConfirm]) => {
       setResumen((data as ConfirmadoResumen[]) ?? [])
       setTotalVerif(Number(verifData ?? 0))
       setTotalCallCenter(Number(ccData ?? 0))
+      setTotalFavorables(Number(totalData ?? 0))
       setPensionadosTotal(resTotal.count ?? 0)
       setPensionadosConfirm(resConfirm.count ?? 0)
       setCargando(false)
@@ -1624,7 +1627,6 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
   }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalConfirmados = resumen.reduce((s, r) => s + r.total, 0)
-  const totalFavorables  = resumen.reduce((s, r) => s + r.favorables, 0) + totalVerif + totalCallCenter
 
   function abrirModal(via: ModalVia, titulo: string) {
     setModalVia(via)
