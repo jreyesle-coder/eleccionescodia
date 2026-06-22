@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AppHeader from '@/components/app-header'
 
@@ -766,9 +766,114 @@ function TabConfirmados({ nucleoGerente }: { nucleoGerente: string | null }) {
   )
 }
 
+// ─── Tab: Monitoreo de Operadores (solo gerente sin núcleo asignado) ──────────
+
+interface OperadorRow {
+  operador_id: string
+  nombre: string
+  rol: string
+  colegiado_activo: boolean
+  miembro_activo: boolean
+  llamadas_total: number
+  efectivas_total: number
+  confirmados_p1_total: number
+  no_contesta_total: number
+  llamadas_hoy: number
+  efectivas_hoy: number
+  confirmados_p1_hoy: number
+  no_contesta_hoy: number
+  ultima_actividad: string | null
+}
+
+function TabMonitoreoOperadores() {
+  const supabase = createClient()
+  const [filas, setFilas]       = useState<OperadorRow[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError]       = useState<string | null>(null)
+  const [tick, setTick]         = useState(0)
+
+  const cargar = useCallback(async () => {
+    setCargando(true); setError(null)
+    const { data, error } = await supabase.rpc('panel_operadores')
+    if (error) { setError(`Error: ${error.message}`); setCargando(false); return }
+    setFilas((data as unknown as OperadorRow[]) ?? [])
+    setCargando(false)
+  }, [supabase])
+
+  useEffect(() => { cargar() }, [cargar, tick])
+
+  useEffect(() => {
+    const canal = supabase
+      .channel('gerente-monitoreo')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'llamadas' }, () => cargar())
+      .subscribe()
+    return () => { supabase.removeChannel(canal) }
+  }, [supabase, cargar])
+
+  if (cargando) return <p className="text-gray-500 text-sm py-8 text-center">Cargando panel…</p>
+  if (error) return (
+    <div className="py-6 text-center space-y-3">
+      <p className="text-red-600 text-sm">{error}</p>
+      <button onClick={() => setTick(t => t + 1)} className="text-sm px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50">Reintentar</button>
+    </div>
+  )
+
+  const activos = filas.filter(op => op.colegiado_activo || op.miembro_activo).length
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          <span className="font-semibold text-gray-700">{filas.length}</span> operadores ·{' '}
+          <span className="font-semibold text-green-700">{activos}</span> activos ahora
+        </p>
+        <button onClick={() => setTick(t => t + 1)} className="text-xs text-blue-600 hover:underline">↻ Actualizar</button>
+      </div>
+      <div className="overflow-x-auto bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs uppercase tracking-wide border-b-2" style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}>
+              <th className="text-left py-3 px-3 font-semibold">Operador</th>
+              <th className="text-center py-3 px-3 font-semibold">Activo</th>
+              <th className="text-right py-3 px-3 font-semibold">Llamadas hoy</th>
+              <th className="text-right py-3 px-3 font-semibold">Efectivas</th>
+              <th className="text-right py-3 px-3 font-semibold">Conf. P1</th>
+              <th className="text-right py-3 px-3 font-semibold hidden sm:table-cell">Total acum.</th>
+              <th className="text-left py-3 px-3 font-semibold hidden md:table-cell">Última act.</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filas.map(op => {
+              const inactivo = !op.ultima_actividad || (Date.now() - new Date(op.ultima_actividad).getTime()) > 30 * 60 * 1000
+              return (
+                <tr key={op.operador_id} className="hover:bg-gray-50">
+                  <td className="py-3 px-3">
+                    <p className="font-medium text-gray-800">{op.nombre}</p>
+                    <p className="text-xs text-gray-400">{op.rol}</p>
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${op.colegiado_activo || op.miembro_activo ? 'bg-green-500' : inactivo ? 'bg-gray-300' : 'bg-yellow-400'}`} />
+                  </td>
+                  <td className="py-3 px-3 text-right font-semibold tabular-nums">{op.llamadas_hoy}</td>
+                  <td className="py-3 px-3 text-right tabular-nums text-green-700">{op.efectivas_hoy}</td>
+                  <td className="py-3 px-3 text-right tabular-nums font-bold" style={{ color: 'var(--color-dorado)' }}>{op.confirmados_p1_hoy}</td>
+                  <td className="py-3 px-3 text-right tabular-nums text-gray-500 hidden sm:table-cell">{op.llamadas_total}</td>
+                  <td className="py-3 px-3 text-xs text-gray-400 hidden md:table-cell">
+                    {op.ultima_actividad ? fmt(op.ultima_actividad) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-type Tab = 'nucleo' | 'padron' | 'confirmados'
+type Tab = 'nucleo' | 'padron' | 'confirmados' | 'monitoreo'
 
 interface Props {
   nombreUsuario: string
@@ -792,6 +897,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
     { id: 'nucleo',      label: '🏛 Mi Núcleo' },
     { id: 'padron',      label: '📋 Padrón en vivo' },
     { id: 'confirmados', label: '✓ Confirmados' },
+    ...(nucleoGerente === null ? [{ id: 'monitoreo' as Tab, label: '📊 Operadores' }] : []),
   ]
 
   if (cargando) {
@@ -837,6 +943,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
         {tab === 'nucleo'      && <TabMiNucleo />}
         {tab === 'padron'      && <TabPadronActivo nombreUsuario={nombreUsuario} nucleoGerente={nucleoGerente} />}
         {tab === 'confirmados' && <TabConfirmados nucleoGerente={nucleoGerente} />}
+        {tab === 'monitoreo'   && <TabMonitoreoOperadores />}
       </div>
     </div>
   )
