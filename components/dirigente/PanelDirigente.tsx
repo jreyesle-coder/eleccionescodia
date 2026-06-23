@@ -223,7 +223,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   async function cargarPadronZona() {
     if (padronCargado) return
     setCargandoPadron(true)
-    const { data } = await supabase.rpc('padron_zona_dirigente').limit(5000)
+    const { data } = await supabase.rpc('listar_confirmados_dirigente', { p_dirigente: nombre })
     setCargandoPadron(false); setPadronCargado(true)
     setPadronZona((data as MiembroPadron[]) ?? [])
   }
@@ -313,7 +313,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
         <div className="flex border-b border-gray-200 overflow-x-auto">
           {([
             { key: 'buscar',          label: 'Buscar' },
-            { key: 'padron',          label: 'Padrón de mi zona' },
+            { key: 'padron',          label: 'Mi padrón trabajado' },
             { key: 'mis_confirmados', label: 'Mis confirmados' },
           ] as { key: 'buscar' | 'padron' | 'mis_confirmados'; label: string }[]).map(({ key, label }) => (
             <button key={key} onClick={() => cambiarPestaña(key)}
