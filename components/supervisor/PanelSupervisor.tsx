@@ -82,7 +82,7 @@ function TabMonitoreo({ onRefresh }: { onRefresh: number }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {filas.map(op => {
+          {filas.filter(op => op.rol === 'operador').map(op => {
             const sinActividad = !op.ultima_actividad ||
               (Date.now() - new Date(op.ultima_actividad).getTime()) > 30 * 60 * 1000
             return (
@@ -109,7 +109,7 @@ function TabMonitoreo({ onRefresh }: { onRefresh: number }) {
               </tr>
             )
           })}
-          {filas.length === 0 && (
+          {filas.filter(op => op.rol === 'operador').length === 0 && (
             <tr><td colSpan={8} className="py-8 text-center text-gray-400">Sin operadores activos</td></tr>
           )}
         </tbody>

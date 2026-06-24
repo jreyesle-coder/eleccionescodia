@@ -1635,158 +1635,42 @@ function ModalConfirmados({
   )
 }
 
-function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () => void }) {
+function TabConfirmadosPresidente({ onVerPensionados: _onVerPensionados }: { onVerPensionados: () => void }) {
   const supabase = createClient()
-  const [resumen, setResumen]                       = useState<ConfirmadoResumen[]>([])
-  const [totalVerif, setTotalVerif]                 = useState(0)
-  const [totalCallCenter, setTotalCallCenter]       = useState(0)
-  const [totalFavorables, setTotalFavorables]       = useState(0)
-  const [pensionadosTotal, setPensionadosTotal]     = useState(0)
-  const [pensionadosConfirm, setPensionadosConfirm] = useState(0)
-  const [cargando, setCargando]                     = useState(true)
-  const [modalVia, setModalVia]                     = useState<ModalVia | null>(null)
-  const [modalTitulo, setModalTitulo]               = useState('')
+  const [totalCallCenter, setTotalCallCenter] = useState(0)
+  const [cargando, setCargando]               = useState(true)
+  const [modalAbierto, setModalAbierto]       = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('v_confirmados_por_dirigente').select('*'),
-      supabase.rpc('confirmados_verificate_count'),
-      supabase.rpc('confirmados_callcenter_count'),
-      supabase.rpc('confirmados_total_global'),
-      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true),
-      supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true).eq('confirmacion_intencion', 'favorable'),
-    ]).then(([{ data }, { data: verifData }, { data: ccData }, { data: totalData }, resTotal, resConfirm]) => {
-      setResumen((data as ConfirmadoResumen[]) ?? [])
-      setTotalVerif(Number(verifData ?? 0))
-      setTotalCallCenter(Number(ccData ?? 0))
-      setTotalFavorables(Number(totalData ?? 0))
-      setPensionadosTotal(resTotal.count ?? 0)
-      setPensionadosConfirm(resConfirm.count ?? 0)
+    supabase.rpc('confirmados_callcenter_count').then(({ data }) => {
+      setTotalCallCenter(Number(data ?? 0))
       setCargando(false)
     })
   }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalConfirmados = resumen.reduce((s, r) => s + r.total, 0)
-
-  function abrirModal(via: ModalVia, titulo: string) {
-    setModalVia(via)
-    setModalTitulo(titulo)
-  }
-
   if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
-
-  const tarjetas: { titulo: string; valor: number; color: string; via: ModalVia }[] = [
-    { titulo: 'Total confirmados (dirigentes)', valor: totalConfirmados, color: 'var(--color-marino)', via: 'dirigente' },
-    { titulo: 'Via Verifícate (simpatizantes)', valor: totalVerif,       color: '#16a34a',            via: 'verificate' },
-    { titulo: 'Via Call Center',                valor: totalCallCenter,  color: '#2563eb',            via: 'callcenter' },
-    { titulo: 'Favorables totales',             valor: totalFavorables,  color: '#ca8a04',            via: 'todos' },
-  ]
-
-  const pctPensionados = pensionadosTotal > 0 ? Math.round(pensionadosConfirm / pensionadosTotal * 100) : 0
 
   return (
     <div className="space-y-5">
-      {/* KPIs — clickables */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {tarjetas.map(({ titulo, valor, color, via }) => (
-          <button
-            key={titulo}
-            onClick={() => abrirModal(via, titulo)}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 border-t-4 text-left hover:shadow-md active:scale-95 transition-all"
-            style={{ borderTopColor: color }}
-          >
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{titulo}</p>
-            <p className="text-3xl font-black mt-1 tabular-nums" style={{ color }}>{valor.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-300 mt-1">Toca para ver lista →</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Tarjeta Pensionados Votantes */}
+      {/* KPI — Call Center */}
       <button
-        onClick={onVerPensionados}
-        className="w-full rounded-2xl border-t-4 shadow-sm p-4 text-left hover:shadow-md active:scale-[0.99] transition-all flex items-center justify-between gap-4"
-        style={{ borderTopColor: '#7c3aed', background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)' }}
+        onClick={() => setModalAbierto(true)}
+        className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-6 border-t-4 text-left hover:shadow-md active:scale-[0.99] transition-all"
+        style={{ borderTopColor: '#2563eb' }}
       >
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#6d28d9' }}>
-            🟣 Pensionados Votantes ISES-CODIA
-          </p>
-          <p className="text-3xl font-black mt-1 tabular-nums" style={{ color: '#4c1d95' }}>
-            {pensionadosConfirm.toLocaleString()}
-            <span className="text-base font-semibold text-purple-400 ml-2">
-              de {pensionadosTotal.toLocaleString()}
-            </span>
-          </p>
-          <p className="text-xs mt-1" style={{ color: '#7c3aed' }}>
-            {pctPensionados}% confirmados · Toca para gestionar →
-          </p>
-        </div>
-        <div
-          className="rounded-xl px-4 py-3 text-center shrink-0"
-          style={{ backgroundColor: '#7c3aed', color: 'white' }}
-        >
-          <p className="text-2xl font-black tabular-nums">{pctPensionados}%</p>
-          <p className="text-[10px] opacity-80 mt-0.5">confirmado</p>
-        </div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Confirmados vía Call Center</p>
+        <p className="text-5xl font-black mt-2 tabular-nums" style={{ color: '#2563eb' }}>
+          {totalCallCenter.toLocaleString()}
+        </p>
+        <p className="text-[11px] text-gray-400 mt-2">Toca para ver la lista completa →</p>
       </button>
 
-      {/* Tabla por dirigente */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100">
-          <p className="text-sm font-semibold text-gray-700">Por dirigente</p>
-        </div>
-        {resumen.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-10">Sin confirmaciones de dirigentes todavía.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs uppercase tracking-wide text-gray-500 bg-gray-50 border-b">
-                  <th className="text-left px-4 py-3">Dirigente</th>
-                  <th className="text-right px-4 py-3">Total</th>
-                  <th className="text-right px-4 py-3 text-green-700">Favorables</th>
-                  <th className="text-right px-4 py-3 text-yellow-700">Indecisos</th>
-                  <th className="text-right px-4 py-3 text-red-600">En contra</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {resumen.map(r => (
-                  <tr key={r.dirigente} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-900">{r.dirigente}</td>
-                    <td className="px-4 py-3 text-right font-bold tabular-nums">{r.total}</td>
-                    <td className="px-4 py-3 text-right text-green-700 font-semibold tabular-nums">{r.favorables}</td>
-                    <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">{r.indecisos}</td>
-                    <td className="px-4 py-3 text-right text-red-600 tabular-nums">{r.en_contra}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-200 font-bold">
-                  <td className="px-4 py-3 text-gray-700">Total</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{totalConfirmados}</td>
-                  <td className="px-4 py-3 text-right text-green-700 tabular-nums">
-                    {resumen.reduce((s, r) => s + r.favorables, 0)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-yellow-700 tabular-nums">
-                    {resumen.reduce((s, r) => s + r.indecisos, 0)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-red-600 tabular-nums">
-                    {resumen.reduce((s, r) => s + r.en_contra, 0)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </div>
-
       {/* Modal drilldown */}
-      {modalVia && (
+      {modalAbierto && (
         <ModalConfirmados
-          titulo={modalTitulo}
-          via={modalVia}
-          onCerrar={() => setModalVia(null)}
+          titulo="Via Call Center"
+          via="callcenter"
+          onCerrar={() => setModalAbierto(false)}
         />
       )}
     </div>

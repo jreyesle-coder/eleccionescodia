@@ -112,11 +112,28 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   const [pestañaActiva, setPestañaActiva] = useState<'buscar' | 'padron' | 'mis_confirmados' | 'por_regularizar'>('buscar')
 
   // ── Por regularizar (solo Marcos Peña) ────────────────────────────────
-  const [porRegularizar, setPorRegularizar]   = useState<import('@/lib/types/database').DeudasVotante[]>([])
+  interface SimpatizanteRow {
+    id: number
+    codigo: string
+    nombre_completo: string
+    cedula: string | null
+    telefono: string | null
+    celular: string | null
+    regional: string | null
+    nucleo: string | null
+    carrera: string | null
+    pensionado: boolean
+    tiene_deuda: boolean
+    monto_deuda: number
+    voto_verificate_at: string | null
+  }
+  const [porRegularizar, setPorRegularizar]   = useState<SimpatizanteRow[]>([])
   const [cargandoRegularizar, setCargandoRegularizar] = useState(false)
   const [errorRegularizar, setErrorRegularizar] = useState<string | null>(null)
   const [nucleosAbiertos, setNucleosAbiertos] = useState<Set<string>>(new Set())
   const [busquedaReg, setBusquedaReg]         = useState('')
+  const [confirmandoReg, setConfirmandoReg]   = useState<string | null>(null)
+  const [guardandoReg, setGuardandoReg]       = useState<string | null>(null)
 
   // ── Pestaña Buscar ────────────────────────────────────────────────────
   const [busqueda, setBusqueda]     = useState('')
@@ -296,15 +313,36 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     if (porRegularizar.length > 0) return
     setCargandoRegularizar(true)
     setErrorRegularizar(null)
-    const { data, error } = await supabase
-      .from('deudas_votantes')
-      .select('*')
-      .order('nucleo', { ascending: true })
-      .order('nombre', { ascending: true })
-      .limit(2000)
+    const { data, error } = await supabase.rpc('simpatizantes_por_regularizar')
     setCargandoRegularizar(false)
     if (error) { setErrorRegularizar(`Error al cargar: ${error.message}`); return }
-    setPorRegularizar((data as import('@/lib/types/database').DeudasVotante[]) ?? [])
+    const rows = (data as SimpatizanteRow[]) ?? []
+    setPorRegularizar(rows)
+    // Consultar deudas en background para los que tienen cédula y sin monto registrado
+    for (const r of rows) {
+      if (!r.cedula || r.monto_deuda > 0) continue
+      fetch('/api/consulta-deuda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cedula: r.cedula, codigo: r.codigo }),
+      })
+        .then(res => res.json())
+        .then((d: { encontrado: boolean; monto: number }) => {
+          if (!d.encontrado || d.monto === 0) return
+          setPorRegularizar(prev => prev.map(p =>
+            p.id === r.id ? { ...p, monto_deuda: d.monto, tiene_deuda: true } : p
+          ))
+        })
+        .catch(() => {})
+    }
+  }
+
+  async function saldarDeudaReg(codigo: string) {
+    setGuardandoReg(codigo)
+    const { error } = await supabase.rpc('saldar_deuda_colegiado', { p_codigo: codigo })
+    setGuardandoReg(null)
+    setConfirmandoReg(null)
+    if (!error) setPorRegularizar(prev => prev.filter(r => r.codigo !== codigo))
   }
 
   function toggleNucleo(nucleo: string) {
@@ -517,99 +555,148 @@ export default function PanelDirigente({ nombre, rol }: Props) {
 
         {/* ══ TAB: POR REGULARIZAR (solo Marcos Peña) ══ */}
         {pestañaActiva === 'por_regularizar' && esMarcosP && (() => {
-          const filtradoReg = porRegularizar.filter(d => {
-            if (!busquedaReg) return true
+          const filtradoReg = porRegularizar.filter(r => {
             const q = busquedaReg.toLowerCase()
-            return d.nombre?.toLowerCase().includes(q) || d.codigo?.toLowerCase().includes(q) || d.telefono?.includes(q)
+            return !q || r.nombre_completo.toLowerCase().includes(q)
+              || String(r.codigo).includes(q)
+              || (r.cedula ?? '').includes(q)
           })
-          const porNucleo = filtradoReg.reduce<Record<string, import('@/lib/types/database').DeudasVotante[]>>((acc, d) => {
-            const clave = d.nucleo ?? 'Sin núcleo'
-            if (!acc[clave]) acc[clave] = []
-            acc[clave].push(d)
-            return acc
-          }, {})
-          const nucleosOrdenados = Object.keys(porNucleo).sort()
+          const nucleosOrden = Array.from(
+            filtradoReg.reduce((m, r) => {
+              const n = r.nucleo ?? 'Sin núcleo'
+              if (!m.has(n)) m.set(n, [])
+              m.get(n)!.push(r)
+              return m
+            }, new Map<string, SimpatizanteRow[]>())
+          ).sort(([a], [b]) => a.localeCompare(b))
+
           return (
             <div className="space-y-4">
+              {/* Banner */}
+              <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4">
+                <p className="text-sm font-bold text-green-800">⭐ Simpatizantes que necesitan regularizarse</p>
+                <p className="text-xs text-green-700 mt-0.5">
+                  Marcaron preferencia por George Richardson en Verifícate pero tienen deuda o son pensionados.
+                  Contáctalos para regularizar su situación antes del día de elección.
+                </p>
+              </div>
+
               {cargandoRegularizar && <p className="text-center text-gray-400 py-8 text-sm">Cargando…</p>}
               {errorRegularizar && <p className="text-red-600 text-sm py-4 text-center">{errorRegularizar}</p>}
+
               {!cargandoRegularizar && !errorRegularizar && (
                 <>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <p className="text-sm font-semibold text-gray-700">
-                      {filtradoReg.length.toLocaleString()} casos · {nucleosOrdenados.length} núcleos
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setNucleosAbiertos(new Set(nucleosOrdenados))}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      >Expandir todo</button>
-                      <button
-                        onClick={() => setNucleosAbiertos(new Set())}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      >Colapsar todo</button>
-                    </div>
+                  {/* Buscador */}
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre, colegiatura o cédula…"
+                      value={busquedaReg}
+                      onChange={e => setBusquedaReg(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+                      style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+                    />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Buscar nombre, código o teléfono…"
-                    value={busquedaReg}
-                    onChange={e => setBusquedaReg(e.target.value)}
-                    className="w-full text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2"
-                    style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
-                  />
-                  {nucleosOrdenados.length === 0 ? (
-                    <p className="text-center text-gray-400 text-sm py-6">Sin resultados</p>
+
+                  {filtradoReg.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-12 text-center">
+                      <p className="text-gray-400 text-sm">
+                        {busquedaReg ? 'Sin resultados para esa búsqueda.' : 'No hay simpatizantes pendientes de regularizar.'}
+                      </p>
+                    </div>
                   ) : (
-                    <div className="space-y-2">
-                      {nucleosOrdenados.map(nucleo => {
-                        const miembros = porNucleo[nucleo]
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between px-1">
+                        <p className="text-sm font-semibold text-gray-700">
+                          {filtradoReg.length} colegiado{filtradoReg.length !== 1 ? 's' : ''}
+                        </p>
+                        <div className="flex gap-2">
+                          <button onClick={() => setNucleosAbiertos(new Set(nucleosOrden.map(([n]) => n)))}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                            Expandir todo
+                          </button>
+                          <button onClick={() => setNucleosAbiertos(new Set())}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                            Colapsar todo
+                          </button>
+                        </div>
+                      </div>
+
+                      {nucleosOrden.map(([nucleo, miembros]) => {
                         const abierto = nucleosAbiertos.has(nucleo)
-                        const montoNucleo = miembros.reduce((s, d) => s + (d.monto ?? 0), 0)
                         return (
-                          <div key={nucleo} className="rounded-xl border border-gray-200 overflow-hidden">
+                          <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                             <button
                               onClick={() => toggleNucleo(nucleo)}
-                              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                              className="w-full flex items-center justify-between px-5 py-4 hover:bg-green-50/30 transition-colors text-left"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className="text-gray-400 text-sm shrink-0">{abierto ? '▼' : '▶'}</span>
-                                <span className="font-semibold text-gray-800 text-sm truncate">{nucleo}</span>
-                                <span className="text-xs text-gray-500 shrink-0">{miembros.length} caso{miembros.length !== 1 ? 's' : ''}</span>
+                                <span className="text-sm font-bold shrink-0" style={{ color: 'var(--color-marino)', display: 'inline-block', transform: abierto ? 'rotate(90deg)' : 'none' }}>›</span>
+                                <span className="font-semibold text-gray-900 truncate">{nucleo}</span>
+                                <span className="text-xs text-gray-400 shrink-0">{miembros.length} caso{miembros.length !== 1 ? 's' : ''}</span>
                               </div>
-                              {montoNucleo > 0 && (
-                                <span className="text-xs font-bold text-red-600 shrink-0 ml-2">
-                                  RD$ {montoNucleo.toLocaleString()}
-                                </span>
-                              )}
                             </button>
+
                             {abierto && (
-                              <div className="divide-y divide-gray-50 bg-white">
-                                {miembros.map((d, i) => (
-                                  <div key={i} className="px-4 py-3 space-y-0.5">
+                              <div className="border-t border-gray-100 divide-y divide-gray-50">
+                                {miembros.map(r => (
+                                  <div key={r.id} className="px-5 py-4 space-y-2">
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-gray-900 text-sm truncate">{d.nombre}</p>
+                                        <p className="font-semibold text-gray-900 text-sm">{r.nombre_completo}</p>
                                         <p className="text-xs text-gray-400">
-                                          #{d.codigo}
-                                          {d.profesion && <> · {d.profesion}</>}
-                                          {d.regional && <> · {d.regional}</>}
+                                          Colegiatura {r.codigo}
+                                          {r.cedula && <> · CI: {r.cedula}</>}
                                         </p>
-                                        {d.telefono && (
-                                          <a href={`tel:${d.telefono}`} className="text-xs font-medium" style={{ color: 'var(--color-marino)' }}>
-                                            {d.telefono}
+                                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 mt-0.5">
+                                          {r.carrera  && <span>{r.carrera}</span>}
+                                          {r.regional && <span>{r.regional}</span>}
+                                        </div>
+                                        {(r.telefono || r.celular) && (
+                                          <a href={`tel:${r.telefono ?? r.celular}`}
+                                            className="text-sm font-semibold mt-1 inline-block"
+                                            style={{ color: 'var(--color-marino)' }}>
+                                            {r.telefono ?? r.celular}
                                           </a>
                                         )}
-                                        {d.contacto && (
-                                          <p className="text-xs text-gray-400">Contacto: {d.contacto}</p>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1 shrink-0">
+                                        {r.pensionado && (
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
+                                        )}
+                                        {r.monto_deuda > 0 && (
+                                          <span className="text-xs font-bold text-red-600">RD$ {r.monto_deuda.toLocaleString()}</span>
                                         )}
                                       </div>
-                                      {d.monto != null && d.monto > 0 && (
-                                        <span className="text-sm font-bold text-red-600 tabular-nums shrink-0">
-                                          RD$ {d.monto.toLocaleString()}
-                                        </span>
-                                      )}
                                     </div>
+
+                                    {/* Botón saldar deuda */}
+                                    {r.tiene_deuda && confirmandoReg !== r.codigo && (
+                                      <button
+                                        onClick={() => setConfirmandoReg(r.codigo)}
+                                        className="text-xs px-3 py-1.5 rounded-lg border border-green-300 text-green-700 hover:bg-green-50 font-semibold"
+                                      >
+                                        ✓ Marcar deuda saldada
+                                      </button>
+                                    )}
+                                    {confirmandoReg === r.codigo && (
+                                      <div className="flex gap-2 items-center">
+                                        <p className="text-xs text-gray-600">¿Confirmar que saldó la deuda?</p>
+                                        <button
+                                          onClick={() => saldarDeudaReg(r.codigo)}
+                                          disabled={guardandoReg === r.codigo}
+                                          className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-semibold disabled:opacity-50"
+                                        >
+                                          {guardandoReg === r.codigo ? 'Guardando…' : 'Sí, confirmar'}
+                                        </button>
+                                        <button
+                                          onClick={() => setConfirmandoReg(null)}
+                                          className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
