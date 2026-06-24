@@ -11,6 +11,7 @@ export default async function GerentePage() {
   return (
     <DashboardGerente
       nombreUsuario={session.nombre}
+      emailUsuario={session.user.email ?? ''}
       rol={session.rol}
     />
   )

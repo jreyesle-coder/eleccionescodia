@@ -1086,10 +1086,11 @@ type Tab = 'nucleo' | 'padron' | 'confirmados' | 'monitoreo' | 'regularizar'
 
 interface Props {
   nombreUsuario: string
+  emailUsuario: string
   rol: string
 }
 
-export default function DashboardGerente({ nombreUsuario, rol }: Props) {
+export default function DashboardGerente({ nombreUsuario, emailUsuario, rol }: Props) {
   const supabase = createClient()
   const [tab, setTab]               = useState<Tab>('nucleo')
   const [nucleoGerente, setNucleo]  = useState<string | null>(null)
@@ -1107,7 +1108,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
     { id: 'padron',      label: '📋 Padrón en vivo' },
     { id: 'confirmados', label: '✓ Confirmados' },
     ...(nucleoGerente === null ? [{ id: 'monitoreo' as Tab, label: '📊 Operadores' }] : []),
-    ...(nombreUsuario.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes('marcos pe') ? [{ id: 'regularizar' as Tab, label: '⭐ Por regularizar' }] : []),
+    ...(emailUsuario === 'marcopena@eleccionescodia.app' ? [{ id: 'regularizar' as Tab, label: '⭐ Por regularizar' }] : []),
   ]
 
   if (cargando) {
