@@ -1107,7 +1107,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
     { id: 'padron',      label: '📋 Padrón en vivo' },
     { id: 'confirmados', label: '✓ Confirmados' },
     ...(nucleoGerente === null ? [{ id: 'monitoreo' as Tab, label: '📊 Operadores' }] : []),
-    ...(nombreUsuario === 'Marcos Peña' ? [{ id: 'regularizar' as Tab, label: '⭐ Por regularizar' }] : []),
+    ...(nombreUsuario.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes('marcos pe') ? [{ id: 'regularizar' as Tab, label: '⭐ Por regularizar' }] : []),
   ]
 
   if (cargando) {
@@ -1154,7 +1154,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
         {tab === 'padron'      && <TabPadronActivo nombreUsuario={nombreUsuario} nucleoGerente={nucleoGerente} />}
         {tab === 'confirmados' && <TabConfirmados nucleoGerente={nucleoGerente} />}
         {tab === 'monitoreo'   && <TabMonitoreoOperadores />}
-        {tab === 'regularizar' && nombreUsuario === 'Marcos Peña' && <TabPorRegularizar />}
+        {tab === 'regularizar' && <TabPorRegularizar />}
       </div>
     </div>
   )
