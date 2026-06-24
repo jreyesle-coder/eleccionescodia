@@ -8,6 +8,7 @@ import {
 } from 'recharts'
 import AppHeader from '@/components/app-header'
 import TabEncuesta from '@/components/presidente/TabEncuesta'
+import TabAdminUsuarios from '@/components/presidente/TabAdminUsuarios'
 import type {
   MetricaDistrito,
   PadronVivoRow,
@@ -54,7 +55,7 @@ const ETIQUETA_RESULTADO: Record<string, string> = {
   rechaza:              'Rechaza',
 }
 
-type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar' | 'confirmados' | 'dia_eleccion' | 'encuesta' | 'pensionados'
+type Tab = 'resumen' | 'padron' | 'nucleos' | 'regularizar' | 'confirmados' | 'dia_eleccion' | 'encuesta' | 'pensionados' | 'usuarios'
 
 
 function fmt(d: string | null) {
@@ -2415,6 +2416,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
     { id: 'pensionados',  label: '🟣 Pensionados Votantes' },
     { id: 'dia_eleccion', label: '🗳 Día de Elección' },
     { id: 'encuesta',     label: '📋 Encuesta' },
+    { id: 'usuarios',     label: '👥 Usuarios' },
   ]
 
   if (cargando) {
@@ -2502,6 +2504,7 @@ export default function DashboardPresidente({ nombreUsuario, rol }: Props) {
         {tab === 'pensionados'  && <TabPensionadosVotantes nombreUsuario={nombreUsuario} />}
         {tab === 'dia_eleccion' && <TabDiaEleccion />}
         {tab === 'encuesta'     && <TabEncuesta />}
+        {tab === 'usuarios'     && <TabAdminUsuarios />}
       </div>
     </div>
   )
