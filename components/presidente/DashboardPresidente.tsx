@@ -1380,14 +1380,32 @@ function TabRegularizar() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-12 text-center">
           <p className="text-gray-400 text-sm">{filtro ? 'Sin resultados para esa búsqueda.' : 'No hay simpatizantes pendientes de regularizar.'}</p>
         </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      ) : (() => {
+        // Agrupar por núcleo manteniendo orden menor deuda primero dentro de cada grupo
+        const nucleosOrden = Array.from(
+          filtrados.reduce((m, r) => {
+            const n = r.nucleo ?? 'Sin núcleo'
+            if (!m.has(n)) m.set(n, [])
+            m.get(n)!.push(r)
+            return m
+          }, new Map<string, SimpatizanteRow[]>())
+        ).sort(([a], [b]) => a.localeCompare(b))
+
+        return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
             <p className="text-sm font-semibold text-gray-700">{filtrados.length} colegiado{filtrados.length !== 1 ? 's' : ''}</p>
             <p className="text-xs text-gray-400">Ordenados por menor deuda primero</p>
           </div>
-          <div className="divide-y divide-gray-50">
-            {filtrados.map(r => (
+          {nucleosOrden.map(([nucleo, filas]) => (
+            <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-2.5 border-b border-gray-100 flex items-center justify-between"
+                style={{ backgroundColor: 'var(--color-fondo)' }}>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--color-marino)' }}>{nucleo}</p>
+                <p className="text-xs text-gray-400">{filas.length} colegiado{filas.length !== 1 ? 's' : ''}</p>
+              </div>
+              <div className="divide-y divide-gray-50">
+            {filas.map(r => (
               <div key={r.id} className="px-5 py-4 space-y-2">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
@@ -1448,9 +1466,12 @@ function TabRegularizar() {
                 )}
               </div>
             ))}
-          </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
