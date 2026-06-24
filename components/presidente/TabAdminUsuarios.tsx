@@ -162,21 +162,24 @@ export default function TabAdminUsuarios() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{u.nombre}</p>
                   <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                  {/* Descripción de acceso debajo del email */}
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {u.rol === 'gerente' && u.nucleo_asignado && `CDN ${u.nucleo_asignado}`}
+                    {u.rol === 'gerente' && !u.nucleo_asignado && 'Padrón general / Call Center completo'}
+                    {u.rol === 'dirigente' && u.regional_asignada && `Dirigente — ${u.regional_asignada}`}
+                    {u.rol === 'dirigente' && !u.regional_asignada && 'Dirigente — sin regional asignada'}
+                    {u.rol === 'colaborador' && u.regional_asignada && `Colaborador — ${u.regional_asignada}`}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${ROL_COLOR[u.rol] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {u.rol}
+                  {u.rol === 'gerente' && u.nucleo_asignado ? `gerente · ${u.nucleo_asignado}` : u.rol}
                 </span>
-                {u.nucleo_asignado && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium hidden sm:inline">
-                    {u.nucleo_asignado}
-                  </span>
-                )}
                 {u.regional_asignada && (
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-medium hidden sm:inline">
-                    {u.regional_asignada.replace('REGIONAL ', '').replace(' (', ' (')}
+                    {u.regional_asignada.replace('REGIONAL ', '')}
                   </span>
                 )}
                 {!u.activo && (
