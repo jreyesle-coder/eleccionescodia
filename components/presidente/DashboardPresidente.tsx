@@ -1497,15 +1497,6 @@ function TabRegularizar() {
 
 // ─── Tab: Confirmados por dirigente ──────────────────────────────────────────
 
-interface ConfirmadoResumen {
-  dirigente: string
-  total: number
-  favorables: number
-  indecisos: number
-  en_contra: number
-  ultima_confirmacion: string | null
-}
-
 interface ConfirmadoDetalleRow {
   codigo: string
   nombre_completo: string
@@ -1635,7 +1626,7 @@ function ModalConfirmados({
   )
 }
 
-function TabConfirmadosPresidente({ onVerPensionados: _onVerPensionados }: { onVerPensionados: () => void }) {
+function TabConfirmadosPresidente(_props: { onVerPensionados: () => void }) {
   const supabase = createClient()
   const [totalCallCenter, setTotalCallCenter] = useState(0)
   const [cargando, setCargando]               = useState(true)
