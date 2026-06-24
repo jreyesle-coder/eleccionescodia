@@ -766,6 +766,215 @@ function TabConfirmados({ nucleoGerente }: { nucleoGerente: string | null }) {
   )
 }
 
+// ─── Tab: Por regularizar (solo Marcos Peña) ─────────────────────────────────
+
+interface SimpatizanteReg {
+  id: number
+  codigo: string
+  nombre_completo: string
+  cedula: string | null
+  telefono: string | null
+  celular: string | null
+  regional: string | null
+  nucleo: string | null
+  carrera: string | null
+  pensionado: boolean
+  tiene_deuda: boolean
+  monto_deuda: number
+  voto_verificate_at: string | null
+}
+
+function TabPorRegularizar() {
+  const supabase = createClient()
+  const [lista, setLista]             = useState<SimpatizanteReg[]>([])
+  const [cargando, setCargando]       = useState(true)
+  const [filtro, setFiltro]           = useState('')
+  const [abiertos, setAbiertos]       = useState<Set<string>>(new Set())
+  const [confirmando, setConfirmando] = useState<string | null>(null)
+  const [guardando, setGuardando]     = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.rpc('simpatizantes_por_regularizar').then(({ data }) => {
+      const rows = (data as SimpatizanteReg[]) ?? []
+      setLista(rows)
+      setCargando(false)
+      for (const r of rows) {
+        if (!r.cedula || r.monto_deuda > 0) continue
+        fetch('/api/consulta-deuda', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cedula: r.cedula, codigo: r.codigo }),
+        })
+          .then(res => res.json())
+          .then((d: { encontrado: boolean; monto: number }) => {
+            if (!d.encontrado || d.monto === 0) return
+            setLista(prev => prev.map(p => p.id === r.id ? { ...p, monto_deuda: d.monto, tiene_deuda: true } : p))
+          })
+          .catch(() => {})
+      }
+    })
+  }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saldarDeuda(codigo: string) {
+    setGuardando(codigo)
+    const { error } = await supabase.rpc('saldar_deuda_colegiado', { p_codigo: codigo })
+    setGuardando(null)
+    setConfirmando(null)
+    if (!error) setLista(prev => prev.filter(r => r.codigo !== codigo))
+  }
+
+  function toggleGrupo(n: string) {
+    setAbiertos(prev => {
+      const next = new Set(prev)
+      if (next.has(n)) next.delete(n); else next.add(n)
+      return next
+    })
+  }
+
+  const filtrados = lista.filter(r => {
+    const q = filtro.toLowerCase()
+    return !q || r.nombre_completo.toLowerCase().includes(q)
+      || String(r.codigo).includes(q)
+      || (r.cedula ?? '').includes(q)
+  })
+
+  const grupos = Array.from(
+    filtrados.reduce((m, r) => {
+      const n = r.nucleo ?? 'Sin núcleo'
+      if (!m.has(n)) m.set(n, [])
+      m.get(n)!.push(r)
+      return m
+    }, new Map<string, SimpatizanteReg[]>())
+  ).sort(([a], [b]) => a.localeCompare(b))
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4">
+        <p className="text-sm font-bold text-green-800">⭐ Simpatizantes que necesitan regularizarse</p>
+        <p className="text-xs text-green-700 mt-0.5">
+          Marcaron preferencia por George Richardson en Verifícate pero tienen deuda o son pensionados.
+          Contáctalos para regularizar antes del día de elección.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <input
+          type="text"
+          placeholder="Buscar por nombre, colegiatura o cédula…"
+          value={filtro}
+          onChange={e => setFiltro(e.target.value)}
+          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+
+      {cargando ? (
+        <p className="text-center text-gray-400 py-10">Cargando…</p>
+      ) : filtrados.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-12 text-center">
+          <p className="text-gray-400 text-sm">
+            {filtro ? 'Sin resultados para esa búsqueda.' : 'No hay simpatizantes pendientes de regularizar.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-sm font-semibold text-gray-700">
+              {filtrados.length} colegiado{filtrados.length !== 1 ? 's' : ''}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setAbiertos(new Set(grupos.map(([n]) => n)))}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                Expandir todo
+              </button>
+              <button onClick={() => setAbiertos(new Set())}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                Colapsar todo
+              </button>
+            </div>
+          </div>
+
+          {grupos.map(([nucleo, miembros]) => {
+            const abierto = abiertos.has(nucleo)
+            return (
+              <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <button
+                  onClick={() => toggleGrupo(nucleo)}
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-green-50/30 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm font-bold shrink-0 transition-transform"
+                      style={{ color: 'var(--color-marino)', display: 'inline-block', transform: abierto ? 'rotate(90deg)' : 'none' }}>
+                      ›
+                    </span>
+                    <span className="font-semibold text-gray-900 truncate">{nucleo}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{miembros.length} caso{miembros.length !== 1 ? 's' : ''}</span>
+                  </div>
+                </button>
+
+                {abierto && (
+                  <div className="border-t border-gray-100 divide-y divide-gray-50">
+                    {miembros.map(r => (
+                      <div key={r.id} className="px-5 py-4 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 text-sm">{r.nombre_completo}</p>
+                            <p className="text-xs text-gray-400">
+                              Colegiatura {r.codigo}{r.cedula && <> · CI: {r.cedula}</>}
+                            </p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 mt-0.5">
+                              {r.carrera  && <span>{r.carrera}</span>}
+                              {r.regional && <span>{r.regional}</span>}
+                            </div>
+                            {(r.telefono || r.celular) && (
+                              <a href={`tel:${r.telefono ?? r.celular}`}
+                                className="text-sm font-semibold mt-1 inline-block"
+                                style={{ color: 'var(--color-marino)' }}>
+                                {r.telefono ?? r.celular}
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {r.pensionado && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
+                            )}
+                            {r.monto_deuda > 0 && (
+                              <span className="text-xs font-bold text-red-600">RD$ {r.monto_deuda.toLocaleString()}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {r.tiene_deuda && confirmando !== r.codigo && (
+                          <button onClick={() => setConfirmando(r.codigo)}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-green-300 text-green-700 hover:bg-green-50 font-semibold">
+                            ✓ Marcar deuda saldada
+                          </button>
+                        )}
+                        {confirmando === r.codigo && (
+                          <div className="flex gap-2 items-center flex-wrap">
+                            <p className="text-xs text-gray-600">¿Confirmar que saldó la deuda?</p>
+                            <button onClick={() => saldarDeuda(r.codigo)} disabled={guardando === r.codigo}
+                              className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-semibold disabled:opacity-50">
+                              {guardando === r.codigo ? 'Guardando…' : 'Sí, confirmar'}
+                            </button>
+                            <button onClick={() => setConfirmando(null)}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600">
+                              Cancelar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Tab: Monitoreo de Operadores (solo gerente sin núcleo asignado) ──────────
 
 interface OperadorRow {
@@ -873,7 +1082,7 @@ function TabMonitoreoOperadores() {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-type Tab = 'nucleo' | 'padron' | 'confirmados' | 'monitoreo'
+type Tab = 'nucleo' | 'padron' | 'confirmados' | 'monitoreo' | 'regularizar'
 
 interface Props {
   nombreUsuario: string
@@ -898,6 +1107,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
     { id: 'padron',      label: '📋 Padrón en vivo' },
     { id: 'confirmados', label: '✓ Confirmados' },
     ...(nucleoGerente === null ? [{ id: 'monitoreo' as Tab, label: '📊 Operadores' }] : []),
+    ...(nombreUsuario === 'Marcos Peña' ? [{ id: 'regularizar' as Tab, label: '⭐ Por regularizar' }] : []),
   ]
 
   if (cargando) {
@@ -944,6 +1154,7 @@ export default function DashboardGerente({ nombreUsuario, rol }: Props) {
         {tab === 'padron'      && <TabPadronActivo nombreUsuario={nombreUsuario} nucleoGerente={nucleoGerente} />}
         {tab === 'confirmados' && <TabConfirmados nucleoGerente={nucleoGerente} />}
         {tab === 'monitoreo'   && <TabMonitoreoOperadores />}
+        {tab === 'regularizar' && nombreUsuario === 'Marcos Peña' && <TabPorRegularizar />}
       </div>
     </div>
   )
