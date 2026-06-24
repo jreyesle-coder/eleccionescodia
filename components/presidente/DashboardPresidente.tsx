@@ -1626,6 +1626,7 @@ function ModalConfirmados({
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TabConfirmadosPresidente(_props: { onVerPensionados: () => void }) {
   const supabase = createClient()
   const [totalCallCenter, setTotalCallCenter] = useState(0)
