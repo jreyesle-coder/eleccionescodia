@@ -2052,6 +2052,8 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
   const [totalCount, setTotalCount]           = useState(0)
   const [confirmadosCount, setConfirmadosCount] = useState(0)
 
+  const [nucleosAbiertos, setNucleosAbiertos] = useState<Set<string>>(new Set())
+
   const [detalle, setDetalle]                       = useState<MiembroPadronActivo | null>(null)
   const [detalleDeuda, setDetalleDeuda]             = useState<DeudaAPI | null>(null)
   const [cargandoDeuda, setCargandoDeuda]           = useState(false)
@@ -2064,7 +2066,6 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
       const rows = (data as { tipo: string; valor: string }[]) ?? []
       setTodasRegionales(rows.filter(r => r.tipo === 'regional').map(r => r.valor).sort())
     })
-    // Conteos autoritativos — misma fuente que la tarjeta en tab Confirmados
     Promise.all([
       supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true),
       supabase.from('padron').select('codigo', { count: 'exact', head: true }).eq('pensionado_votante', true).eq('confirmacion_intencion', 'favorable'),
@@ -2086,6 +2087,15 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
       setCargando(false)
     })
   }, [supabase, filtroRegional, busqueda])
+
+  function toggleNucleoP(nucleo: string) {
+    setNucleosAbiertos(prev => {
+      const next = new Set(prev)
+      if (next.has(nucleo)) next.delete(nucleo)
+      else next.add(nucleo)
+      return next
+    })
+  }
 
   async function abrirDetalle(m: MiembroPadronActivo) {
     setDetalle(m)
@@ -2189,41 +2199,93 @@ function TabPensionadosVotantes({ nombreUsuario }: { nombreUsuario: string }) {
         </p>
       </div>
 
-      {/* Lista */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="divide-y divide-gray-50">
-          {cargando ? (
-            <p className="text-center text-gray-400 text-sm py-12">Cargando…</p>
-          ) : padron.length === 0 ? (
-            <p className="text-center text-gray-400 text-sm py-12">Sin resultados.</p>
-          ) : padron.map(m => (
-            <button key={m.id} onClick={() => abrirDetalle(m)}
-              className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-purple-50/40 active:bg-purple-50 transition-colors"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 truncate">{m.nombre_completo}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  #{m.codigo}
-                  {m.regional && <> · <span className="text-gray-500">{m.regional}</span></>}
-                  {m.nucleo   && <> · {m.nucleo}</>}
-                </p>
+      {/* Acordeón por núcleo */}
+      {(() => {
+        const porNucleo = padron.reduce<Record<string, MiembroPadronActivo[]>>((acc, m) => {
+          const clave = m.nucleo ?? 'Sin núcleo'
+          if (!acc[clave]) acc[clave] = []
+          acc[clave].push(m)
+          return acc
+        }, {})
+        const nucleosOrdenados = Object.keys(porNucleo).sort()
+        return cargando ? (
+          <p className="text-center text-gray-400 text-sm py-12">Cargando…</p>
+        ) : padron.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-12">Sin resultados.</p>
+        ) : (
+          <div className="space-y-2">
+            {/* Controles expandir/colapsar */}
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs text-gray-500">{nucleosOrdenados.length} núcleos</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNucleosAbiertos(new Set(nucleosOrdenados))}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                >Expandir todo</button>
+                <button
+                  onClick={() => setNucleosAbiertos(new Set())}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                >Colapsar todo</button>
               </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                {m.confirmacion_intencion ? (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${INTENCION_COLOR_P[m.confirmacion_intencion]}`}>
-                    {INTENCION_LABEL_P[m.confirmacion_intencion]}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-gray-300">Pendiente</span>
-                )}
-                {m.tiene_deuda && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Deuda</span>}
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Pensionado</span>
-              </div>
-              <span className="text-gray-300 text-lg shrink-0">›</span>
-            </button>
-          ))}
-        </div>
-      </div>
+            </div>
+            {nucleosOrdenados.map(nucleo => {
+              const miembros = porNucleo[nucleo]
+              const abierto  = nucleosAbiertos.has(nucleo)
+              const confirmadosNucleo = miembros.filter(m => m.confirmacion_intencion === 'favorable').length
+              return (
+                <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <button
+                    onClick={() => toggleNucleoP(nucleo)}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-purple-50/30 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span
+                        className="text-sm font-bold shrink-0 transition-transform"
+                        style={{ color: '#7c3aed', display: 'inline-block', transform: abierto ? 'rotate(90deg)' : 'none' }}
+                      >›</span>
+                      <span className="font-semibold text-gray-900 truncate">{nucleo}</span>
+                      <span className="text-xs text-gray-400 shrink-0">{miembros.length} pensionado{miembros.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {confirmadosNucleo > 0 && (
+                      <span className="text-xs font-bold text-green-700 shrink-0 ml-2 bg-green-50 px-2 py-1 rounded-lg">
+                        ✓ {confirmadosNucleo} confirmado{confirmadosNucleo !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </button>
+                  {abierto && (
+                    <div className="border-t border-gray-100 divide-y divide-gray-50">
+                      {miembros.map(m => (
+                        <button key={m.id} onClick={() => abrirDetalle(m)}
+                          className="w-full text-left px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-purple-50/40 active:bg-purple-50 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{m.nombre_completo}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              #{m.codigo}
+                              {m.regional && <> · <span className="text-gray-500">{m.regional}</span></>}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {m.confirmacion_intencion ? (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${INTENCION_COLOR_P[m.confirmacion_intencion]}`}>
+                                {INTENCION_LABEL_P[m.confirmacion_intencion]}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-gray-300">Pendiente</span>
+                            )}
+                            {m.tiene_deuda && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Deuda</span>}
+                          </div>
+                          <span className="text-gray-300 text-lg shrink-0">›</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* Panel de detalle */}
       {detalle && (
