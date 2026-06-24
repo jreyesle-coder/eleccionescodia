@@ -106,8 +106,17 @@ interface Props {
 export default function PanelDirigente({ nombre, rol }: Props) {
   const supabase = createClient()
 
+  const esMarcosP = nombre === 'Marcos Peña'
+
   // Pestañas
-  const [pestañaActiva, setPestañaActiva] = useState<'buscar' | 'padron' | 'mis_confirmados'>('buscar')
+  const [pestañaActiva, setPestañaActiva] = useState<'buscar' | 'padron' | 'mis_confirmados' | 'por_regularizar'>('buscar')
+
+  // ── Por regularizar (solo Marcos Peña) ────────────────────────────────
+  const [porRegularizar, setPorRegularizar]   = useState<import('@/lib/types/database').DeudasVotante[]>([])
+  const [cargandoRegularizar, setCargandoRegularizar] = useState(false)
+  const [errorRegularizar, setErrorRegularizar] = useState<string | null>(null)
+  const [nucleosAbiertos, setNucleosAbiertos] = useState<Set<string>>(new Set())
+  const [busquedaReg, setBusquedaReg]         = useState('')
 
   // ── Pestaña Buscar ────────────────────────────────────────────────────
   const [busqueda, setBusqueda]     = useState('')
@@ -281,13 +290,40 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     setDetalleIntencion(null)
   }
 
+  // ── Acciones: Por regularizar ─────────────────────────────────────────
+
+  async function cargarPorRegularizar() {
+    if (porRegularizar.length > 0) return
+    setCargandoRegularizar(true)
+    setErrorRegularizar(null)
+    const { data, error } = await supabase
+      .from('deudas_votantes')
+      .select('*')
+      .order('nucleo', { ascending: true })
+      .order('nombre', { ascending: true })
+      .limit(2000)
+    setCargandoRegularizar(false)
+    if (error) { setErrorRegularizar(`Error al cargar: ${error.message}`); return }
+    setPorRegularizar((data as import('@/lib/types/database').DeudasVotante[]) ?? [])
+  }
+
+  function toggleNucleo(nucleo: string) {
+    setNucleosAbiertos(prev => {
+      const next = new Set(prev)
+      if (next.has(nucleo)) next.delete(nucleo)
+      else next.add(nucleo)
+      return next
+    })
+  }
+
   // ── Navegación pestañas ───────────────────────────────────────────────
 
-  function cambiarPestaña(p: 'buscar' | 'padron' | 'mis_confirmados') {
+  function cambiarPestaña(p: 'buscar' | 'padron' | 'mis_confirmados' | 'por_regularizar') {
     setPestañaActiva(p)
     setToastNombre(null); setToastDeuda(null)
     if (p === 'mis_confirmados') cargarMisConfirmados()
     if (p === 'padron') cargarPadronZona()
+    if (p === 'por_regularizar') cargarPorRegularizar()
   }
 
   // ── Filtros padrón ────────────────────────────────────────────────────
@@ -312,10 +348,11 @@ export default function PanelDirigente({ nombre, rol }: Props) {
         {/* Pestañas */}
         <div className="flex border-b border-gray-200 overflow-x-auto">
           {([
-            { key: 'buscar',          label: 'Buscar' },
-            { key: 'padron',          label: 'Mi padrón trabajado' },
-            { key: 'mis_confirmados', label: 'Mis confirmados' },
-          ] as { key: 'buscar' | 'padron' | 'mis_confirmados'; label: string }[]).map(({ key, label }) => (
+            { key: 'buscar',           label: 'Buscar' },
+            { key: 'padron',           label: 'Mi padrón trabajado' },
+            { key: 'mis_confirmados',  label: 'Mis confirmados' },
+            ...(esMarcosP ? [{ key: 'por_regularizar', label: '📋 Por regularizar' }] : []),
+          ] as { key: 'buscar' | 'padron' | 'mis_confirmados' | 'por_regularizar'; label: string }[]).map(({ key, label }) => (
             <button key={key} onClick={() => cambiarPestaña(key)}
               className={cn(
                 'px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap',
@@ -477,6 +514,116 @@ export default function PanelDirigente({ nombre, rol }: Props) {
             </div>
           )
         )}
+
+        {/* ══ TAB: POR REGULARIZAR (solo Marcos Peña) ══ */}
+        {pestañaActiva === 'por_regularizar' && esMarcosP && (() => {
+          const filtradoReg = porRegularizar.filter(d => {
+            if (!busquedaReg) return true
+            const q = busquedaReg.toLowerCase()
+            return d.nombre?.toLowerCase().includes(q) || d.codigo?.toLowerCase().includes(q) || d.telefono?.includes(q)
+          })
+          const porNucleo = filtradoReg.reduce<Record<string, import('@/lib/types/database').DeudasVotante[]>>((acc, d) => {
+            const clave = d.nucleo ?? 'Sin núcleo'
+            if (!acc[clave]) acc[clave] = []
+            acc[clave].push(d)
+            return acc
+          }, {})
+          const nucleosOrdenados = Object.keys(porNucleo).sort()
+          return (
+            <div className="space-y-4">
+              {cargandoRegularizar && <p className="text-center text-gray-400 py-8 text-sm">Cargando…</p>}
+              {errorRegularizar && <p className="text-red-600 text-sm py-4 text-center">{errorRegularizar}</p>}
+              {!cargandoRegularizar && !errorRegularizar && (
+                <>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-sm font-semibold text-gray-700">
+                      {filtradoReg.length.toLocaleString()} casos · {nucleosOrdenados.length} núcleos
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setNucleosAbiertos(new Set(nucleosOrdenados))}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                      >Expandir todo</button>
+                      <button
+                        onClick={() => setNucleosAbiertos(new Set())}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                      >Colapsar todo</button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar nombre, código o teléfono…"
+                    value={busquedaReg}
+                    onChange={e => setBusquedaReg(e.target.value)}
+                    className="w-full text-sm px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2"
+                    style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+                  />
+                  {nucleosOrdenados.length === 0 ? (
+                    <p className="text-center text-gray-400 text-sm py-6">Sin resultados</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {nucleosOrdenados.map(nucleo => {
+                        const miembros = porNucleo[nucleo]
+                        const abierto = nucleosAbiertos.has(nucleo)
+                        const montoNucleo = miembros.reduce((s, d) => s + (d.monto ?? 0), 0)
+                        return (
+                          <div key={nucleo} className="rounded-xl border border-gray-200 overflow-hidden">
+                            <button
+                              onClick={() => toggleNucleo(nucleo)}
+                              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-gray-400 text-sm shrink-0">{abierto ? '▼' : '▶'}</span>
+                                <span className="font-semibold text-gray-800 text-sm truncate">{nucleo}</span>
+                                <span className="text-xs text-gray-500 shrink-0">{miembros.length} caso{miembros.length !== 1 ? 's' : ''}</span>
+                              </div>
+                              {montoNucleo > 0 && (
+                                <span className="text-xs font-bold text-red-600 shrink-0 ml-2">
+                                  RD$ {montoNucleo.toLocaleString()}
+                                </span>
+                              )}
+                            </button>
+                            {abierto && (
+                              <div className="divide-y divide-gray-50 bg-white">
+                                {miembros.map((d, i) => (
+                                  <div key={i} className="px-4 py-3 space-y-0.5">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-gray-900 text-sm truncate">{d.nombre}</p>
+                                        <p className="text-xs text-gray-400">
+                                          #{d.codigo}
+                                          {d.profesion && <> · {d.profesion}</>}
+                                          {d.regional && <> · {d.regional}</>}
+                                        </p>
+                                        {d.telefono && (
+                                          <a href={`tel:${d.telefono}`} className="text-xs font-medium" style={{ color: 'var(--color-marino)' }}>
+                                            {d.telefono}
+                                          </a>
+                                        )}
+                                        {d.contacto && (
+                                          <p className="text-xs text-gray-400">Contacto: {d.contacto}</p>
+                                        )}
+                                      </div>
+                                      {d.monto != null && d.monto > 0 && (
+                                        <span className="text-sm font-bold text-red-600 tabular-nums shrink-0">
+                                          RD$ {d.monto.toLocaleString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })()}
 
         {/* ══ TAB: MIS CONFIRMADOS ══ */}
         {pestañaActiva === 'mis_confirmados' && (

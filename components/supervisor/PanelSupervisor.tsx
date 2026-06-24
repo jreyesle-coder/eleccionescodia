@@ -218,8 +218,8 @@ function TabDeudas() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filtroRegional, setFiltroRegional] = useState('')
-  const [filtroNucleo, setFiltroNucleo] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [nucleosAbiertos, setNucleosAbiertos] = useState<Set<string>>(new Set())
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -229,6 +229,7 @@ function TabDeudas() {
         .from('deudas_votantes')
         .select('*')
         .order('regional', { ascending: true })
+        .order('nucleo', { ascending: true })
         .order('nombre', { ascending: true })
         .limit(2000)
       if (error) { setError(`Error al cargar deudas: ${error.message}`); return }
@@ -241,11 +242,9 @@ function TabDeudas() {
   useEffect(() => { cargar() }, [cargar])
 
   const regionales = Array.from(new Set(lista.map(d => d.regional).filter(Boolean))).sort() as string[]
-  const nucleos = Array.from(new Set(lista.filter(d => !filtroRegional || d.regional === filtroRegional).map(d => d.nucleo).filter(Boolean))).sort() as string[]
 
   const filtrado = lista.filter(d => {
     if (filtroRegional && d.regional !== filtroRegional) return false
-    if (filtroNucleo && d.nucleo !== filtroNucleo) return false
     if (busqueda) {
       const q = busqueda.toLowerCase()
       return (d.nombre?.toLowerCase().includes(q) || d.codigo?.toLowerCase().includes(q) || d.profesion?.toLowerCase().includes(q))
@@ -253,7 +252,28 @@ function TabDeudas() {
     return true
   })
 
+  // Agrupar por núcleo
+  const porNucleo = filtrado.reduce<Record<string, DeudasVotante[]>>((acc, d) => {
+    const clave = d.nucleo ?? 'Sin núcleo'
+    if (!acc[clave]) acc[clave] = []
+    acc[clave].push(d)
+    return acc
+  }, {})
+  const nucleosOrdenados = Object.keys(porNucleo).sort()
+
   const totalMonto = filtrado.reduce((sum, d) => sum + (d.monto ?? 0), 0)
+
+  function toggleNucleo(nucleo: string) {
+    setNucleosAbiertos(prev => {
+      const next = new Set(prev)
+      if (next.has(nucleo)) next.delete(nucleo)
+      else next.add(nucleo)
+      return next
+    })
+  }
+
+  function expandirTodos() { setNucleosAbiertos(new Set(nucleosOrdenados)) }
+  function colapsarTodos() { setNucleosAbiertos(new Set()) }
 
   if (cargando) return <p className="text-gray-500 text-sm py-8 text-center">Cargando deudas…</p>
   if (error) return <p className="text-red-600 text-sm py-6 text-center">{error}</p>
@@ -262,9 +282,17 @@ function TabDeudas() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-sm font-semibold text-gray-700">
-          Deudas / Votantes — {filtrado.length.toLocaleString()} registros
+          Pensionados / Votantes — {filtrado.length.toLocaleString()} registros · {nucleosOrdenados.length} núcleos
           {totalMonto > 0 && <span className="ml-2 text-red-600">Total: RD$ {totalMonto.toLocaleString()}</span>}
         </h2>
+        <div className="flex gap-2">
+          <button onClick={expandirTodos} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+            Expandir todo
+          </button>
+          <button onClick={colapsarTodos} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+            Colapsar todo
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -278,63 +306,72 @@ function TabDeudas() {
         />
         <select
           value={filtroRegional}
-          onChange={e => { setFiltroRegional(e.target.value); setFiltroNucleo('') }}
+          onChange={e => setFiltroRegional(e.target.value)}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
         >
           <option value="">Todas las regionales</option>
           {regionales.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select
-          value={filtroNucleo}
-          onChange={e => setFiltroNucleo(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
-        >
-          <option value="">Todos los núcleos</option>
-          {nucleos.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
       </div>
 
-      {/* Tabla */}
-      <div className="overflow-x-auto rounded-xl border border-gray-100">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs uppercase tracking-wide border-b-2 bg-gray-50" style={{ borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }}>
-              <th className="text-left px-4 py-3 font-semibold">Nombre</th>
-              <th className="text-left px-4 py-3 font-semibold">Código</th>
-              <th className="text-left px-4 py-3 font-semibold">Profesión</th>
-              <th className="text-left px-4 py-3 font-semibold">Regional</th>
-              <th className="text-left px-4 py-3 font-semibold">Núcleo</th>
-              <th className="text-left px-4 py-3 font-semibold">Teléfono</th>
-              <th className="text-right px-4 py-3 font-semibold">Monto</th>
-              <th className="text-left px-4 py-3 font-semibold">Contacto</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 bg-white">
-            {filtrado.slice(0, 200).map((d, i) => (
-              <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-4 py-2.5 font-medium text-gray-900">{d.nombre}</td>
-                <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{d.codigo}</td>
-                <td className="px-4 py-2.5 text-gray-600 text-xs">{d.profesion ?? '—'}</td>
-                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.regional ?? '—'}</td>
-                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.nucleo ?? '—'}</td>
-                <td className="px-4 py-2.5 text-gray-600">{d.telefono ?? '—'}</td>
-                <td className="px-4 py-2.5 text-right font-semibold text-red-600 tabular-nums">
-                  {d.monto != null ? `RD$ ${d.monto.toLocaleString()}` : '—'}
-                </td>
-                <td className="px-4 py-2.5 text-gray-500 text-xs">{d.contacto ?? '—'}</td>
-              </tr>
-            ))}
-            {filtrado.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
-            )}
-          </tbody>
-        </table>
-        {filtrado.length > 200 && (
-          <div className="px-4 py-2 text-center text-xs text-gray-400 border-t border-gray-100">
-            Mostrando 200 de {filtrado.length.toLocaleString()} — afina los filtros
-          </div>
-        )}
-      </div>
+      {/* Núcleos acordeón */}
+      {nucleosOrdenados.length === 0 ? (
+        <p className="text-center text-gray-400 text-sm py-6">Sin resultados</p>
+      ) : (
+        <div className="space-y-2">
+          {nucleosOrdenados.map(nucleo => {
+            const miembros = porNucleo[nucleo]
+            const abierto = nucleosAbiertos.has(nucleo)
+            const montoNucleo = miembros.reduce((s, d) => s + (d.monto ?? 0), 0)
+            return (
+              <div key={nucleo} className="rounded-xl border border-gray-100 overflow-hidden">
+                <button
+                  onClick={() => toggleNucleo(nucleo)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-gray-400 text-sm shrink-0">{abierto ? '▼' : '▶'}</span>
+                    <span className="font-semibold text-gray-800 text-sm truncate">{nucleo}</span>
+                    <span className="text-xs text-gray-500 shrink-0">{miembros.length} votante{miembros.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  {montoNucleo > 0 && (
+                    <span className="text-xs font-bold text-red-600 shrink-0 ml-2">
+                      RD$ {montoNucleo.toLocaleString()}
+                    </span>
+                  )}
+                </button>
+                {abierto && (
+                  <div className="divide-y divide-gray-50 bg-white">
+                    {miembros.map((d, i) => (
+                      <div key={i} className="px-4 py-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-gray-900 text-sm truncate">{d.nombre}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            #{d.codigo}
+                            {d.profesion && <> · {d.profesion}</>}
+                            {d.regional && <> · {d.regional}</>}
+                          </p>
+                          {d.telefono && (
+                            <p className="text-xs text-gray-600 mt-0.5">{d.telefono}</p>
+                          )}
+                          {d.contacto && (
+                            <p className="text-xs text-gray-400 mt-0.5">Contacto: {d.contacto}</p>
+                          )}
+                        </div>
+                        {d.monto != null && d.monto > 0 && (
+                          <span className="text-sm font-bold text-red-600 tabular-nums shrink-0">
+                            RD$ {d.monto.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
