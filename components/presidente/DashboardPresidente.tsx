@@ -1363,6 +1363,15 @@ function TabRegularizar() {
       || (r.cedula ?? '').toLowerCase().includes(q)
   })
 
+  const nucleosOrden = Array.from(
+    filtrados.reduce((m, r) => {
+      const n = r.nucleo ?? 'Sin núcleo'
+      if (!m.has(n)) m.set(n, [])
+      m.get(n)!.push(r)
+      return m
+    }, new Map<string, SimpatizanteRow[]>())
+  ).sort(([a], [b]) => a.localeCompare(b))
+
   return (
     <div className="space-y-4">
       <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-4">
@@ -1390,18 +1399,7 @@ function TabRegularizar() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-12 text-center">
           <p className="text-gray-400 text-sm">{filtro ? 'Sin resultados para esa búsqueda.' : 'No hay simpatizantes pendientes de regularizar.'}</p>
         </div>
-      ) : (() => {
-        // Agrupar por núcleo manteniendo orden menor deuda primero dentro de cada grupo
-        const nucleosOrden = Array.from(
-          filtrados.reduce((m, r) => {
-            const n = r.nucleo ?? 'Sin núcleo'
-            if (!m.has(n)) m.set(n, [])
-            m.get(n)!.push(r)
-            return m
-          }, new Map<string, SimpatizanteRow[]>())
-        ).sort(([a], [b]) => a.localeCompare(b))
-
-        return (
+      ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <p className="text-sm font-semibold text-gray-700">{filtrados.length} colegiado{filtrados.length !== 1 ? 's' : ''}</p>
@@ -1491,8 +1489,7 @@ function TabRegularizar() {
             )
           })}
         </div>
-        )
-      })()}
+      )}
     </div>
   )
 }
