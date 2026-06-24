@@ -1346,6 +1346,16 @@ function TabRegularizar() {
     }
   }
 
+  const [nucleosAbiertos, setNucleosAbiertos] = useState<Set<string>>(new Set())
+
+  function toggleNucleo(n: string) {
+    setNucleosAbiertos(prev => {
+      const next = new Set(prev)
+      next.has(n) ? next.delete(n) : next.add(n)
+      return next
+    })
+  }
+
   const filtrados = lista.filter(r => {
     const q = filtro.toLowerCase()
     return !q || r.nombre_completo.toLowerCase().includes(q)
@@ -1397,14 +1407,23 @@ function TabRegularizar() {
             <p className="text-sm font-semibold text-gray-700">{filtrados.length} colegiado{filtrados.length !== 1 ? 's' : ''}</p>
             <p className="text-xs text-gray-400">Ordenados por menor deuda primero</p>
           </div>
-          {nucleosOrden.map(([nucleo, filas]) => (
+          {nucleosOrden.map(([nucleo, filas]) => {
+            const abierto = nucleosAbiertos.has(nucleo)
+            return (
             <div key={nucleo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-2.5 border-b border-gray-100 flex items-center justify-between"
-                style={{ backgroundColor: 'var(--color-fondo)' }}>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--color-marino)' }}>{nucleo}</p>
-                <p className="text-xs text-gray-400">{filas.length} colegiado{filas.length !== 1 ? 's' : ''}</p>
-              </div>
-              <div className="divide-y divide-gray-50">
+              <button
+                onClick={() => toggleNucleo(nucleo)}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                style={{ backgroundColor: abierto ? 'var(--color-fondo)' : undefined }}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--color-marino)' }}>{nucleo}</span>
+                  <span className="text-xs text-gray-400 font-normal">{filas.length} colegiado{filas.length !== 1 ? 's' : ''}</span>
+                </div>
+                <span className="text-gray-400 text-sm transition-transform" style={{ display: 'inline-block', transform: abierto ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+              </button>
+              {abierto && (
+              <div className="divide-y divide-gray-50 border-t border-gray-100">
             {filas.map(r => (
               <div key={r.id} className="px-5 py-4 space-y-2">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -1467,8 +1486,10 @@ function TabRegularizar() {
               </div>
             ))}
               </div>
+              )}
             </div>
-          ))}
+            )
+          })}
         </div>
         )
       })()}
