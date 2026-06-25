@@ -379,9 +379,9 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
       const todos: MiembroPadronActivo[] = []
       let pagina = 0
       while (true) {
-        const { data } = await supabase
-          .rpc('buscar_padron_presidente', params)
-          .range(pagina * PAGE, pagina * PAGE + PAGE - 1)
+        const { data, error } = await supabase
+          .rpc('buscar_padron_presidente', { ...params, p_limit: PAGE, p_offset: pagina * PAGE })
+        if (error) { console.error('buscar_padron_presidente error:', error); break }
         if (!data || data.length === 0) break
         todos.push(...(data as MiembroPadronActivo[]))
         if (data.length < PAGE) break

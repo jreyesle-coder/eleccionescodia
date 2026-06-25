@@ -253,9 +253,9 @@ export default function PanelDirigente({ nombre, rol }: Props) {
     const todos: MiembroPadron[] = []
     let pagina = 0
     while (true) {
-      const { data } = await supabase
-        .rpc('padron_zona_dirigente')
-        .range(pagina * PAGE, pagina * PAGE + PAGE - 1)
+      const { data, error } = await supabase
+        .rpc('padron_zona_dirigente', { p_limit: PAGE, p_offset: pagina * PAGE })
+      if (error) { console.error('padron_zona_dirigente error:', error); break }
       if (!data || data.length === 0) break
       todos.push(...(data as MiembroPadron[]))
       if (data.length < PAGE) break
