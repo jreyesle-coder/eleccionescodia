@@ -1121,7 +1121,6 @@ export default function DashboardGerente({ nombreUsuario, emailUsuario, rol }: P
     { id: 'nucleo',      label: '🏛 Mi Núcleo' },
     { id: 'padron',      label: '📋 Padrón en vivo' },
     { id: 'confirmados', label: '✓ Confirmados' },
-    ...(nucleoGerente === null ? [{ id: 'monitoreo' as Tab, label: '📊 Operadores' }] : []),
     ...(emailUsuario === 'marcopena@eleccionescodia.app' ? [{ id: 'regularizar' as Tab, label: '⭐ Por regularizar' }] : []),
   ]
 
