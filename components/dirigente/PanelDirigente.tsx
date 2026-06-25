@@ -249,19 +249,11 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   async function cargarPadronZona() {
     if (padronCargado) return
     setCargandoPadron(true)
-    const PAGE = 1000
-    const todos: MiembroPadron[] = []
-    let pagina = 0
-    while (true) {
-      const { data, error } = await supabase
-        .rpc('padron_zona_dirigente', { p_limit: PAGE, p_offset: pagina * PAGE })
-      if (error) { console.error('padron_zona_dirigente error:', error); break }
-      if (!data || data.length === 0) break
-      todos.push(...(data as MiembroPadron[]))
-      setPadronZona([...todos])   // muestra los registros recibidos sin esperar el resto
-      if (data.length < PAGE) break
-      pagina++
-    }
+    // p_limit: null = sin límite; la RPC ya filtra por regional del dirigente
+    const { data, error } = await supabase
+      .rpc('padron_zona_dirigente', { p_limit: null, p_offset: 0 })
+    if (error) console.error('padron_zona_dirigente error:', error)
+    setPadronZona((data as MiembroPadron[]) ?? [])
     setCargandoPadron(false)
     setPadronCargado(true)
   }
