@@ -258,12 +258,12 @@ export default function PanelDirigente({ nombre, rol }: Props) {
       if (error) { console.error('padron_zona_dirigente error:', error); break }
       if (!data || data.length === 0) break
       todos.push(...(data as MiembroPadron[]))
+      setPadronZona([...todos])   // muestra los registros recibidos sin esperar el resto
       if (data.length < PAGE) break
       pagina++
     }
     setCargandoPadron(false)
     setPadronCargado(true)
-    setPadronZona(todos)
   }
 
   async function abrirDetalle(m: MiembroPadron) {
