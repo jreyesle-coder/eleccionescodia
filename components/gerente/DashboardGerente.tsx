@@ -455,7 +455,7 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
             className="text-sm text-blue-600 hover:underline px-2">Limpiar</button>
         )}
         <p className="w-full text-xs text-gray-400">
-          {filtrado.length.toLocaleString()} colegiados{!filtroRegional && !filtroNucleo && !busqueda.trim() ? ' (primeros 2,000 — filtra para ver más)' : ''}
+          {filtrado.length.toLocaleString()} colegiados
         </p>
       </div>
 

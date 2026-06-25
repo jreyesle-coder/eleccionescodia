@@ -249,7 +249,7 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   async function cargarPadronZona() {
     if (padronCargado) return
     setCargandoPadron(true)
-    const { data } = await supabase.rpc('listar_confirmados_dirigente', { p_dirigente: nombre })
+    const { data } = await supabase.rpc('padron_zona_dirigente')
     setCargandoPadron(false); setPadronCargado(true)
     setPadronZona((data as MiembroPadron[]) ?? [])
   }
