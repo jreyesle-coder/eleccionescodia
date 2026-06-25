@@ -249,9 +249,21 @@ export default function PanelDirigente({ nombre, rol }: Props) {
   async function cargarPadronZona() {
     if (padronCargado) return
     setCargandoPadron(true)
-    const { data } = await supabase.rpc('padron_zona_dirigente')
-    setCargandoPadron(false); setPadronCargado(true)
-    setPadronZona((data as MiembroPadron[]) ?? [])
+    const PAGE = 1000
+    const todos: MiembroPadron[] = []
+    let pagina = 0
+    while (true) {
+      const { data } = await supabase
+        .rpc('padron_zona_dirigente')
+        .range(pagina * PAGE, pagina * PAGE + PAGE - 1)
+      if (!data || data.length === 0) break
+      todos.push(...(data as MiembroPadron[]))
+      if (data.length < PAGE) break
+      pagina++
+    }
+    setCargandoPadron(false)
+    setPadronCargado(true)
+    setPadronZona(todos)
   }
 
   async function abrirDetalle(m: MiembroPadron) {

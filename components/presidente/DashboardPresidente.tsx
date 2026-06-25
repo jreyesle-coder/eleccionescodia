@@ -1037,15 +1037,29 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
   // Carga el padrón filtrado del servidor cada vez que cambia un filtro
   useEffect(() => {
     const q = busqueda.trim()
-    setCargando(true)
-    supabase.rpc('buscar_padron_presidente', {
+    const params = {
       p_regional: filtroRegional || null,
       p_nucleo:   filtroNucleo   || null,
       p_q:        q.length >= 3 ? q : null,
-    }).then(({ data }) => {
-      setPadron((data as MiembroPadronActivo[]) ?? [])
+    }
+    setCargando(true)
+    const PAGE = 1000
+    async function cargarTodo() {
+      const todos: MiembroPadronActivo[] = []
+      let pagina = 0
+      while (true) {
+        const { data } = await supabase
+          .rpc('buscar_padron_presidente', params)
+          .range(pagina * PAGE, pagina * PAGE + PAGE - 1)
+        if (!data || data.length === 0) break
+        todos.push(...(data as MiembroPadronActivo[]))
+        if (data.length < PAGE) break
+        pagina++
+      }
+      setPadron(todos)
       setCargando(false)
-    })
+    }
+    cargarTodo()
   }, [supabase, filtroRegional, filtroNucleo, busqueda])
 
   const nucleos = filtroRegional ? nucleosPorRegional.length > 0 ? nucleosPorRegional : todosNucleos : todosNucleos
