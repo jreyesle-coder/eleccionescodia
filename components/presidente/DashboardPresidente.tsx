@@ -1037,12 +1037,6 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
   // Carga el padrón filtrado del servidor cada vez que cambia un filtro
   useEffect(() => {
     const q = busqueda.trim()
-    // No cargar sin filtro activo — evita traer todo el padrón al abrir el tab
-    if (!filtroRegional && !filtroNucleo && q.length < 3) {
-      setPadron([])
-      setCargando(false)
-      return
-    }
     const params = {
       p_regional: filtroRegional || null,
       p_nucleo:   filtroNucleo   || null,
@@ -1154,8 +1148,6 @@ function TabPadronActivo({ nombreUsuario }: { nombreUsuario: string }) {
         <div className="divide-y divide-gray-50">
           {cargando ? (
             <p className="text-center text-gray-400 text-sm py-12">Cargando…</p>
-          ) : !filtroRegional && !filtroNucleo && busqueda.trim().length < 3 ? (
-            <p className="text-center text-gray-400 text-sm py-12">Selecciona una regional, núcleo o busca por nombre para ver el padrón.</p>
           ) : filtrado.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-12">Sin resultados.</p>
           ) : filtrado.map(m => (
