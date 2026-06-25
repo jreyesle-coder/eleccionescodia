@@ -340,14 +340,19 @@ function TabMiNucleo() {
 
 interface DeudaAPI { encontrado: boolean; monto: number }
 
+const PAGE_PADRON_GERENTE = 100
+
 function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: string; nucleoGerente: string | null }) {
   const supabase = createClient()
 
   const [padron, setPadron]                         = useState<MiembroPadronActivo[]>([])
   const [cargando, setCargando]                     = useState(false)
   const [busqueda, setBusqueda]                     = useState('')
+  const [busquedaDebounced, setBusquedaDebounced]   = useState('')
   const [filtroRegional, setFiltroRegional]         = useState('')
   const [filtroNucleo, setFiltroNucleo]             = useState(nucleoGerente ?? '')
+  const [pagina, setPagina]                         = useState(0)
+  const [total, setTotal]                           = useState<number | null>(null)
   const [todasRegionales, setTodasRegionales]       = useState<string[]>([])
   const [todosNucleos, setTodosNucleos]             = useState<string[]>([])
 
@@ -358,6 +363,15 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
   const [detalleGuardando, setDetalleGuardando]     = useState(false)
   const [detalleError, setDetalleError]             = useState<string | null>(null)
 
+  // Debounce: espera 400ms después del último keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setBusquedaDebounced(busqueda), 400)
+    return () => clearTimeout(t)
+  }, [busqueda])
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => { setPagina(0) }, [busquedaDebounced, filtroRegional, filtroNucleo])
+
   useEffect(() => {
     supabase.rpc('opciones_padron').then(({ data }) => {
       const rows = (data as { tipo: string; valor: string }[]) ?? []
@@ -366,32 +380,29 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
     })
   }, [supabase])
 
+  // Carga una página a la vez — sin loop masivo
   useEffect(() => {
-    const q = busqueda.trim()
+    const q = busquedaDebounced.trim()
     const params = {
       p_regional: filtroRegional || null,
       p_nucleo:   filtroNucleo   || null,
       p_q:        q.length >= 3 ? q : null,
+      p_limit:    PAGE_PADRON_GERENTE,
+      p_offset:   pagina * PAGE_PADRON_GERENTE,
     }
     setCargando(true)
-    const PAGE = 1000
-    async function cargarTodo() {
-      const todos: MiembroPadronActivo[] = []
-      let pagina = 0
-      while (true) {
-        const { data, error } = await supabase
-          .rpc('buscar_padron_presidente', { ...params, p_limit: PAGE, p_offset: pagina * PAGE })
-        if (error) { console.error('buscar_padron_presidente error:', error); break }
-        if (!data || data.length === 0) break
-        todos.push(...(data as MiembroPadronActivo[]))
-        if (data.length < PAGE) break
-        pagina++
+    supabase.rpc('buscar_padron_presidente', params).then(({ data, error }) => {
+      if (error) { console.error('buscar_padron_presidente error:', error); setCargando(false); return }
+      const filas = (data as MiembroPadronActivo[]) ?? []
+      setPadron(filas)
+      if (filas.length < PAGE_PADRON_GERENTE) {
+        setTotal(pagina * PAGE_PADRON_GERENTE + filas.length)
+      } else {
+        setTotal(null)
       }
-      setPadron(todos)
       setCargando(false)
-    }
-    cargarTodo()
-  }, [supabase, filtroRegional, filtroNucleo, busqueda])
+    })
+  }, [supabase, filtroRegional, filtroNucleo, busquedaDebounced, pagina])
 
   async function abrirDetalle(m: MiembroPadronActivo) {
     setDetalle(m)
@@ -440,6 +451,7 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
   }
 
   const filtrado = padron
+  const hayMas = total === null
 
   return (
     <div className="space-y-4">
@@ -465,11 +477,13 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
           {todosNucleos.map(n => <option key={n} value={n}>{n}</option>)}
         </select>
         {(busqueda || filtroRegional || filtroNucleo !== (nucleoGerente ?? '')) && (
-          <button onClick={() => { setBusqueda(''); setFiltroRegional(''); setFiltroNucleo(nucleoGerente ?? '') }}
+          <button onClick={() => { setBusqueda(''); setFiltroRegional(''); setFiltroNucleo(nucleoGerente ?? ''); setPagina(0) }}
             className="text-sm text-blue-600 hover:underline px-2">Limpiar</button>
         )}
         <p className="w-full text-xs text-gray-400">
-          {filtrado.length.toLocaleString()} colegiados
+          {cargando ? 'Buscando…' : total !== null
+            ? `${total.toLocaleString()} colegiados`
+            : `Mostrando ${pagina * PAGE_PADRON_GERENTE + 1}–${pagina * PAGE_PADRON_GERENTE + filtrado.length}`}
         </p>
       </div>
 
@@ -507,6 +521,27 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
           ))}
         </div>
       </div>
+
+      {/* Paginación */}
+      {!cargando && (pagina > 0 || hayMas) && (
+        <div className="flex items-center justify-between gap-3 bg-white rounded-xl border border-gray-100 px-4 py-3">
+          <button
+            disabled={pagina === 0}
+            onClick={() => setPagina(p => p - 1)}
+            className="text-sm px-4 py-2 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 font-medium"
+          >
+            ← Anterior
+          </button>
+          <span className="text-xs text-gray-500">Página {pagina + 1}</span>
+          <button
+            disabled={!hayMas}
+            onClick={() => setPagina(p => p + 1)}
+            className="text-sm px-4 py-2 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 font-medium"
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
 
       {/* Panel de detalle */}
       {detalle && (
