@@ -40,6 +40,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
   const [guardandoVoto, setGuardandoVoto]     = useState(false)
   const [votoGuardado, setVotoGuardado]       = useState<string | null>(null)
   const [errorVoto, setErrorVoto]             = useState<string | null>(null)
+  const [montoDeuda, setMontoDeuda]           = useState<number | null>(null)
 
   const consultarDeudaEnBackground = useCallback((lista: ResultadoBusqueda[]) => {
     for (const r of lista) {
@@ -102,6 +103,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
     setPreferencia(null)
     setVotoGuardado(null)
     setErrorVoto(null)
+    setMontoDeuda(null)
   }
 
   async function guardarPreferencia() {
@@ -131,7 +133,12 @@ export default function BuscadorPublico({ inline = false }: Props) {
           codigo: String(modalColegiado.codigo),
           actualizarBd: true,
         }),
-      }).catch(() => {})
+      })
+        .then(res => res.json())
+        .then((d: { encontrado: boolean; habilitado: boolean; monto: number }) => {
+          if (d.encontrado) setMontoDeuda(d.monto)
+        })
+        .catch(() => {})
     }
   }
 
@@ -263,6 +270,21 @@ export default function BuscadorPublico({ inline = false }: Props) {
               <div className="text-5xl">🎉</div>
               <p className="font-bold text-green-700 text-lg">¡Preferencia registrada!</p>
               <p className="text-gray-500 text-sm">Gracias, {votoGuardado}. Tu preferencia ha sido guardada.</p>
+
+              {montoDeuda !== null && (
+                <div className={`rounded-xl px-4 py-3 border text-sm font-semibold ${
+                  montoDeuda === 0
+                    ? 'bg-green-50 border-green-200 text-green-700'
+                    : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                  {montoDeuda === 0 ? (
+                    <p>✓ Estás al día con el CODIA. No tienes deuda pendiente.</p>
+                  ) : (
+                    <p>Tu deuda con el CODIA es de <span className="font-bold">${montoDeuda.toLocaleString('es-DO')}</span>. Regulariza tu situación para poder votar.</p>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={() => setModalColegiado(null)}
                 className="mt-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm"
