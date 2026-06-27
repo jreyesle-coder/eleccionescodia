@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface ResultadoBusqueda {
@@ -26,28 +26,31 @@ interface DeudaInfo {
 }
 
 interface Props {
-  /** true = sin page chrome (header, banner, footer); se embebe en otra página */
   inline?: boolean
 }
+
+type Pantalla = 'form' | 'colegiado'
 
 export default function BuscadorPublico({ inline = false }: Props) {
   const supabase = createClient()
 
+  // ── Pantalla activa ──
+  const [pantalla, setPantalla] = useState<Pantalla>('form')
+
   // ── Campos de búsqueda ──
-  const [codigo, setCodigo]     = useState('')
-  const [cedula, setCedula]     = useState('')
+  const [codigo, setCodigo] = useState('')
+  const [cedula, setCedula] = useState('')
 
   // ── Estado de búsqueda ──
-  const [colegiado, setColegiado]   = useState<ResultadoBusqueda | null>(null)
-  const [buscando, setBuscando]     = useState(false)
-  const [buscado, setBuscado]       = useState(false)
-  const [error, setError]           = useState<string | null>(null)
+  const [colegiado, setColegiado]     = useState<ResultadoBusqueda | null>(null)
+  const [buscando, setBuscando]       = useState(false)
+  const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null)
 
   // ── Estado de deuda ──
-  const [deudaInfo, setDeudaInfo]   = useState<DeudaInfo | null>(null)
+  const [deudaInfo, setDeudaInfo]         = useState<DeudaInfo | null>(null)
   const [cargandoDeuda, setCargandoDeuda] = useState(false)
 
-  // ── Estado para modal de preferencia ──
+  // ── Modal de preferencia ──
   const [modalAbierto, setModalAbierto]   = useState(false)
   const [preferencia, setPreferencia]     = useState<boolean | null>(null)
   const [guardandoVoto, setGuardandoVoto] = useState(false)
@@ -63,7 +66,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
   }
 
   function cedulasCoinciden(almacenada: string | null, ingresada: string): boolean {
-    if (!almacenada) return true // sin cédula en BD → no podemos validar, aceptamos
+    if (!almacenada) return true
     const limpiar = (s: string) => s.replace(/[\s-]/g, '').toLowerCase()
     return limpiar(almacenada) === limpiar(ingresada)
   }
@@ -72,6 +75,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
     const cedulaParaConsulta = r.cedula ?? cedulaIngresada
     if (!cedulaParaConsulta) return
     setCargandoDeuda(true)
+    setDeudaInfo(null)
     try {
       const res = await fetch('/api/consulta-deuda', {
         method: 'POST',
@@ -81,58 +85,69 @@ export default function BuscadorPublico({ inline = false }: Props) {
       const d: DeudaInfo = await res.json()
       setDeudaInfo(d)
     } catch {
-      // silencioso — no bloqueamos el flujo si falla la consulta de deuda
+      // silencioso
     } finally {
       setCargandoDeuda(false)
     }
   }, [])
 
+  // Al entrar a la pantalla del colegiado, disparar consulta de deuda
+  useEffect(() => {
+    if (pantalla === 'colegiado' && colegiado) {
+      consultarDeuda(colegiado, normalizarCedula(cedula))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pantalla, colegiado])
+
   const buscar = useCallback(async () => {
     const codigoQ = codigo.trim()
     const cedulaQ = normalizarCedula(cedula)
-
     if (!codigoQ || !cedulaQ) return
 
     setBuscando(true)
-    setError(null)
-    setBuscado(false)
+    setErrorBusqueda(null)
     setColegiado(null)
     setDeudaInfo(null)
     setVotoGuardado(null)
     setPreferencia(null)
 
     const { data, error: err } = await supabase.rpc('buscar_colegiado', { p_q: codigoQ })
-
     setBuscando(false)
-    setBuscado(true)
 
     if (err) {
-      setError('No se pudo realizar la búsqueda. Intenta de nuevo.')
+      setErrorBusqueda('No se pudo realizar la búsqueda. Intenta de nuevo.')
       return
     }
 
     const lista = (data as ResultadoBusqueda[]) ?? []
 
     if (lista.length === 0) {
-      setColegiado(null)
+      setErrorBusqueda('No encontramos tu registro en el padrón. Pasa por las oficinas del CODIA para verificar tu membresía.')
       return
     }
 
     const encontrado = lista[0]
-
-    // Validar que la cédula ingresada coincide con la almacenada
     if (!cedulasCoinciden(encontrado.cedula, cedulaQ)) {
-      setError('Los datos ingresados no coinciden. Verifica tu número de colegiado y cédula.')
+      setErrorBusqueda('Los datos ingresados no coinciden. Verifica tu número de colegiado y cédula.')
       return
     }
 
     setColegiado(encontrado)
-    consultarDeuda(encontrado, cedulaQ)
-  }, [codigo, cedula, supabase, consultarDeuda])
+    setPantalla('colegiado')
+  }, [codigo, cedula, supabase])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     buscar()
+  }
+
+  function volverAlFormulario() {
+    setPantalla('form')
+    setDeudaInfo(null)
+    setVotoGuardado(null)
+    setPreferencia(null)
+    setModalAbierto(false)
+    setErrorBusqueda(null)
   }
 
   function abrirModal() {
@@ -160,141 +175,176 @@ export default function BuscadorPublico({ inline = false }: Props) {
     setVotoGuardado(data.nombre)
   }
 
-  // ── Formulario de dos campos ──
-  const formulario = (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="space-y-2">
-        <div>
-          <label className="text-xs font-semibold text-gray-600 block mb-1">
-            Número de colegiado
-          </label>
-          <input
-            type="text"
-            value={codigo}
-            onChange={e => setCodigo(e.target.value)}
-            placeholder="Ej: 12345"
-            required
-            autoFocus={inline}
-            className="w-full text-sm px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
-            style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
-          />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-gray-600 block mb-1">
-            Número de cédula
-          </label>
-          <input
-            type="text"
-            value={cedula}
-            onChange={e => setCedula(e.target.value)}
-            placeholder="Ej: 001-0000000-0"
-            required
-            className="w-full text-sm px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
-            style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
-          />
-        </div>
-      </div>
-      <button
-        type="submit"
-        disabled={buscando || !codigo.trim() || !cedula.trim()}
-        className="w-full py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
-        style={{ backgroundColor: 'var(--color-marino)' }}
-      >
-        {buscando ? 'Verificando…' : 'Verificarme'}
-      </button>
-    </form>
-  )
-
-  // ── Bloque de deuda ──
-  const bloqueDeuda = colegiado && (
-    <div className="mt-3">
-      {cargandoDeuda ? (
-        <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 text-xs text-gray-400 flex items-center gap-2">
-          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          Consultando estado de membresía…
-        </div>
-      ) : deudaInfo?.encontrado ? (
-        deudaInfo.monto === 0 ? (
-          <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200 text-sm text-green-700 font-semibold">
-            ✓ Estás al día con el CODIA. No tienes deuda pendiente.
-          </div>
-        ) : (
-          <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 space-y-1">
-            <p className="text-sm font-bold text-amber-800">
-              Deuda pendiente: <span className="font-extrabold">${deudaInfo.monto.toLocaleString('es-DO')}</span>
-            </p>
-            <p className="text-xs text-amber-700">
-              Para regularizar tu situación, pasa por las oficinas del CODIA más cercana.
-            </p>
-          </div>
-        )
-      ) : null}
-    </div>
-  )
-
-  // ── Tarjeta del colegiado ──
-  const tarjeta = buscado && !buscando && (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      {!colegiado ? (
-        <div className="px-5 py-10 text-center space-y-3">
-          <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3">
-            <p className="text-sm font-medium">No encontramos tu registro en el padrón</p>
-          </div>
-          <p className="text-gray-500 text-sm">
-            Pasa por las <span className="font-semibold">oficinas del CODIA</span> para verificar tu membresía.
-          </p>
-        </div>
-      ) : (
-        <div className="px-5 py-4 space-y-3">
-          {/* Datos del colegiado */}
+  // ═══════════════════════════════════════════════
+  // PANTALLA 1 — Formulario de verificación
+  // ═══════════════════════════════════════════════
+  const pantallaForm = (
+    <div className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="space-y-2">
           <div>
-            <p className="font-bold text-gray-900 text-base">{colegiado.nombre_completo}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Colegiatura {colegiado.codigo}
-              {colegiado.cedula && <> · CI: {colegiado.cedula}</>}
-            </p>
+            <label className="text-xs font-semibold text-gray-600 block mb-1">
+              Número de colegiado
+            </label>
+            <input
+              type="text"
+              value={codigo}
+              onChange={e => setCodigo(e.target.value)}
+              placeholder="Ej: 12345"
+              required
+              autoFocus={inline}
+              className="w-full text-sm px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
+              style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+            />
           </div>
-
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
-            {colegiado.carrera  && <span>Profesión: <span className="font-medium text-gray-700">{colegiado.carrera}</span></span>}
-            {colegiado.regional && <span>Regional: <span className="font-medium text-gray-700">{colegiado.regional}</span></span>}
-            {colegiado.nucleo   && <span>Núcleo: <span className="font-medium text-gray-700">{colegiado.nucleo}</span></span>}
+          <div>
+            <label className="text-xs font-semibold text-gray-600 block mb-1">
+              Número de cédula
+            </label>
+            <input
+              type="text"
+              value={cedula}
+              onChange={e => setCedula(e.target.value)}
+              placeholder="Ej: 001-0000000-0"
+              required
+              className="w-full text-sm px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
+              style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+            />
           </div>
+        </div>
+        <button
+          type="submit"
+          disabled={buscando || !codigo.trim() || !cedula.trim()}
+          className="w-full py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
+          style={{ backgroundColor: 'var(--color-marino)' }}
+        >
+          {buscando ? 'Verificando…' : 'Verificarme'}
+        </button>
+      </form>
 
-          {colegiado.nuevo_integrante && (
-            <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 text-xs text-amber-800">
-              Tu certificado de membresía está pendiente de procesamiento. Pasa por las oficinas del CODIA.
-            </div>
-          )}
-
-          {/* Estado de deuda */}
-          {bloqueDeuda}
-
-          {/* Botón preferencia */}
-          {!votoGuardado && (
-            <button
-              onClick={abrirModal}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold border-2 transition-all hover:opacity-90 mt-1"
-              style={{ borderColor: 'var(--color-marino)', color: 'var(--color-marino)', backgroundColor: 'transparent' }}
-            >
-              Marcar mi preferencia de voto
-            </button>
-          )}
-
-          {votoGuardado && (
-            <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200 text-sm text-green-700 text-center font-semibold">
-              ✓ Preferencia registrada. ¡Gracias, {votoGuardado}!
-            </div>
-          )}
+      {errorBusqueda && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
+          {errorBusqueda}
         </div>
       )}
     </div>
   )
 
-  // ── Modal preferencia de voto ──
+  // ═══════════════════════════════════════════════
+  // PANTALLA 2 — Ficha del colegiado
+  // ═══════════════════════════════════════════════
+  const pantallaFicha = colegiado && (
+    <div className="space-y-4">
+
+      {/* Botón volver */}
+      <button
+        onClick={volverAlFormulario}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
+        style={{ color: 'var(--color-marino)' }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7" />
+        </svg>
+        Verificar otro colegiado
+      </button>
+
+      {/* Tarjeta principal */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-md overflow-hidden">
+
+        {/* Header de la tarjeta */}
+        <div className="px-5 py-4" style={{ backgroundColor: 'var(--color-marino)' }}>
+          <p className="text-white font-extrabold text-lg leading-tight">{colegiado.nombre_completo}</p>
+          <p className="text-blue-200 text-sm mt-0.5">
+            Colegiatura {colegiado.codigo}
+            {colegiado.cedula && <> · CI: {colegiado.cedula}</>}
+          </p>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+
+          {/* Datos profesionales */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            {colegiado.carrera && (
+              <div>
+                <p className="text-gray-400 uppercase tracking-wide font-semibold">Profesión</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{colegiado.carrera}</p>
+              </div>
+            )}
+            {colegiado.regional && (
+              <div>
+                <p className="text-gray-400 uppercase tracking-wide font-semibold">Regional</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{colegiado.regional}</p>
+              </div>
+            )}
+            {colegiado.nucleo && (
+              <div className="col-span-2">
+                <p className="text-gray-400 uppercase tracking-wide font-semibold">Núcleo</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{colegiado.nucleo}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="h-px bg-gray-100" />
+
+          {/* Estado de membresía / deuda */}
+          {colegiado.nuevo_integrante ? (
+            <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              <p className="font-semibold">Certificado pendiente</p>
+              <p className="text-xs mt-0.5">Tu certificado de membresía está en proceso. Pasa por las oficinas del CODIA.</p>
+            </div>
+          ) : cargandoDeuda ? (
+            <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 flex items-center gap-3">
+              <svg className="w-5 h-5 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              <p className="text-sm text-gray-500">Consultando tu estado de membresía…</p>
+            </div>
+          ) : deudaInfo?.encontrado ? (
+            deudaInfo.monto === 0 ? (
+              <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200">
+                <p className="text-sm font-bold text-green-700">✓ Estás al día con el CODIA</p>
+                <p className="text-xs text-green-600 mt-0.5">No tienes deuda pendiente.</p>
+              </div>
+            ) : (
+              <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 space-y-1">
+                <p className="text-sm font-bold text-amber-800">
+                  Deuda pendiente: <span className="font-extrabold">${deudaInfo.monto.toLocaleString('es-DO')}</span>
+                </p>
+                <p className="text-xs text-amber-700">
+                  Para regularizar tu situación, pasa por las oficinas del CODIA más cercana.
+                </p>
+              </div>
+            )
+          ) : null}
+
+          {/* Preferencia ya registrada */}
+          {votoGuardado && (
+            <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200 text-center">
+              <p className="text-sm font-bold text-green-700">✓ Preferencia registrada</p>
+              <p className="text-xs text-green-600 mt-0.5">Gracias, {votoGuardado}.</p>
+            </div>
+          )}
+
+          {/* Botón marcar preferencia */}
+          {!votoGuardado && (
+            <button
+              onClick={abrirModal}
+              className="w-full py-3 rounded-xl text-sm font-bold border-2 transition-all hover:opacity-90"
+              style={{ borderColor: 'var(--color-marino)', color: 'white', backgroundColor: 'var(--color-marino)' }}
+            >
+              Marcar mi preferencia de voto
+            </button>
+          )}
+
+        </div>
+      </div>
+    </div>
+  )
+
+  // ═══════════════════════════════════════════════
+  // MODAL — Preferencia de voto
+  // ═══════════════════════════════════════════════
   const modal = modalAbierto && colegiado && (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
@@ -332,7 +382,9 @@ export default function BuscadorPublico({ inline = false }: Props) {
                   <button
                     onClick={() => setPreferencia(true)}
                     className={`py-4 rounded-xl font-bold text-sm border-2 transition-all ${
-                      preferencia === true ? 'bg-green-600 text-white border-green-600' : 'border-green-400 text-green-700 hover:bg-green-50'
+                      preferencia === true
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'border-green-400 text-green-700 hover:bg-green-50'
                     }`}
                   >
                     ✓ George Richardson
@@ -340,7 +392,9 @@ export default function BuscadorPublico({ inline = false }: Props) {
                   <button
                     onClick={() => setPreferencia(false)}
                     className={`py-4 rounded-xl font-bold text-sm border-2 transition-all ${
-                      preferencia === false ? 'bg-red-500 text-white border-red-500' : 'border-red-300 text-red-600 hover:bg-red-50'
+                      preferencia === false
+                        ? 'bg-red-500 text-white border-red-500'
+                        : 'border-red-300 text-red-600 hover:bg-red-50'
                     }`}
                   >
                     ✗ Otra preferencia
@@ -375,46 +429,26 @@ export default function BuscadorPublico({ inline = false }: Props) {
     </div>
   )
 
-  // ── Modo inline ──
+  // ═══════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════
+  const contenido = pantalla === 'form' ? pantallaForm : pantallaFicha
+
   if (inline) {
     return (
       <>
-        <div className="space-y-3">
-          {formulario}
-          {error && (
-            <p className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</p>
-          )}
-          {tarjeta}
-        </div>
+        {contenido}
         {modal}
       </>
     )
   }
 
-  // ── Modo página completa ──
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-fondo)' }}>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <div>
-            <h1 className="text-base font-bold" style={{ color: 'var(--color-marino)' }}>
-              Consulta tu habilitación para votar
-            </h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Ingresa tu número de colegiado y tu cédula
-            </p>
-          </div>
-          {formulario}
-          {error && (
-            <p className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">{error}</p>
-          )}
-        </div>
-
-        {tarjeta}
-
-        <p className="text-center text-xs text-gray-400 pb-4">Sistema CODIA · Elecciones 2026</p>
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {contenido}
+        <p className="text-center text-xs text-gray-400 pb-4 mt-8">Sistema CODIA · Elecciones 2026</p>
       </div>
-
       {modal}
     </div>
   )
