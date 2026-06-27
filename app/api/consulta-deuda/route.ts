@@ -2,46 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const BASE = 'https://www.codiaenlinea.com'
+const TIMEOUT_MS = 12000
 
-// Cliente Supabase server-side (anon key — llama RPCs con security definer)
 const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-/**
- * POST /api/consulta-deuda
- * Body: { cedula: string, codigo: string }
- * Returns: { monto: number, habilitado: boolean, encontrado: boolean, error?: string }
- *
- * Consulta la deuda real de un colegiado en codiaenlinea.com y
- * actualiza monto_deuda en la BD. Se llama en background desde:
- *   - BuscadorPublico (Verifícate): al mostrar resultados de búsqueda
- *   - PanelDirigente: al confirmar intención de un colegiado
- */
+function fetchConTimeout(url: string, opts: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer))
+}
+
 export async function POST(req: NextRequest) {
+  const { cedula, codigo } = await req.json().catch(() => ({})) as {
+    cedula?: string
+    codigo?: string
+  }
+
+  if (!cedula || !codigo) {
+    return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
+  }
+
+  const cedulaLimpia = cedula.replace(/-/g, '')
+
   try {
-    const { cedula, codigo } = await req.json() as {
-      cedula?: string
-      codigo?: string
-    }
-
-    if (!cedula || !codigo) {
-      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 }, { status: 400 })
-    }
-
-    // codiaenlinea.com espera la cédula sin guiones
-    const cedulaLimpia = cedula.replace(/-/g, '')
-
-    // ── Paso 1: Login en codiaenlinea.com ────────────────────────────────────
-    const loginRes = await fetch(`${BASE}/Home/Login`, {
+    // ── Paso 1: Login ────────────────────────────────────────────────────────
+    const loginRes = await fetchConTimeout(`${BASE}/Home/Login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'X-Requested-With': 'XMLHttpRequest',
         'Referer': `${BASE}/`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       },
       body: JSON.stringify({ Cedula: cedulaLimpia, Codigo: codigo }),
       redirect: 'manual',
@@ -55,12 +50,13 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join('; ')
 
-    // 302 sin cookie = login rechazado
     if (!cookieHeader) {
+      // Login rechazado por el sistema del CODIA
+      console.log(`[consulta-deuda] login rechazado para codigo=${codigo}`)
       return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
 
-    // Verificar si el sistema devolvió JSON de error
+    // Verificar si el sistema devolvió JSON de error explícito
     const contentType = loginRes.headers.get('content-type') ?? ''
     if (contentType.includes('application/json')) {
       const loginJson = await loginRes.json().catch(() => null)
@@ -69,51 +65,47 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Paso 2: Obtener página de balance ─────────────────────────────────────
-    const profileRes = await fetch(`${BASE}/Home/IndexUser`, {
+    // ── Paso 2: Página de balance ────────────────────────────────────────────
+    const profileRes = await fetchConTimeout(`${BASE}/Home/IndexUser`, {
       headers: {
         'Cookie': cookieHeader,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Referer': `${BASE}/`,
       },
     })
 
     if (!profileRes.ok) {
+      console.log(`[consulta-deuda] IndexUser devolvió ${profileRes.status} para codigo=${codigo}`)
       return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
 
     const html = await profileRes.text()
 
-    // ── Paso 3: Parsear el balance ────────────────────────────────────────────
+    // ── Paso 3: Parsear balance ──────────────────────────────────────────────
     const monto = parsearBalance(html)
-    const habilitado = monto === 0  // sin deuda = habilitado
+    const habilitado = monto === 0
 
-    // ── Paso 4: Actualizar BD siempre (monto 0 también limpia deudas pagadas) ─
+    // ── Paso 4: Actualizar BD ────────────────────────────────────────────────
     await supabaseServer.rpc('set_deuda_lookup', {
       p_codigo: String(codigo),
       p_monto:  monto,
     })
 
+    console.log(`[consulta-deuda] codigo=${codigo} monto=${monto}`)
     return NextResponse.json({ encontrado: true, habilitado, monto })
 
   } catch (err) {
-    console.error('[consulta-deuda]', err)
-    return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[consulta-deuda] error para codigo=${codigo}:`, msg)
+    // Siempre devuelve 200 para que el cliente pueda leer el JSON
+    return NextResponse.json({ encontrado: false, habilitado: true, monto: 0, _error: msg })
   }
 }
 
-/**
- * Extrae el monto del campo Balance del HTML de codiaenlinea.com/Home/IndexUser.
- * El campo Balance refleja la deuda real del colegiado.
- * Los conceptos como CUOTAS son opcionales y NO representan deuda pendiente.
- */
 function parsearBalance(html: string): number {
-  // Patrón principal: "Balance:" seguido de cualquier contenido hasta el signo $
-  // Cubre: "Balance: $0.00", "Balance:</td><td>$300.00", etc.
   const balance = html.match(/Balance\s*:?[^$]{0,200}\$\s*([\d,\.]+)/i)
   if (balance) return parseMonto(balance[1])
 
-  // Fallback: Sub Total explícito
   const subTotal = html.match(/Sub\s*Total\s*:\s*\$\s*([\d,\.]+)/i)
   if (subTotal) return parseMonto(subTotal[1])
 

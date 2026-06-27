@@ -78,7 +78,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cedula: cedulaParaConsulta, codigo: String(r.codigo) }),
       })
-      if (!res.ok) throw new Error('HTTP ' + res.status)
+      // Leer JSON independientemente del status HTTP
       const d: DeudaInfo = await res.json()
       setDeudaInfo(d)
       setEstadoDeuda('ok')
@@ -194,11 +194,12 @@ export default function BuscadorPublico({ inline = false }: Props) {
       )
     }
 
-    // estadoDeuda === 'ok'
+    // estadoDeuda === 'ok' pero no encontrado (credenciales no reconocidas en el sistema del CODIA)
     if (!deudaInfo || !deudaInfo.encontrado) {
       return (
-        <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 text-sm text-gray-500">
-          No se encontró información de membresía. Pasa por las oficinas del CODIA.
+        <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 space-y-1">
+          <p className="text-sm font-bold text-amber-800">Estado pendiente de verificación</p>
+          <p className="text-xs text-amber-700">No pudimos consultar tu estado en el sistema del CODIA. Pasa por las oficinas para verificar tu membresía.</p>
         </div>
       )
     }
