@@ -54,7 +54,7 @@ export default function HomePage() {
 
           {/* Instrucción */}
           <p className="text-sm font-semibold text-gray-700 text-center">
-            Ingresa tu número de colegiado o cédula:
+            Ingresa tu número de colegiado y tu cédula:
           </p>
 
           {/* Buscador inline */}
