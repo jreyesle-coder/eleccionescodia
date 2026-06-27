@@ -361,7 +361,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
             <button
               onClick={abrirModal}
               className="w-full py-3 rounded-xl text-sm font-bold border-2 transition-all hover:opacity-90"
-              style={{ borderColor: 'var(--color-marino)', color: 'white', backgroundColor: 'var(--color-marino)' }}
+              style={{ borderColor: 'var(--color-dorado)', color: 'white', backgroundColor: 'var(--color-dorado)' }}
             >
               Marcar mi preferencia de voto
             </button>
