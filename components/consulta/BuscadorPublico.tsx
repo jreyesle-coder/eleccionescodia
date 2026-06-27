@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface ResultadoBusqueda {
@@ -91,14 +91,6 @@ export default function BuscadorPublico({ inline = false }: Props) {
     }
   }, [])
 
-  // Al entrar a la pantalla del colegiado, disparar consulta de deuda
-  useEffect(() => {
-    if (pantalla === 'colegiado' && colegiado) {
-      consultarDeuda(colegiado, normalizarCedula(cedula))
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pantalla, colegiado])
-
   const buscar = useCallback(async () => {
     const codigoQ = codigo.trim()
     const cedulaQ = normalizarCedula(cedula)
@@ -134,7 +126,9 @@ export default function BuscadorPublico({ inline = false }: Props) {
 
     setColegiado(encontrado)
     setPantalla('colegiado')
-  }, [codigo, cedula, supabase])
+    // Consultar deuda inmediatamente tras verificar identidad
+    consultarDeuda(encontrado, cedulaQ)
+  }, [codigo, cedula, supabase, consultarDeuda])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
