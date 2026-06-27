@@ -43,15 +43,21 @@ export async function POST(req: NextRequest) {
     })
 
     // Capturar cookies de sesión
-    const setCookie = loginRes.headers.get('set-cookie') ?? ''
-    const cookieHeader = setCookie
-      .split(',')
+    // getSetCookie() es el método correcto en Node.js 18+ — headers.get('set-cookie')
+    // devuelve null en entornos server-side porque Set-Cookie es forbidden header en Fetch spec
+    const rawCookies: string[] =
+      typeof (loginRes.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
+        ? (loginRes.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
+        : (loginRes.headers.get('set-cookie') ?? '').split(/,(?=[^ ])/)
+
+    const cookieHeader = rawCookies
       .map(c => c.split(';')[0].trim())
       .filter(Boolean)
       .join('; ')
 
+    console.log(`[consulta-deuda] cookies recibidas (${rawCookies.length}): ${cookieHeader}`)
+
     if (!cookieHeader) {
-      // Login rechazado por el sistema del CODIA
       console.log(`[consulta-deuda] login rechazado para codigo=${codigo}`)
       return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
