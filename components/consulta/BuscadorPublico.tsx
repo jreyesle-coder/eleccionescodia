@@ -31,26 +31,24 @@ interface Props {
 
 type Pantalla = 'form' | 'colegiado'
 
+// Estado posible del bloque de deuda
+type EstadoDeuda = 'cargando' | 'ok' | 'error'
+
 export default function BuscadorPublico({ inline = false }: Props) {
   const supabase = createClient()
 
-  // ── Pantalla activa ──
   const [pantalla, setPantalla] = useState<Pantalla>('form')
 
-  // ── Campos de búsqueda ──
   const [codigo, setCodigo] = useState('')
   const [cedula, setCedula] = useState('')
 
-  // ── Estado de búsqueda ──
-  const [colegiado, setColegiado]     = useState<ResultadoBusqueda | null>(null)
-  const [buscando, setBuscando]       = useState(false)
+  const [colegiado, setColegiado]         = useState<ResultadoBusqueda | null>(null)
+  const [buscando, setBuscando]           = useState(false)
   const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null)
 
-  // ── Estado de deuda ──
-  const [deudaInfo, setDeudaInfo]         = useState<DeudaInfo | null>(null)
-  const [cargandoDeuda, setCargandoDeuda] = useState(false)
+  const [deudaInfo, setDeudaInfo]       = useState<DeudaInfo | null>(null)
+  const [estadoDeuda, setEstadoDeuda]   = useState<EstadoDeuda>('cargando')
 
-  // ── Modal de preferencia ──
   const [modalAbierto, setModalAbierto]   = useState(false)
   const [preferencia, setPreferencia]     = useState<boolean | null>(null)
   const [guardandoVoto, setGuardandoVoto] = useState(false)
@@ -71,25 +69,23 @@ export default function BuscadorPublico({ inline = false }: Props) {
     return limpiar(almacenada) === limpiar(ingresada)
   }
 
-  const consultarDeuda = useCallback(async (r: ResultadoBusqueda, cedulaIngresada: string) => {
+  // Consulta deuda — siempre setea estadoDeuda al terminar (ok o error)
+  async function consultarDeuda(r: ResultadoBusqueda, cedulaIngresada: string) {
     const cedulaParaConsulta = r.cedula ?? cedulaIngresada
-    if (!cedulaParaConsulta) return
-    setCargandoDeuda(true)
-    setDeudaInfo(null)
     try {
       const res = await fetch('/api/consulta-deuda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cedula: cedulaParaConsulta, codigo: String(r.codigo) }),
       })
+      if (!res.ok) throw new Error('HTTP ' + res.status)
       const d: DeudaInfo = await res.json()
       setDeudaInfo(d)
+      setEstadoDeuda('ok')
     } catch {
-      // silencioso
-    } finally {
-      setCargandoDeuda(false)
+      setEstadoDeuda('error')
     }
-  }, [])
+  }
 
   const buscar = useCallback(async () => {
     const codigoQ = codigo.trim()
@@ -124,11 +120,15 @@ export default function BuscadorPublico({ inline = false }: Props) {
       return
     }
 
+    // Activar spinner ANTES de cambiar pantalla para que el primer render ya lo muestre
+    setEstadoDeuda('cargando')
     setColegiado(encontrado)
     setPantalla('colegiado')
-    // Consultar deuda inmediatamente tras verificar identidad
-    consultarDeuda(encontrado, cedulaQ)
-  }, [codigo, cedula, supabase, consultarDeuda])
+
+    // Llamar sin await — corre en paralelo mientras el usuario ve la ficha
+    consultarDeuda(encontrado, normalizarCedula(cedula))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codigo, cedula, supabase])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -138,6 +138,7 @@ export default function BuscadorPublico({ inline = false }: Props) {
   function volverAlFormulario() {
     setPantalla('form')
     setDeudaInfo(null)
+    setEstadoDeuda('cargando')
     setVotoGuardado(null)
     setPreferencia(null)
     setModalAbierto(false)
@@ -170,7 +171,61 @@ export default function BuscadorPublico({ inline = false }: Props) {
   }
 
   // ═══════════════════════════════════════════════
-  // PANTALLA 1 — Formulario de verificación
+  // BLOQUE DE DEUDA
+  // ═══════════════════════════════════════════════
+  function BloqueDeuda() {
+    if (estadoDeuda === 'cargando') {
+      return (
+        <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 flex items-center gap-3">
+          <svg className="w-5 h-5 animate-spin shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <p className="text-sm text-gray-500">Consultando tu estado de membresía…</p>
+        </div>
+      )
+    }
+
+    if (estadoDeuda === 'error') {
+      return (
+        <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 text-sm text-gray-500">
+          No se pudo consultar tu estado en este momento. Pasa por las oficinas del CODIA.
+        </div>
+      )
+    }
+
+    // estadoDeuda === 'ok'
+    if (!deudaInfo || !deudaInfo.encontrado) {
+      return (
+        <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 text-sm text-gray-500">
+          No se encontró información de membresía. Pasa por las oficinas del CODIA.
+        </div>
+      )
+    }
+
+    if (deudaInfo.monto === 0) {
+      return (
+        <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200">
+          <p className="text-sm font-bold text-green-700">✓ Estás al día con el CODIA</p>
+          <p className="text-xs text-green-600 mt-0.5">No tienes deuda pendiente.</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 space-y-1">
+        <p className="text-sm font-bold text-amber-800">
+          Deuda pendiente: <span className="font-extrabold">${deudaInfo.monto.toLocaleString('es-DO')}</span>
+        </p>
+        <p className="text-xs text-amber-700">
+          Para regularizar tu situación, pasa por las oficinas del CODIA más cercana.
+        </p>
+      </div>
+    )
+  }
+
+  // ═══════════════════════════════════════════════
+  // PANTALLA 1 — Formulario
   // ═══════════════════════════════════════════════
   const pantallaForm = (
     <div className="space-y-3">
@@ -230,7 +285,6 @@ export default function BuscadorPublico({ inline = false }: Props) {
   const pantallaFicha = colegiado && (
     <div className="space-y-4">
 
-      {/* Botón volver */}
       <button
         onClick={volverAlFormulario}
         className="inline-flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
@@ -242,10 +296,8 @@ export default function BuscadorPublico({ inline = false }: Props) {
         Verificar otro colegiado
       </button>
 
-      {/* Tarjeta principal */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-md overflow-hidden">
 
-        {/* Header de la tarjeta */}
         <div className="px-5 py-4" style={{ backgroundColor: 'var(--color-marino)' }}>
           <p className="text-white font-extrabold text-lg leading-tight">{colegiado.nombre_completo}</p>
           <p className="text-blue-200 text-sm mt-0.5">
@@ -256,7 +308,6 @@ export default function BuscadorPublico({ inline = false }: Props) {
 
         <div className="px-5 py-4 space-y-4">
 
-          {/* Datos profesionales */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
             {colegiado.carrera && (
               <div>
@@ -280,39 +331,16 @@ export default function BuscadorPublico({ inline = false }: Props) {
 
           <div className="h-px bg-gray-100" />
 
-          {/* Estado de membresía / deuda */}
+          {/* Estado de membresía — siempre visible */}
           {colegiado.nuevo_integrante ? (
             <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 text-sm text-amber-800">
               <p className="font-semibold">Certificado pendiente</p>
               <p className="text-xs mt-0.5">Tu certificado de membresía está en proceso. Pasa por las oficinas del CODIA.</p>
             </div>
-          ) : cargandoDeuda ? (
-            <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-100 flex items-center gap-3">
-              <svg className="w-5 h-5 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-              <p className="text-sm text-gray-500">Consultando tu estado de membresía…</p>
-            </div>
-          ) : deudaInfo?.encontrado ? (
-            deudaInfo.monto === 0 ? (
-              <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200">
-                <p className="text-sm font-bold text-green-700">✓ Estás al día con el CODIA</p>
-                <p className="text-xs text-green-600 mt-0.5">No tienes deuda pendiente.</p>
-              </div>
-            ) : (
-              <div className="rounded-xl px-4 py-3 bg-amber-50 border border-amber-200 space-y-1">
-                <p className="text-sm font-bold text-amber-800">
-                  Deuda pendiente: <span className="font-extrabold">${deudaInfo.monto.toLocaleString('es-DO')}</span>
-                </p>
-                <p className="text-xs text-amber-700">
-                  Para regularizar tu situación, pasa por las oficinas del CODIA más cercana.
-                </p>
-              </div>
-            )
-          ) : null}
+          ) : (
+            <BloqueDeuda />
+          )}
 
-          {/* Preferencia ya registrada */}
           {votoGuardado && (
             <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200 text-center">
               <p className="text-sm font-bold text-green-700">✓ Preferencia registrada</p>
@@ -320,7 +348,6 @@ export default function BuscadorPublico({ inline = false }: Props) {
             </div>
           )}
 
-          {/* Botón marcar preferencia */}
           {!votoGuardado && (
             <button
               onClick={abrirModal}
