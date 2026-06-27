@@ -78,8 +78,16 @@ export default function BuscadorPublico({ inline = false }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cedula: cedulaParaConsulta, codigo: String(r.codigo) }),
       })
-      // Leer JSON independientemente del status HTTP
-      const d: DeudaInfo = await res.json()
+      const text = await res.text()
+      let d: DeudaInfo
+      try {
+        d = JSON.parse(text)
+      } catch {
+        // Vercel devolvió HTML (timeout 504 u otro error de plataforma)
+        console.error('[consulta-deuda] respuesta no-JSON:', text.slice(0, 200))
+        setEstadoDeuda('error')
+        return
+      }
       setDeudaInfo(d)
       setEstadoDeuda('ok')
     } catch {

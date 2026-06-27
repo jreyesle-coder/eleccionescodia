@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const BASE = 'https://www.codiaenlinea.com'
-const TIMEOUT_MS = 12000
+const TIMEOUT_MS = 8000
+
+// Vercel Hobby/Free plan: max 10 s. Keeping internal timeout at 8 s leaves margin.
+// If on Pro plan, add: export const maxDuration = 60
 
 const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
