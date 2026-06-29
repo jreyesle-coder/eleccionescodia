@@ -1715,7 +1715,8 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
     })
   }, [supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalConfirmados = resumen.reduce((s, r) => s + r.total, 0)
+  const totalConfirmados  = resumen.reduce((s, r) => s + r.total, 0)
+  const totalFavorDirigente = resumen.reduce((s, r) => s + r.favorables, 0)
 
   function abrirModal(via: ModalVia, titulo: string) {
     setModalVia(via)
@@ -1724,8 +1725,8 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
 
   if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
 
-  const tarjetas: { titulo: string; valor: number; color: string; via: ModalVia }[] = [
-    { titulo: 'Total confirmados (dirigentes)', valor: totalConfirmados, color: 'var(--color-marino)', via: 'dirigente' },
+  const tarjetas: { titulo: string; valor: number; color: string; via: ModalVia; subtitulo?: string }[] = [
+    { titulo: 'Favorables (dirigentes)', valor: totalFavorDirigente, color: 'var(--color-marino)', via: 'dirigente', subtitulo: `${totalConfirmados} gestionados total` },
     { titulo: 'Via Verifícate (simpatizantes)', valor: totalVerif,       color: '#16a34a',            via: 'verificate' },
     { titulo: 'Via Call Center',                valor: totalCallCenter,  color: '#2563eb',            via: 'callcenter' },
     { titulo: 'Favorables totales',             valor: totalFavorables,  color: '#ca8a04',            via: 'todos' },
@@ -1737,7 +1738,7 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
     <div className="space-y-5">
       {/* KPIs — clickables */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {tarjetas.map(({ titulo, valor, color, via }) => (
+        {tarjetas.map(({ titulo, valor, color, via, subtitulo }) => (
           <button
             key={titulo}
             onClick={() => abrirModal(via, titulo)}
@@ -1746,7 +1747,7 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
           >
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{titulo}</p>
             <p className="text-3xl font-black mt-1 tabular-nums" style={{ color }}>{valor.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-300 mt-1">Toca para ver lista →</p>
+            <p className="text-[10px] text-gray-300 mt-1">{subtitulo ?? 'Toca para ver lista →'}</p>
           </button>
         ))}
       </div>
