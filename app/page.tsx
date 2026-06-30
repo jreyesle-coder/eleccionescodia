@@ -101,6 +101,18 @@ export default async function RootPage() {
           {/* Buscador inline */}
           <BuscadorPublico inline />
 
+          {/* Botón Plan de Acción */}
+          <Link
+            href="/plan-accion"
+            className="block w-full text-center text-sm font-semibold py-3 px-4 rounded-xl transition-all hover:opacity-80"
+            style={{
+              backgroundColor: 'var(--color-dorado)',
+              color: 'white',
+            }}
+          >
+            Plan de Acción — George Richardson
+          </Link>
+
           {/* Botón Operación de Campaña */}
           <Link
             href="/login"
