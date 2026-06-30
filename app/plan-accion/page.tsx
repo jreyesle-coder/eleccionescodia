@@ -201,8 +201,17 @@ export default function PlanAccionPage() {
 
             {/* Badge VOTA — 17 de julio */}
             <div className="inline-flex items-center gap-3 bg-white rounded-2xl px-5 py-3 mb-6 shadow-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-dorado)" strokeWidth="1.6" strokeLinecap="round" className="w-9 h-9 shrink-0">
-                <path d="M12 11c0 3-1 5-2.5 6.5M8.5 14c0 2-.5 3.5-1.5 5M15.5 14c0 1.5-.2 2.7-.6 3.9M5.5 11.5c0-1 .2-2 .6-3M18.5 11.5c0 2.5-.4 4.5-1.2 6.5M12 7.5a4.5 4.5 0 014.5 4.5c0 1-.1 2-.3 3M12 4.2C7.7 4.2 4.2 7.7 4.2 12c0 1 .1 2 .4 3" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" stroke="var(--color-dorado)" strokeWidth="28" strokeLinecap="round" className="w-9 h-9 shrink-0">
+                <path d="M256 48c-37 0-72 8-104 24" />
+                <path d="M408 116c-20-24-46-44-75-58" />
+                <path d="M440 192c-6-23-16-44-29-63" />
+                <path d="M120 88c-30 22-54 51-70 85" />
+                <path d="M256 96c-88 0-160 72-160 160 0 30 4 56 11 80" />
+                <path d="M256 96c88 0 160 72 160 160 0 64-16 120-43 168" />
+                <path d="M256 160c-53 0-96 43-96 96 0 70 18 130 48 176" />
+                <path d="M256 160c53 0 96 43 96 96 0 16-1 31-3 46" />
+                <path d="M256 224c-18 0-32 14-32 32 0 84 22 154 58 206" />
+                <path d="M256 224c18 0 32 14 32 32 0 30-2 57-7 82" />
               </svg>
               <div className="text-left">
                 <p className="text-lg font-extrabold leading-none tracking-tight" style={{ color: 'var(--color-marino)' }}>
