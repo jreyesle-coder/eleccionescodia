@@ -133,6 +133,8 @@ export default function PlanAccionPage() {
                   'Observatorio Nacional del Ejercicio Profesional',
                   'Plataforma Digital de Denuncias',
                   'Fortalecimiento jurídico y fiscalizador',
+                  'Fortalecimiento de los capítulos profesionales del CODIA',
+                  'Participación del CODIA en los programas y mesas de trabajo de las Sectoriales del gobierno',
                 ],
               },
               {
@@ -243,6 +245,7 @@ export default function PlanAccionPage() {
                   'Red Universitaria CODIA',
                   'Acuerdo de pago para la reintegración de colegiados inactivos',
                   'Participación de jóvenes en la vida gremial y directiva',
+                  'Programa de pasantías con acuerdo con Sectoriales del gobierno, ayuntamientos y universidades',
                 ],
               },
               {
