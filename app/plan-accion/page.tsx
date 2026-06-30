@@ -2,8 +2,27 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Plan de Acción — George Richardson | CODIA 2026',
-  description: 'Conoce el Plan de Acción de George Richardson para el CODIA 2026-2027.',
+  title: 'Vota este próximo 17 de Julio — George Richardson | CODIA 2026',
+  description: 'Vota este próximo 17 de Julio. Conoce el Plan de Acción de George Richardson para el CODIA 2026-2027.',
+  openGraph: {
+    title: 'Vota este próximo 17 de Julio',
+    description: 'Por un CODIA más fuerte, moderno y transparente. Conoce el Plan de Acción del Arq. Richardson.',
+    images: [
+      {
+        url: 'https://eleccionescodia.rogapps.com/vota-17-julio.jpg',
+        width: 919,
+        height: 1455,
+        alt: 'Vota este viernes 17 de julio — Arq. Richardson Presidente CODIA',
+      },
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Vota este próximo 17 de Julio',
+    description: 'Por un CODIA más fuerte, moderno y transparente. Conoce el Plan de Acción del Arq. Richardson.',
+    images: ['https://eleccionescodia.rogapps.com/vota-17-julio.jpg'],
+  },
 }
 
 const EJES = [
@@ -179,6 +198,22 @@ export default function PlanAccionPage() {
         }} />
         <div className="relative max-w-6xl mx-auto px-6 py-14 md:py-20 flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1 text-center md:text-left">
+
+            {/* Badge VOTA — 17 de julio */}
+            <div className="inline-flex items-center gap-3 bg-white rounded-2xl px-5 py-3 mb-6 shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--color-dorado)" strokeWidth="1.6" strokeLinecap="round" className="w-9 h-9 shrink-0">
+                <path d="M12 11c0 3-1 5-2.5 6.5M8.5 14c0 2-.5 3.5-1.5 5M15.5 14c0 1.5-.2 2.7-.6 3.9M5.5 11.5c0-1 .2-2 .6-3M18.5 11.5c0 2.5-.4 4.5-1.2 6.5M12 7.5a4.5 4.5 0 014.5 4.5c0 1-.1 2-.3 3M12 4.2C7.7 4.2 4.2 7.7 4.2 12c0 1 .1 2 .4 3" />
+              </svg>
+              <div className="text-left">
+                <p className="text-lg font-extrabold leading-none tracking-tight" style={{ color: 'var(--color-marino)' }}>
+                  VOTA
+                </p>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--color-dorado)' }}>
+                  Este viernes 17 de julio
+                </p>
+              </div>
+            </div>
+
             <p className="text-sm md:text-base font-bold tracking-widest uppercase mb-3" style={{ color: 'var(--color-dorado)' }}>
               CODIA · Gestión 2026–2027
             </p>
