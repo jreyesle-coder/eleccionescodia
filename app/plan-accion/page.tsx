@@ -2,11 +2,11 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Vota este próximo 17 de Julio — George Richardson | CODIA 2026',
-  description: 'Vota este próximo 17 de Julio. Conoce el Plan de Acción de George Richardson para el CODIA 2026-2027.',
+  title: 'Plan de Acción — George Richardson | CODIA 2026',
+  description: 'Plan de Acción del Arq. George Richardson para el CODIA 2026-2027. ¡Vota este próximo viernes 17 de julio!',
   openGraph: {
-    title: 'Vota este próximo 17 de Julio',
-    description: 'Por un CODIA más fuerte, moderno y transparente. Conoce el Plan de Acción del Arq. Richardson.',
+    title: 'Plan de Acción — Arq. George Richardson | CODIA 2026',
+    description: '¡Vota este próximo viernes 17 de julio! Por un CODIA más fuerte, moderno y transparente.',
     images: [
       {
         url: 'https://eleccionescodia.rogapps.com/vota-17-julio.jpg',
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vota este próximo 17 de Julio',
-    description: 'Por un CODIA más fuerte, moderno y transparente. Conoce el Plan de Acción del Arq. Richardson.',
+    title: 'Plan de Acción — Arq. George Richardson | CODIA 2026',
+    description: '¡Vota este próximo viernes 17 de julio! Por un CODIA más fuerte, moderno y transparente.',
     images: ['https://eleccionescodia.rogapps.com/vota-17-julio.jpg'],
   },
 }
