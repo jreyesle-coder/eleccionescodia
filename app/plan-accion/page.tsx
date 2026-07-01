@@ -167,7 +167,7 @@ const EJES = [
 ]
 
 const INDICADORES = [
-  { valor: '2,000+', desc: 'colegiados capacitados anualmente' },
+  { valor: '4,000+', desc: 'colegiados capacitados anualmente' },
   { valor: '500+', desc: 'empleos gestionados anualmente' },
   { valor: '20+', desc: 'convenios internacionales activos' },
   { valor: '50+', desc: 'nuevos convenios comerciales para el Carnet Inteligente CODIA' },
