@@ -11,9 +11,11 @@ declare
   v_filas_actualizadas int;
 begin
   -- Obtener el nombre exacto del dirigente Silvio Garcia desde profiles
-  select nombre into v_nombre_dirigente
-    from public.profiles
-   where lower(email) = 'silviogarcia@eleccionescodia.app'
+  -- (el email vive en auth.users; profiles solo tiene id, nombre, rol)
+  select p.nombre into v_nombre_dirigente
+    from public.profiles p
+    join auth.users u on u.id = p.id
+   where lower(u.email) = 'silviogarcia@eleccionescodia.app'
    limit 1;
 
   if v_nombre_dirigente is null then
