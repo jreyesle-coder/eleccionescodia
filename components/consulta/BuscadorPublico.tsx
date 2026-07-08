@@ -17,6 +17,7 @@ interface ResultadoBusqueda {
   pensionado: boolean
   nuevo_integrante: boolean
   tiene_deuda: boolean
+  ya_registro: boolean
 }
 
 interface DeudaInfo {
@@ -350,14 +351,16 @@ export default function BuscadorPublico({ inline = false }: Props) {
             <BloqueDeuda />
           )}
 
-          {votoGuardado && (
+          {(votoGuardado || colegiado.ya_registro) && (
             <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200 text-center">
               <p className="text-sm font-bold text-green-700">✓ Preferencia registrada</p>
-              <p className="text-xs text-green-600 mt-0.5">Gracias, {votoGuardado}.</p>
+              <p className="text-xs text-green-600 mt-0.5">
+                {votoGuardado ? `Gracias, ${votoGuardado}.` : 'Ya registraste tu intención de voto anteriormente.'}
+              </p>
             </div>
           )}
 
-          {!votoGuardado && (
+          {!votoGuardado && !colegiado.ya_registro && (
             <button
               onClick={abrirModal}
               className="w-full py-3 rounded-xl text-sm font-bold border-2 transition-all hover:opacity-90"
