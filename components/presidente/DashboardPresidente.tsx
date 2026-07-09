@@ -670,6 +670,54 @@ interface ConfirmadoNucleoRow {
   confirmacion_intencion: string | null
 }
 
+// ─── Exportación a Excel (CSV con BOM UTF-8, abre directo en Excel) ───────────
+
+const INTENCION_TEXTO: Record<string, string> = {
+  favorable: 'Favorable',
+  indeciso:  'Indeciso',
+  en_contra: 'En contra',
+}
+
+function escaparCSV(valor: string | number | null | undefined): string {
+  const s = valor == null ? '' : String(valor)
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function viaTexto(d: ConfirmadoNucleoRow): string {
+  const vias: string[] = []
+  if (d.via_callcenter) vias.push('Call center')
+  if (d.via_verificate) vias.push('Verifícate')
+  if (d.via_dirigente)  vias.push('Dirigente')
+  return vias.join(' / ')
+}
+
+function exportarConfirmadosCSV(filas: ConfirmadoNucleoRow[], nombreArchivo: string) {
+  const encabezados = ['Nombre', 'Colegiatura', 'Regional', 'Núcleo', 'Carrera', 'Vía', 'Confirmado por', 'Intención']
+  const lineas = [encabezados.join(',')]
+  for (const d of filas) {
+    lineas.push([
+      escaparCSV(d.nombre_completo),
+      escaparCSV(d.codigo),
+      escaparCSV(d.regional),
+      escaparCSV(d.nucleo),
+      escaparCSV(d.carrera),
+      escaparCSV(viaTexto(d)),
+      escaparCSV(d.via_dirigente ? (d.confirmado_por ?? 'Dirigente') : ''),
+      escaparCSV(d.confirmacion_intencion ? (INTENCION_TEXTO[d.confirmacion_intencion] ?? d.confirmacion_intencion) : ''),
+    ].join(','))
+  }
+  const contenido = '﻿' + lineas.join('\r\n')
+  const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombreArchivo
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 function TabNucleos() {
   const supabase = createClient()
   const [datos, setDatos]                     = useState<NucleoAgrupado[]>([])
@@ -680,6 +728,7 @@ function TabNucleos() {
   const [drilldown, setDrilldown]             = useState<{ nucleo: string; carrera: string | null } | null>(null)
   const [detalle, setDetalle]                 = useState<ConfirmadoNucleoRow[]>([])
   const [cargandoDrill, setCargandoDrill]     = useState(false)
+  const [exportando, setExportando]           = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -740,6 +789,21 @@ function TabNucleos() {
     })
     setDetalle((data as ConfirmadoNucleoRow[]) ?? [])
     setCargandoDrill(false)
+  }
+
+  async function exportarNucleo(nucleo: string) {
+    setExportando(nucleo)
+    const { data } = await supabase.rpc('listar_confirmados_nucleo', {
+      p_nucleo: nucleo,
+      p_carrera: null,
+    })
+    const filas = (data as ConfirmadoNucleoRow[]) ?? []
+    if (filas.length > 0) {
+      const fecha = new Date().toISOString().slice(0, 10)
+      const slug = nucleo.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_')
+      exportarConfirmadosCSV(filas, `confirmados_${slug}_${fecha}.csv`)
+    }
+    setExportando(null)
   }
 
   const totalGlobal     = datos.reduce((s, n) => s + n.totalNucleo, 0)
@@ -817,14 +881,22 @@ function TabNucleos() {
               {/* Lista de profesiones (expandible) */}
               {abierto && (
                 <div className="border-t border-gray-100 divide-y divide-gray-50">
-                  {/* Fila "Ver todos confirmados del núcleo" */}
+                  {/* Fila "Ver todos confirmados del núcleo" + Exportar */}
                   {totalConfirmados > 0 && (
-                    <div className="px-8 py-2 bg-green-50/50">
+                    <div className="px-8 py-2 bg-green-50/50 flex items-center justify-between gap-3 flex-wrap">
                       <button
                         onClick={() => abrirDrilldown(nucleo, null)}
                         className="text-xs font-semibold text-green-700 hover:underline"
                       >
                         ★ Ver los {totalConfirmados} confirmados de {nucleo} →
+                      </button>
+                      <button
+                        onClick={() => exportarNucleo(nucleo)}
+                        disabled={exportando === nucleo}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white shadow-sm hover:opacity-90 active:scale-95 transition-all disabled:opacity-60 shrink-0"
+                        style={{ backgroundColor: '#16a34a' }}
+                      >
+                        {exportando === nucleo ? 'Generando…' : '⬇ Exportar a Excel'}
                       </button>
                     </div>
                   )}
@@ -1695,6 +1767,7 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
   const [cargando, setCargando]                     = useState(true)
   const [modalVia, setModalVia]                     = useState<ModalVia | null>(null)
   const [modalTitulo, setModalTitulo]               = useState('')
+  const [vista, setVista]                           = useState<'general' | 'nucleos'>('general')
 
   useEffect(() => {
     Promise.all([
@@ -1723,8 +1796,6 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
     setModalTitulo(titulo)
   }
 
-  if (cargando) return <p className="text-center text-gray-400 py-10">Cargando…</p>
-
   const tarjetas: { titulo: string; valor: number; color: string; via: ModalVia; subtitulo?: string }[] = [
     { titulo: 'Favorables (dirigentes)', valor: totalFavorDirigente, color: 'var(--color-marino)', via: 'dirigente', subtitulo: `${totalConfirmados} gestionados total` },
     { titulo: 'Via Verifícate (simpatizantes)', valor: totalVerif,       color: '#16a34a',            via: 'verificate' },
@@ -1736,6 +1807,30 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
 
   return (
     <div className="space-y-5">
+      {/* Sub-vistas: General / Por núcleos */}
+      <div className="inline-flex rounded-xl bg-gray-100 p-1">
+        {([['general', 'General'], ['nucleos', 'Por núcleos']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setVista(id)}
+            className="px-4 py-1.5 text-sm font-semibold rounded-lg transition-all"
+            style={
+              vista === id
+                ? { backgroundColor: 'var(--color-marino)', color: 'white' }
+                : { color: '#6b7280' }
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {vista === 'nucleos' ? (
+        <TabNucleos />
+      ) : cargando ? (
+        <p className="text-center text-gray-400 py-10">Cargando…</p>
+      ) : (
+        <div className="space-y-5">
       {/* KPIs — clickables */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {tarjetas.map(({ titulo, valor, color, via, subtitulo }) => (
@@ -1830,6 +1925,8 @@ function TabConfirmadosPresidente({ onVerPensionados }: { onVerPensionados: () =
           </div>
         )}
       </div>
+        </div>
+      )}
 
       {/* Modal drilldown */}
       {modalVia && (
