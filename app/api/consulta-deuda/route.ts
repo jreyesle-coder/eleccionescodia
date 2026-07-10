@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const BASE = 'https://www.codiaenlinea.com'
+// Fuente única: portal de verificación de núcleos del CODIA.
+// Un solo GET devuelve regional, centro de votación, núcleo, posición y balance.
+// No requiere login ni cédula — basta la colegiatura (código).
+const BASE = 'https://verificate.codiaenlinea.com'
 const TIMEOUT_MS = 8000
 
-// Vercel Hobby/Free plan: max 10 s. Keeping internal timeout at 8 s leaves margin.
-// If on Pro plan, add: export const maxDuration = 60
+// Vercel Hobby/Free plan: max 10 s. Timeout interno de 8 s deja margen.
+// En plan Pro se puede subir con: export const maxDuration = 60
 
 const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,104 +22,110 @@ function fetchConTimeout(url: string, opts: RequestInit): Promise<Response> {
 }
 
 export async function POST(req: NextRequest) {
-  const { cedula, codigo } = await req.json().catch(() => ({})) as {
+  // `cedula` se acepta por retrocompatibilidad pero ya no se usa.
+  const { codigo } = await req.json().catch(() => ({})) as {
     cedula?: string
     codigo?: string
   }
 
-  if (!cedula || !codigo) {
+  if (!codigo) {
     return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
   }
 
-  const cedulaLimpia = cedula.replace(/-/g, '')
+  const codigoLimpio = String(codigo).trim()
 
   try {
-    // ── Paso 1: Login ────────────────────────────────────────────────────────
-    const loginRes = await fetchConTimeout(`${BASE}/Home/Login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Referer': `${BASE}/`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      },
-      body: JSON.stringify({ Cedula: cedulaLimpia, Codigo: codigo }),
-      redirect: 'manual',
-    })
-
-    // Capturar cookies de sesión
-    // getSetCookie() es el método correcto en Node.js 18+ — headers.get('set-cookie')
-    // devuelve null en entornos server-side porque Set-Cookie es forbidden header en Fetch spec
-    const rawCookies: string[] =
-      typeof (loginRes.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
-        ? (loginRes.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
-        : (loginRes.headers.get('set-cookie') ?? '').split(/,(?=[^ ])/)
-
-    const cookieHeader = rawCookies
-      .map(c => c.split(';')[0].trim())
-      .filter(Boolean)
-      .join('; ')
-
-    console.log(`[consulta-deuda] cookies recibidas (${rawCookies.length}): ${cookieHeader}`)
-
-    if (!cookieHeader) {
-      console.log(`[consulta-deuda] login rechazado para codigo=${codigo}`)
-      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
-    }
-
-    // Verificar si el sistema devolvió JSON de error explícito
-    const contentType = loginRes.headers.get('content-type') ?? ''
-    if (contentType.includes('application/json')) {
-      const loginJson = await loginRes.json().catch(() => null)
-      if (loginJson && loginJson.success === false) {
-        return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
+    const res = await fetchConTimeout(
+      `${BASE}/ConsultaCodias/Details/${encodeURIComponent(codigoLimpio)}?state=submited`,
+      {
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Referer': `${BASE}/ConsultaCodias/Details`,
+        },
       }
-    }
+    )
 
-    // ── Paso 2: Página de balance ────────────────────────────────────────────
-    const profileRes = await fetchConTimeout(`${BASE}/Home/IndexUser`, {
-      headers: {
-        'Cookie': cookieHeader,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Referer': `${BASE}/`,
-      },
-    })
-
-    if (!profileRes.ok) {
-      console.log(`[consulta-deuda] IndexUser devolvió ${profileRes.status} para codigo=${codigo}`)
+    if (!res.ok) {
+      console.log(`[consulta-codia] HTTP ${res.status} para codigo=${codigoLimpio}`)
       return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
     }
 
-    const html = await profileRes.text()
+    const html = await res.text()
 
-    // ── Paso 3: Parsear balance ──────────────────────────────────────────────
-    const monto = parsearBalance(html)
-    const habilitado = monto === 0
+    // Colegiatura inexistente
+    if (/NO\s+HAY\s+COLEGIADO\s+REGISTRADO/i.test(html)) {
+      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
+    }
 
-    // ── Paso 4: Actualizar BD ────────────────────────────────────────────────
-    await supabaseServer.rpc('set_deuda_lookup', {
-      p_codigo: String(codigo),
-      p_monto:  monto,
+    // ── Parsear campos ────────────────────────────────────────────────────────
+    const regional        = limpiar(campoTabla(html, 'REGIONAL'))
+    const centro_votacion = limpiar(campoTabla(html, 'CENTRO DE VOTACION'))
+    const nucleo          = limpiar(campoTabla(html, 'NUCLEO'))
+    const posicion        = parsearPosicion(html)
+    const monto           = parsearBalance(html)
+    const habilitado      = monto === 0
+
+    // Si no reconocimos ningún campo, tratar como no encontrado (cambio de estructura)
+    if (!regional && !centro_votacion && !nucleo && monto === 0 && posicion === null) {
+      return NextResponse.json({ encontrado: false, habilitado: true, monto: 0 })
+    }
+
+    // ── Persistir en el padrón ────────────────────────────────────────────────
+    await supabaseServer.rpc('set_datos_codia', {
+      p_codigo:          codigoLimpio,
+      p_regional:        regional || null,
+      p_centro_votacion: centro_votacion || null,
+      p_nucleo:          nucleo || null,
+      p_posicion:        posicion,
+      p_monto:           monto,
     })
 
-    console.log(`[consulta-deuda] codigo=${codigo} monto=${monto}`)
-    return NextResponse.json({ encontrado: true, habilitado, monto })
+    console.log(`[consulta-codia] codigo=${codigoLimpio} centro="${centro_votacion}" pos=${posicion} monto=${monto}`)
+
+    return NextResponse.json({
+      encontrado: true,
+      habilitado,
+      monto,
+      regional,
+      centro_votacion,
+      nucleo,
+      posicion,
+    })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[consulta-deuda] error para codigo=${codigo}:`, msg)
+    console.error(`[consulta-codia] error para codigo=${codigo}:`, msg)
     // Siempre devuelve 200 para que el cliente pueda leer el JSON
     return NextResponse.json({ encontrado: false, habilitado: true, monto: 0, _error: msg })
   }
 }
 
+// ── Helpers de parseo ─────────────────────────────────────────────────────────
+
+// Extrae el <td> que sigue a un <th>LABEL:</th> en la tabla de resultados.
+function campoTabla(html: string, label: string): string {
+  const etiqueta = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')
+  const re = new RegExp(`<th[^>]*>\\s*${etiqueta}\\s*:?\\s*</th>\\s*<td[^>]*>([\\s\\S]*?)</td>`, 'i')
+  const m = html.match(re)
+  return m ? m[1] : ''
+}
+
+// POSICION viene como "<b>POSICION:</b>  980" dentro de un <td>.
+function parsearPosicion(html: string): number | null {
+  const m = html.match(/POSICION\s*:?\s*<\/b>\s*([\d,]+)/i)
+    || html.match(/POSICION\s*:?\s*([\d,]+)/i)
+  if (!m) return null
+  const n = parseInt(m[1].replace(/,/g, ''), 10)
+  return isNaN(n) ? null : n
+}
+
 function parsearBalance(html: string): number {
-  const balance = html.match(/Balance\s*:?[^$]{0,200}\$\s*([\d,\.]+)/i)
+  const balance = html.match(/BALANCE\s*:?\s*<\/th>\s*<td[^>]*>\s*\$?\s*([\d,\.]+)/i)
   if (balance) return parseMonto(balance[1])
 
-  const subTotal = html.match(/Sub\s*Total\s*:\s*\$\s*([\d,\.]+)/i)
-  if (subTotal) return parseMonto(subTotal[1])
+  const generico = html.match(/Balance\s*:?[^$\d]{0,40}\$?\s*([\d,\.]+)/i)
+  if (generico) return parseMonto(generico[1])
 
   return 0
 }
@@ -124,4 +133,13 @@ function parsearBalance(html: string): number {
 function parseMonto(raw: string): number {
   const n = parseFloat(raw.replace(/,/g, ''))
   return isNaN(n) ? 0 : Math.round(n)
+}
+
+// Normaliza texto de celdas: colapsa espacios y quita saltos de línea sobrantes.
+function limpiar(raw: string): string {
+  return raw
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
