@@ -22,6 +22,8 @@ interface FilaSegmento {
   codigo: string
   cedula: string | null
   nombre_completo: string | null
+  telefono: string | null
+  celular: string | null
   provincia: string | null
   regional: string | null
   nucleo: string | null
@@ -39,7 +41,7 @@ function escaparCSV(valor: string | number | boolean | null | undefined): string
 
 function exportarCSV(filas: FilaSegmento[], nombreArchivo: string) {
   const encabezados = [
-    'Codigo', 'Cedula', 'Nombre', 'Provincia', 'Regional (vota)',
+    'Codigo', 'Cedula', 'Nombre', 'Telefono', 'Celular', 'Provincia', 'Regional (vota)',
     'Nucleo (profesion)', 'Centro de votacion', 'Prefijo', 'Demarcacion origen', 'Vota fuera',
   ]
   const lineas = [encabezados.join(',')]
@@ -48,6 +50,8 @@ function exportarCSV(filas: FilaSegmento[], nombreArchivo: string) {
       escaparCSV(f.codigo),
       escaparCSV(f.cedula),
       escaparCSV(f.nombre_completo),
+      escaparCSV(f.telefono),
+      escaparCSV(f.celular),
       escaparCSV(f.provincia),
       escaparCSV(f.regional),
       escaparCSV(f.nucleo),
@@ -249,6 +253,7 @@ export default function TabSegmentador() {
                     <th className="py-2 pr-3 font-medium">Código</th>
                     <th className="py-2 pr-3 font-medium">Cédula</th>
                     <th className="py-2 pr-3 font-medium">Nombre</th>
+                    <th className="py-2 pr-3 font-medium">Teléfono</th>
                     <th className="py-2 pr-3 font-medium">Provincia</th>
                     <th className="py-2 pr-3 font-medium">Regional (vota)</th>
                     <th className="py-2 pr-3 font-medium">Núcleo</th>
@@ -262,6 +267,7 @@ export default function TabSegmentador() {
                       <td className="py-1.5 pr-3 tabular-nums">{f.codigo}</td>
                       <td className="py-1.5 pr-3 tabular-nums">{f.cedula}</td>
                       <td className="py-1.5 pr-3">{f.nombre_completo}</td>
+                      <td className="py-1.5 pr-3 tabular-nums">{f.celular || f.telefono || '—'}</td>
                       <td className="py-1.5 pr-3">{f.provincia}</td>
                       <td className="py-1.5 pr-3">{f.regional}</td>
                       <td className="py-1.5 pr-3">{f.nucleo}</td>
