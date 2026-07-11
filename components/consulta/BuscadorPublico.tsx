@@ -24,6 +24,10 @@ interface DeudaInfo {
   encontrado: boolean
   habilitado: boolean
   monto: number
+  regional?: string | null
+  centro_votacion?: string | null
+  nucleo?: string | null
+  posicion?: number | null
 }
 
 interface Props {
@@ -335,6 +339,18 @@ export default function BuscadorPublico({ inline = false }: Props) {
               <div className="col-span-2">
                 <p className="text-gray-400 uppercase tracking-wide font-semibold">Núcleo</p>
                 <p className="font-semibold text-gray-800 mt-0.5">{colegiado.nucleo}</p>
+              </div>
+            )}
+            {deudaInfo?.centro_votacion && (
+              <div className="col-span-2">
+                <p className="text-gray-400 uppercase tracking-wide font-semibold">Centro de votación</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{deudaInfo.centro_votacion}</p>
+              </div>
+            )}
+            {deudaInfo?.posicion != null && (
+              <div>
+                <p className="text-gray-400 uppercase tracking-wide font-semibold">Posición</p>
+                <p className="font-semibold text-gray-800 mt-0.5">{deudaInfo.posicion}</p>
               </div>
             )}
           </div>

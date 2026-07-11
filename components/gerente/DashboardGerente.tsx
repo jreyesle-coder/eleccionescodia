@@ -68,6 +68,7 @@ interface MiembroPadronActivo {
   tiene_deuda: boolean
   monto_deuda: number
   centro_votacion: string | null
+  posicion: number | null
   confirmado_por: string | null
   confirmacion_intencion: string | null
   confirmacion_at: string | null
@@ -338,7 +339,14 @@ function TabMiNucleo() {
 
 // ─── Tab: Padrón en vivo ──────────────────────────────────────────────────────
 
-interface DeudaAPI { encontrado: boolean; monto: number }
+interface DeudaAPI {
+  encontrado: boolean
+  monto: number
+  regional?: string | null
+  centro_votacion?: string | null
+  nucleo?: string | null
+  posicion?: number | null
+}
 
 const PAGE_PADRON_GERENTE = 100
 
@@ -409,21 +417,29 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
     setDetalleDeuda(null)
     setDetalleIntencion(null)
     setDetalleError(null)
-    if (m.cedula) {
-      setCargandoDeuda(true)
-      try {
-        const res  = await fetch('/api/consulta-deuda', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cedula: m.cedula, codigo: m.codigo }),
-        })
-        const data = await res.json() as DeudaAPI
-        setDetalleDeuda(data)
-        if (data.encontrado && data.monto > 0) {
-          await supabase.rpc('actualizar_deuda', { p_codigo: m.codigo, p_monto_nuevo: data.monto })
-          setPadron(prev => prev.map(x => x.codigo === m.codigo ? { ...x, monto_deuda: data.monto, tiene_deuda: true } : x))
+    setCargandoDeuda(true)
+    try {
+      const res  = await fetch('/api/consulta-deuda', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo: m.codigo }),
+      })
+      const data = await res.json() as DeudaAPI
+      setDetalleDeuda(data)
+      if (data.encontrado) {
+        // El servidor ya persistió los datos vía set_datos_codia; aquí solo
+        // refrescamos el estado local para que la UI muestre lo más reciente.
+        const frescos = {
+          regional:        data.regional ?? m.regional,
+          centro_votacion: data.centro_votacion ?? m.centro_votacion,
+          nucleo:          data.nucleo ?? m.nucleo,
+          posicion:        data.posicion ?? m.posicion,
+          monto_deuda:     data.monto,
+          tiene_deuda:     data.monto > 0,
         }
-      } catch { /* no interrumpir */ } finally { setCargandoDeuda(false) }
-    }
+        setDetalle(prev => prev && prev.codigo === m.codigo ? { ...prev, ...frescos } : prev)
+        setPadron(prev => prev.map(x => x.codigo === m.codigo ? { ...x, ...frescos } : x))
+      }
+    } catch { /* no interrumpir */ } finally { setCargandoDeuda(false) }
   }
 
   async function guardarDetalle() {
@@ -583,15 +599,14 @@ function TabPadronActivo({ nombreUsuario, nucleoGerente }: { nombreUsuario: stri
                     {detalle.regional        && <FilaDato label="Regional"           valor={detalle.regional} />}
                     {detalle.provincia       && <FilaDato label="Provincia"          valor={detalle.provincia} />}
                     {detalle.centro_votacion && <FilaDato label="Centro de votación" valor={detalle.centro_votacion} />}
+                    {detalle.posicion != null && <FilaDato label="Posición"           valor={String(detalle.posicion)} />}
                   </div>
                 </div>
 
                 {/* Deuda */}
                 <div className="bg-white px-6 py-4 border-t border-gray-100 space-y-2">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estado de deuda</p>
-                  {!detalle.cedula ? (
-                    <p className="text-sm text-gray-400">Sin cédula registrada.</p>
-                  ) : cargandoDeuda ? (
+                  {cargandoDeuda ? (
                     <p className="text-sm text-gray-400 animate-pulse">Consultando CODIA en línea…</p>
                   ) : detalleDeuda ? (
                     detalleDeuda.monto > 0 ? (
@@ -848,11 +863,11 @@ function TabPorRegularizar() {
       setLista(rows)
       setCargando(false)
       for (const r of rows) {
-        if (!r.cedula || r.monto_deuda > 0) continue
+        if (r.monto_deuda > 0) continue
         fetch('/api/consulta-deuda', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cedula: r.cedula, codigo: r.codigo }),
+          body: JSON.stringify({ codigo: r.codigo }),
         })
           .then(res => res.json())
           .then((d: { encontrado: boolean; monto: number }) => {
