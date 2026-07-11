@@ -197,7 +197,7 @@ export default function TabSegmentador() {
 
         {votaFuera !== '' && !prefijo && (
           <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            El filtro "vota fuera" usa la demarcación por prefijo de cédula. Las cédulas de formato nuevo (prefijo 402)
+            El filtro «vota fuera» usa la demarcación por prefijo de cédula. Las cédulas de formato nuevo (prefijo 402)
             no son rastreables y se excluyen de ese cálculo.
           </p>
         )}
@@ -277,7 +277,7 @@ export default function TabSegmentador() {
               </table>
               {filas.length > 500 && (
                 <p className="text-xs text-gray-400 mt-3">
-                  Mostrando las primeras 500 filas. El botón "Exportar a Excel" descarga las {filas.length.toLocaleString()} completas.
+                  Mostrando las primeras 500 filas. El botón «Exportar a Excel» descarga las {filas.length.toLocaleString()} completas.
                 </p>
               )}
             </div>
