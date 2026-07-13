@@ -28,6 +28,8 @@ interface FilaSegmento {
   regional: string | null
   nucleo: string | null
   centro_votacion: string | null
+  monto_deuda: number | null
+  tiene_deuda: boolean | null
   prefijo: string | null
   demarcacion_origen: string | null
   vota_fuera: boolean | null
@@ -42,7 +44,8 @@ function escaparCSV(valor: string | number | boolean | null | undefined): string
 function exportarCSV(filas: FilaSegmento[], nombreArchivo: string) {
   const encabezados = [
     'Codigo', 'Cedula', 'Nombre', 'Telefono', 'Celular', 'Provincia', 'Regional (vota)',
-    'Nucleo (profesion)', 'Centro de votacion', 'Prefijo', 'Demarcacion origen', 'Vota fuera',
+    'Nucleo (profesion)', 'Centro de votacion', 'Monto deuda', 'Tiene deuda',
+    'Prefijo', 'Demarcacion origen', 'Vota fuera',
   ]
   const lineas = [encabezados.join(',')]
   for (const f of filas) {
@@ -56,6 +59,8 @@ function exportarCSV(filas: FilaSegmento[], nombreArchivo: string) {
       escaparCSV(f.regional),
       escaparCSV(f.nucleo),
       escaparCSV(f.centro_votacion),
+      escaparCSV(f.monto_deuda == null ? 0 : f.monto_deuda),
+      escaparCSV(f.tiene_deuda == null ? '' : f.tiene_deuda ? 'SI' : 'NO'),
       escaparCSV(f.prefijo),
       escaparCSV(f.demarcacion_origen),
       escaparCSV(f.vota_fuera == null ? '' : f.vota_fuera ? 'SI' : 'NO'),
@@ -257,6 +262,7 @@ export default function TabSegmentador() {
                     <th className="py-2 pr-3 font-medium">Provincia</th>
                     <th className="py-2 pr-3 font-medium">Regional (vota)</th>
                     <th className="py-2 pr-3 font-medium">Núcleo</th>
+                    <th className="py-2 pr-3 font-medium">Deuda</th>
                     <th className="py-2 pr-3 font-medium">Origen</th>
                     <th className="py-2 pr-3 font-medium">Fuera</th>
                   </tr>
@@ -271,6 +277,11 @@ export default function TabSegmentador() {
                       <td className="py-1.5 pr-3">{f.provincia}</td>
                       <td className="py-1.5 pr-3">{f.regional}</td>
                       <td className="py-1.5 pr-3">{f.nucleo}</td>
+                      <td className="py-1.5 pr-3 tabular-nums">
+                        {f.tiene_deuda
+                          ? <span className="text-red-600 font-medium">RD$ {(f.monto_deuda ?? 0).toLocaleString()}</span>
+                          : <span className="text-gray-400">—</span>}
+                      </td>
                       <td className="py-1.5 pr-3">{f.demarcacion_origen ?? '—'}</td>
                       <td className="py-1.5 pr-3">
                         {f.vota_fuera == null ? '—' : f.vota_fuera

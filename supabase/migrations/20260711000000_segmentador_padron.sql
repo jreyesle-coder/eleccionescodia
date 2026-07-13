@@ -69,6 +69,8 @@ returns table (
   regional           text,
   nucleo             text,
   centro_votacion    text,
+  monto_deuda        integer,
+  tiene_deuda        boolean,
   prefijo            text,
   demarcacion_origen text,
   vota_fuera         boolean
@@ -84,6 +86,8 @@ language sql security definer stable set search_path = public as $$
     p.regional,
     p.nucleo,
     p.centro_votacion,
+    coalesce(p.monto_deuda, 0)      as monto_deuda,
+    coalesce(p.monto_deuda, 0) > 0  as tiene_deuda,
     left(p.cedula, 3)  as prefijo,
     o.demarcacion      as demarcacion_origen,
     case
