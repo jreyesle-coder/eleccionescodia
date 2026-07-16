@@ -15,6 +15,7 @@ export default function PanelDelegado({ nombre, rol, mesa }: Props) {
 
   const [busqueda, setBusqueda]   = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [totalSesion, setTotalSesion] = useState(0)
   const [resultado, setResultado] = useState<{
     ok: boolean
     nombre?: string
@@ -41,6 +42,7 @@ export default function PanelDelegado({ nombre, rol, mesa }: Props) {
       setResultado({ ok: false, error: r.error ?? 'No se pudo registrar.' })
     } else {
       setResultado({ ok: true, habilitado: r.habilitado })
+      setTotalSesion(n => n + 1)
     }
   }, [supabase, busqueda, guardando])
 
@@ -69,6 +71,9 @@ export default function PanelDelegado({ nombre, rol, mesa }: Props) {
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tu mesa</p>
           <p className="text-5xl font-black mt-1" style={{ color: 'var(--color-marino)' }}>{mesa}</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Registrados en esta sesión: <span className="font-bold text-gray-600 tabular-nums">{totalSesion}</span>
+          </p>
         </div>
 
         {/* Feedback del último voto */}
