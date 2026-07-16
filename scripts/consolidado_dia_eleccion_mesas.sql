@@ -252,14 +252,14 @@ begin
 
   return query
     select
-      u.id                as user_id,
-      u.email,
-      coalesce(p.nombre, split_part(u.email, '@', 1)) as nombre,
-      coalesce(p.rol, '—')      as rol,
-      p.nucleo_asignado,
-      p.regional_asignada,
-      p.mesa,
-      coalesce(p.activo, false) as activo,
+      u.id                                            as user_id,
+      u.email::text                                   as email,
+      coalesce(p.nombre, split_part(u.email::text, '@', 1)) as nombre,
+      coalesce(p.rol, '—')                            as rol,
+      p.nucleo_asignado::text,
+      p.regional_asignada::text,
+      p.mesa::text,
+      coalesce(p.activo, false)                       as activo,
       u.created_at,
       u.last_sign_in_at
     from auth.users u
