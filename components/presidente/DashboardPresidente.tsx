@@ -1978,6 +1978,15 @@ interface AlertaNoHab {
   created_at: string
 }
 
+interface MesaResultado {
+  numero: number
+  etiqueta: string
+  lugar: string
+  a_favor: number
+  no_a_favor: number
+  total: number
+}
+
 function TabDiaEleccion() {
   const supabase = createClient()
   const [totalVotos, setTotalVotos]     = useState(0)
@@ -1986,13 +1995,15 @@ function TabDiaEleccion() {
   const [porRegional, setPorRegional]   = useState<Record<string, RegionalResultado>>({})
   const [alertasDoble, setAlertasDoble] = useState<AlertaDoble[]>([])
   const [alertasNoHab, setAlertasNoHab] = useState<AlertaNoHab[]>([])
+  const [porMesa, setPorMesa]           = useState<MesaResultado[]>([])
   const [cargando, setCargando]         = useState(true)
 
   const cargar = useCallback(async () => {
-    const [resConteo, resDoble, resNoHab] = await Promise.all([
+    const [resConteo, resDoble, resNoHab, resMesa] = await Promise.all([
       supabase.rpc('conteo_votos_dia'),
       supabase.from('v_alerta_doble_voto').select('*'),
       supabase.from('v_alerta_no_habilitado').select('*').order('created_at', { ascending: false }),
+      supabase.rpc('conteo_por_mesa'),
     ])
     const c = Array.isArray(resConteo.data) ? resConteo.data[0] : resConteo.data
     if (c) {
@@ -2003,6 +2014,12 @@ function TabDiaEleccion() {
     }
     setAlertasDoble((resDoble.data as AlertaDoble[]) ?? [])
     setAlertasNoHab((resNoHab.data as AlertaNoHab[]) ?? [])
+    setPorMesa(((resMesa.data as MesaResultado[]) ?? []).map(m => ({
+      ...m,
+      a_favor:    Number(m.a_favor),
+      no_a_favor: Number(m.no_a_favor),
+      total:      Number(m.total),
+    })))
     setCargando(false)
   }, [supabase])
 
@@ -2024,6 +2041,7 @@ function TabDiaEleccion() {
   const vamosGanando = diferencia >= 0
 
   const regionalesOrdenadas = Object.entries(porRegional).sort(([a], [b]) => a.localeCompare(b))
+  const mesasConVotos = porMesa.filter(m => m.total > 0)
 
   return (
     <div className="space-y-5">
@@ -2152,6 +2170,62 @@ function TabDiaEleccion() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Resultados por mesa ───────────────────────────────────────────── */}
+      {mesasConVotos.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-700">Resultados por mesa</p>
+            <p className="text-xs text-gray-400">{mesasConVotos.length} de {porMesa.length} mesas con votos</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                    <th className="px-4 py-2.5 font-semibold">Mesa</th>
+                    <th className="px-3 py-2.5 font-semibold text-right">✓ A Favor</th>
+                    <th className="px-3 py-2.5 font-semibold text-right">✗ No A Favor</th>
+                    <th className="px-3 py-2.5 font-semibold text-right">Total</th>
+                    <th className="px-4 py-2.5 font-semibold w-32">Tendencia</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {mesasConVotos.map(m => {
+                    const pctF = m.total > 0 ? (m.a_favor / m.total * 100) : 0
+                    const lidera = m.a_favor >= m.no_a_favor
+                    return (
+                      <tr key={m.numero} className="hover:bg-gray-50">
+                        <td className="px-4 py-2.5">
+                          <p className="font-semibold text-gray-800 leading-tight">
+                            <span className="tabular-nums text-gray-400 mr-1.5">{m.numero}.</span>
+                            {m.etiqueta}
+                          </p>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-green-700">{m.a_favor}</td>
+                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-red-600">{m.no_a_favor}</td>
+                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-gray-800">{m.total}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden flex">
+                              <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
+                              <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+                            </div>
+                            <span className="text-xs font-bold tabular-nums shrink-0"
+                              style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
+                              {pctF.toFixed(0)}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
