@@ -2045,8 +2045,8 @@ function TabDiaEleccion() {
   const mesasConVotos = porMesa.filter(m => m.total > 0)
   const qMesa = filtroMesa.trim().toLowerCase()
   const mesasFiltradas = qMesa
-    ? mesasConVotos.filter(m => m.etiqueta.toLowerCase().includes(qMesa) || m.lugar.toLowerCase().includes(qMesa))
-    : mesasConVotos
+    ? porMesa.filter(m => m.etiqueta.toLowerCase().includes(qMesa) || m.lugar.toLowerCase().includes(qMesa))
+    : porMesa
   const gruposMesa = Array.from(
     mesasFiltradas.reduce((map, m) => {
       const arr = map.get(m.lugar) ?? []
@@ -2200,7 +2200,7 @@ function TabDiaEleccion() {
       )}
 
       {/* ── Resultados por mesa (agrupado por centro) ─────────────────────── */}
-      {mesasConVotos.length > 0 && (
+      {porMesa.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm font-semibold text-gray-700">Resultados por mesa</p>
@@ -2224,31 +2224,43 @@ function TabDiaEleccion() {
                 const pctF = g.total > 0 ? (g.a_favor / g.total * 100) : 0
                 const lidera = g.a_favor >= g.no_a_favor
                 const multi = g.mesas.length > 1
+                const sinReportar = g.total === 0
                 return (
-                  <div key={g.lugar} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div key={g.lugar} className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${sinReportar ? 'border-gray-100 opacity-70' : 'border-gray-100'}`}>
                     {/* Encabezado del centro */}
-                    <div className="px-5 py-3" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+                    <div className="px-5 py-3" style={{ backgroundColor: sinReportar ? '#94a3b8' : 'var(--color-marino)', color: 'white' }}>
                       <div className="flex items-center justify-between gap-3">
                         <p className="font-bold text-sm leading-tight">{g.lugar}</p>
-                        <p className="text-blue-200 text-xs shrink-0">{g.total.toLocaleString()} votos{multi && ` · ${g.mesas.length} mesas`}</p>
+                        <p className="text-xs shrink-0 opacity-90">
+                          {sinReportar ? 'Sin reportar' : `${g.total.toLocaleString()} votos${multi ? ` · ${g.mesas.length} mesas` : ''}`}
+                        </p>
                       </div>
                     </div>
 
                     {/* Barra + tendencia del centro */}
                     <div className="px-5 py-3 border-b border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
-                          <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
-                          <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+                      {sinReportar ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 bg-gray-100 rounded-full h-2.5" />
+                          <span className="text-xs font-semibold text-gray-400 shrink-0">— %</span>
                         </div>
-                        <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
-                          {lidera ? '✓' : '✗'} {pctF.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between mt-2 text-xs">
-                        <span className="font-semibold text-green-700 tabular-nums">A Favor: {g.a_favor}</span>
-                        <span className="font-semibold text-red-600 tabular-nums">No A Favor: {g.no_a_favor}</span>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
+                              <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
+                              <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+                            </div>
+                            <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
+                              {lidera ? '✓' : '✗'} {pctF.toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between mt-2 text-xs">
+                            <span className="font-semibold text-green-700 tabular-nums">A Favor: {g.a_favor}</span>
+                            <span className="font-semibold text-red-600 tabular-nums">No A Favor: {g.no_a_favor}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {/* Desglose por mesa (solo si el centro tiene varias) */}
@@ -2259,15 +2271,24 @@ function TabDiaEleccion() {
                           return (
                             <div key={m.numero} className="px-5 py-2 flex items-center gap-3">
                               <span className="text-xs font-semibold text-gray-500 w-14 shrink-0">Mesa {i + 1}</span>
-                              <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
-                                <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
-                                <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
-                              </div>
-                              <span className="text-xs tabular-nums text-gray-500 shrink-0 w-24 text-right">
-                                <span className="text-green-700 font-semibold">{m.a_favor}</span>
-                                {' / '}
-                                <span className="text-red-600 font-semibold">{m.no_a_favor}</span>
-                              </span>
+                              {m.total === 0 ? (
+                                <>
+                                  <div className="flex-1 bg-gray-100 rounded-full h-1.5" />
+                                  <span className="text-xs text-gray-300 shrink-0 w-24 text-right">sin reportar</span>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
+                                    <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
+                                    <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
+                                  </div>
+                                  <span className="text-xs tabular-nums text-gray-500 shrink-0 w-24 text-right">
+                                    <span className="text-green-700 font-semibold">{m.a_favor}</span>
+                                    {' / '}
+                                    <span className="text-red-600 font-semibold">{m.no_a_favor}</span>
+                                  </span>
+                                </>
+                              )}
                             </div>
                           )
                         })}
