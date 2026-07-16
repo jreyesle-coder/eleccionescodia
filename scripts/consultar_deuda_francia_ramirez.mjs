@@ -19,7 +19,7 @@ import { createClient } from '@supabase/supabase-js'
 
 // ── Dirigente a consultar ─────────────────────────────────────────────────────
 
-const DIRIGENTE = 'francia ramirez'   // match parcial contra padron.confirmado_por
+const DIRIGENTE = 'francia.ramirez'   // match parcial contra padron.confirmado_por (guardado con punto)
 
 // ── Leer .env.local ───────────────────────────────────────────────────────────
 
