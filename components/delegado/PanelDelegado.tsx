@@ -8,9 +8,10 @@ interface Props {
   nombre: string
   rol: string
   mesa: string | null
+  lugar?: string | null
 }
 
-export default function PanelDelegado({ nombre, rol, mesa }: Props) {
+export default function PanelDelegado({ nombre, rol, mesa, lugar }: Props) {
   const supabase = createClient()
 
   const [busqueda, setBusqueda]   = useState('')
@@ -71,6 +72,9 @@ export default function PanelDelegado({ nombre, rol, mesa }: Props) {
         <div className="text-center">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tu mesa</p>
           <p className="text-5xl font-black mt-1" style={{ color: 'var(--color-marino)' }}>{mesa}</p>
+          {lugar && (
+            <p className="text-sm font-semibold text-gray-600 mt-1">{lugar}</p>
+          )}
           <p className="text-xs text-gray-400 mt-2">
             Registrados en esta sesión: <span className="font-bold text-gray-600 tabular-nums">{totalSesion}</span>
           </p>

@@ -33,6 +33,7 @@ interface UsuarioRow {
   rol: string
   nucleo_asignado: string | null
   regional_asignada: string | null
+  mesa: string | null
   activo: boolean
   created_at: string
   last_sign_in_at: string | null
@@ -42,7 +43,13 @@ interface EditState {
   rol: string
   nucleo_asignado: string
   regional_asignada: string
+  mesa: string
   activo: boolean
+}
+
+interface MesaRow {
+  numero: number
+  etiqueta: string
 }
 
 const ZONA = 'America/Santo_Domingo'
@@ -59,15 +66,20 @@ export default function TabAdminUsuarios() {
   const [error, setError]       = useState<string | null>(null)
   const [filtro, setFiltro]     = useState('')
   const [editando, setEditando] = useState<string | null>(null)
-  const [edit, setEdit]         = useState<EditState>({ rol: '', nucleo_asignado: '', regional_asignada: '', activo: true })
+  const [edit, setEdit]         = useState<EditState>({ rol: '', nucleo_asignado: '', regional_asignada: '', mesa: '', activo: true })
   const [guardando, setGuardando] = useState(false)
   const [guardadoOk, setGuardadoOk] = useState<string | null>(null)
+  const [mesas, setMesas]       = useState<MesaRow[]>([])
 
   const cargar = useCallback(async () => {
     setCargando(true); setError(null)
-    const { data, error } = await supabase.rpc('admin_listar_usuarios')
-    if (error) { setError(`Error: ${error.message}`); setCargando(false); return }
-    setUsuarios((data as UsuarioRow[]) ?? [])
+    const [resUsuarios, resMesas] = await Promise.all([
+      supabase.rpc('admin_listar_usuarios'),
+      supabase.from('mesas').select('numero, etiqueta').order('numero'),
+    ])
+    if (resUsuarios.error) { setError(`Error: ${resUsuarios.error.message}`); setCargando(false); return }
+    setUsuarios((resUsuarios.data as UsuarioRow[]) ?? [])
+    setMesas((resMesas.data as MesaRow[]) ?? [])
     setCargando(false)
   }, [supabase])
 
@@ -79,18 +91,26 @@ export default function TabAdminUsuarios() {
       rol: u.rol === '—' ? 'operador' : u.rol,
       nucleo_asignado: u.nucleo_asignado ?? '',
       regional_asignada: u.regional_asignada ?? '',
+      mesa: u.mesa ?? '',
       activo: u.activo,
     })
     setGuardadoOk(null)
   }
 
   async function guardar(userId: string) {
+    const esDelegado = edit.rol === 'delegado' || edit.rol === 'suplente'
+    if (esDelegado && !edit.mesa) {
+      setError('Selecciona la mesa del delegado antes de guardar.')
+      return
+    }
     setGuardando(true)
+    const mesaFinal = esDelegado ? edit.mesa : null
     const { error } = await supabase.rpc('admin_actualizar_perfil', {
       p_user_id:           userId,
       p_rol:               edit.rol,
       p_nucleo_asignado:   edit.nucleo_asignado   || null,
       p_regional_asignada: edit.regional_asignada || null,
+      p_mesa:              mesaFinal,
       p_activo:            edit.activo,
     })
     setGuardando(false)
@@ -99,10 +119,13 @@ export default function TabAdminUsuarios() {
     setEditando(null)
     setUsuarios(prev => prev.map(u =>
       u.user_id === userId
-        ? { ...u, rol: edit.rol, nucleo_asignado: edit.nucleo_asignado || null, regional_asignada: edit.regional_asignada || null, activo: edit.activo }
+        ? { ...u, rol: edit.rol, nucleo_asignado: edit.nucleo_asignado || null, regional_asignada: edit.regional_asignada || null, mesa: mesaFinal, activo: edit.activo }
         : u
     ))
   }
+
+  const etiquetaMesa = (numero: string | null) =>
+    numero ? (mesas.find(m => String(m.numero) === numero)?.etiqueta ?? `Mesa ${numero}`) : null
 
   const filtrados = usuarios.filter(u => {
     const q = filtro.toLowerCase()
@@ -169,6 +192,9 @@ export default function TabAdminUsuarios() {
                     {u.rol === 'dirigente' && u.regional_asignada && `Dirigente — ${u.regional_asignada}`}
                     {u.rol === 'dirigente' && !u.regional_asignada && 'Dirigente — sin regional asignada'}
                     {u.rol === 'colaborador' && u.regional_asignada && `Colaborador — ${u.regional_asignada}`}
+                    {(u.rol === 'delegado' || u.rol === 'suplente') && (
+                      u.mesa ? `Mesa ${u.mesa} — ${etiquetaMesa(u.mesa)}` : 'Sin mesa asignada'
+                    )}
                   </p>
                 </div>
               </div>
@@ -213,7 +239,7 @@ export default function TabAdminUsuarios() {
                     <label className="text-xs font-semibold text-gray-600">Rol</label>
                     <select
                       value={edit.rol}
-                      onChange={e => setEdit(prev => ({ ...prev, rol: e.target.value, nucleo_asignado: '', regional_asignada: '' }))}
+                      onChange={e => setEdit(prev => ({ ...prev, rol: e.target.value, nucleo_asignado: '', regional_asignada: '', mesa: '' }))}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-white"
                       style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
                     >
@@ -269,6 +295,27 @@ export default function TabAdminUsuarios() {
                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-white"
                         style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
                       />
+                    </div>
+                  )}
+
+                  {/* Mesa (delegado / suplente) */}
+                  {(edit.rol === 'delegado' || edit.rol === 'suplente') && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-xs font-semibold text-gray-600">Mesa de votación asignada</label>
+                      <select
+                        value={edit.mesa}
+                        onChange={e => setEdit(prev => ({ ...prev, mesa: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 bg-white"
+                        style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+                      >
+                        <option value="">— Selecciona una mesa —</option>
+                        {mesas.map(m => (
+                          <option key={m.numero} value={String(m.numero)}>{m.numero}. {m.etiqueta}</option>
+                        ))}
+                      </select>
+                      {!edit.mesa && (
+                        <p className="text-xs text-orange-600">Obligatorio: el delegado no puede registrar votos sin mesa.</p>
+                      )}
                     </div>
                   )}
                 </div>

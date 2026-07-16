@@ -15,11 +15,24 @@ export default async function DelegadoPage() {
     .eq('id', session.user.id)
     .single()
 
+  const mesa = profile?.mesa ?? null
+
+  let lugar: string | null = null
+  if (mesa) {
+    const { data: mesaInfo } = await supabase
+      .from('mesas')
+      .select('etiqueta')
+      .eq('numero', Number(mesa))
+      .single()
+    lugar = mesaInfo?.etiqueta ?? null
+  }
+
   return (
     <PanelDelegado
       nombre={session.nombre}
       rol={session.rol}
-      mesa={profile?.mesa ?? null}
+      mesa={mesa}
+      lugar={lugar}
     />
   )
 }
