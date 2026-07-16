@@ -1996,6 +1996,7 @@ function TabDiaEleccion() {
   const [alertasDoble, setAlertasDoble] = useState<AlertaDoble[]>([])
   const [alertasNoHab, setAlertasNoHab] = useState<AlertaNoHab[]>([])
   const [porMesa, setPorMesa]           = useState<MesaResultado[]>([])
+  const [filtroMesa, setFiltroMesa]     = useState('')
   const [cargando, setCargando]         = useState(true)
 
   const cargar = useCallback(async () => {
@@ -2042,6 +2043,30 @@ function TabDiaEleccion() {
 
   const regionalesOrdenadas = Object.entries(porRegional).sort(([a], [b]) => a.localeCompare(b))
   const mesasConVotos = porMesa.filter(m => m.total > 0)
+  const qMesa = filtroMesa.trim().toLowerCase()
+  const mesasFiltradas = qMesa
+    ? mesasConVotos.filter(m => m.etiqueta.toLowerCase().includes(qMesa) || m.lugar.toLowerCase().includes(qMesa))
+    : mesasConVotos
+  const gruposMesa = Array.from(
+    mesasFiltradas.reduce((map, m) => {
+      const arr = map.get(m.lugar) ?? []
+      arr.push(m)
+      map.set(m.lugar, arr)
+      return map
+    }, new Map<string, MesaResultado[]>())
+  )
+    .map(([lugar, mesas]) => {
+      const ordenadas = [...mesas].sort((a, b) => a.numero - b.numero)
+      return {
+        lugar,
+        mesas: ordenadas,
+        a_favor:    ordenadas.reduce((s, m) => s + m.a_favor, 0),
+        no_a_favor: ordenadas.reduce((s, m) => s + m.no_a_favor, 0),
+        total:      ordenadas.reduce((s, m) => s + m.total, 0),
+        minNumero:  ordenadas[0].numero,
+      }
+    })
+    .sort((a, b) => a.minNumero - b.minNumero)
 
   return (
     <div className="space-y-5">
@@ -2174,59 +2199,85 @@ function TabDiaEleccion() {
         </div>
       )}
 
-      {/* ── Resultados por mesa ───────────────────────────────────────────── */}
+      {/* ── Resultados por mesa (agrupado por centro) ─────────────────────── */}
       {mesasConVotos.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm font-semibold text-gray-700">Resultados por mesa</p>
             <p className="text-xs text-gray-400">{mesasConVotos.length} de {porMesa.length} mesas con votos</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                    <th className="px-4 py-2.5 font-semibold">Mesa</th>
-                    <th className="px-3 py-2.5 font-semibold text-right">✓ A Favor</th>
-                    <th className="px-3 py-2.5 font-semibold text-right">✗ No A Favor</th>
-                    <th className="px-3 py-2.5 font-semibold text-right">Total</th>
-                    <th className="px-4 py-2.5 font-semibold w-32">Tendencia</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {mesasConVotos.map(m => {
-                    const pctF = m.total > 0 ? (m.a_favor / m.total * 100) : 0
-                    const lidera = m.a_favor >= m.no_a_favor
-                    return (
-                      <tr key={m.numero} className="hover:bg-gray-50">
-                        <td className="px-4 py-2.5">
-                          <p className="font-semibold text-gray-800 leading-tight">
-                            <span className="tabular-nums text-gray-400 mr-1.5">{m.numero}.</span>
-                            {m.etiqueta}
-                          </p>
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-green-700">{m.a_favor}</td>
-                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-red-600">{m.no_a_favor}</td>
-                        <td className="px-3 py-2.5 text-right font-bold tabular-nums text-gray-800">{m.total}</td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden flex">
-                              <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
-                              <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+
+          <input
+            type="text"
+            value={filtroMesa}
+            onChange={e => setFiltroMesa(e.target.value)}
+            placeholder="Buscar centro o mesa… (ej. Santiago, MOPC)"
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
+            style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+          />
+
+          {gruposMesa.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-6">Ninguna mesa coincide con “{filtroMesa}”.</p>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {gruposMesa.map(g => {
+                const pctF = g.total > 0 ? (g.a_favor / g.total * 100) : 0
+                const lidera = g.a_favor >= g.no_a_favor
+                const multi = g.mesas.length > 1
+                return (
+                  <div key={g.lugar} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    {/* Encabezado del centro */}
+                    <div className="px-5 py-3" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-bold text-sm leading-tight">{g.lugar}</p>
+                        <p className="text-blue-200 text-xs shrink-0">{g.total.toLocaleString()} votos{multi && ` · ${g.mesas.length} mesas`}</p>
+                      </div>
+                    </div>
+
+                    {/* Barra + tendencia del centro */}
+                    <div className="px-5 py-3 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
+                          <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
+                          <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+                        </div>
+                        <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
+                          {lidera ? '✓' : '✗'} {pctF.toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs">
+                        <span className="font-semibold text-green-700 tabular-nums">A Favor: {g.a_favor}</span>
+                        <span className="font-semibold text-red-600 tabular-nums">No A Favor: {g.no_a_favor}</span>
+                      </div>
+                    </div>
+
+                    {/* Desglose por mesa (solo si el centro tiene varias) */}
+                    {multi && (
+                      <div className="divide-y divide-gray-50">
+                        {g.mesas.map((m, i) => {
+                          const p = m.total > 0 ? (m.a_favor / m.total * 100) : 0
+                          return (
+                            <div key={m.numero} className="px-5 py-2 flex items-center gap-3">
+                              <span className="text-xs font-semibold text-gray-500 w-14 shrink-0">Mesa {i + 1}</span>
+                              <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden flex">
+                                <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
+                                <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
+                              </div>
+                              <span className="text-xs tabular-nums text-gray-500 shrink-0 w-24 text-right">
+                                <span className="text-green-700 font-semibold">{m.a_favor}</span>
+                                {' / '}
+                                <span className="text-red-600 font-semibold">{m.no_a_favor}</span>
+                              </span>
                             </div>
-                            <span className="text-xs font-bold tabular-nums shrink-0"
-                              style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
-                              {pctF.toFixed(0)}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-          </div>
+          )}
         </div>
       )}
 
