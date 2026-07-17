@@ -17,6 +17,7 @@ export default function PanelDelegado({ nombre, rol, mesa, lugar }: Props) {
   const [busqueda, setBusqueda]   = useState('')
   const [guardando, setGuardando] = useState(false)
   const [totalSesion, setTotalSesion] = useState(0)
+  const [ultimoCodigo, setUltimoCodigo] = useState<string | null>(null)
   const [resultado, setResultado] = useState<{
     ok: boolean
     nombre?: string
@@ -43,6 +44,7 @@ export default function PanelDelegado({ nombre, rol, mesa, lugar }: Props) {
       setResultado({ ok: false, error: r.error ?? 'No se pudo registrar.' })
     } else {
       setResultado({ ok: true, habilitado: r.habilitado })
+      setUltimoCodigo(q)
       setTotalSesion(n => n + 1)
     }
   }, [supabase, busqueda, guardando])
@@ -78,6 +80,11 @@ export default function PanelDelegado({ nombre, rol, mesa, lugar }: Props) {
           <p className="text-xs text-gray-400 mt-2">
             Registrados en esta sesión: <span className="font-bold text-gray-600 tabular-nums">{totalSesion}</span>
           </p>
+          {ultimoCodigo && (
+            <p className="text-xs text-gray-500 mt-1">
+              Último registrado: <span className="font-bold tabular-nums" style={{ color: 'var(--color-marino)' }}>{ultimoCodigo}</span>
+            </p>
+          )}
         </div>
 
         {/* Feedback del último voto */}
@@ -91,6 +98,11 @@ export default function PanelDelegado({ nombre, rol, mesa, lugar }: Props) {
               <p className={`text-2xl font-black ${resultado.habilitado ? 'text-green-700' : 'text-orange-700'}`}>
                 {resultado.habilitado ? '✓ Voto registrado' : '⚠ Registrado (no habilitado)'}
               </p>
+              {ultimoCodigo && (
+                <p className="text-sm font-semibold text-gray-600 mt-1">
+                  Colegiatura <span className="font-black tabular-nums">{ultimoCodigo}</span>
+                </p>
+              )}
               {!resultado.habilitado && (
                 <p className="text-orange-700 text-xs mt-2 font-medium">
                   Este colegiado no estaba habilitado. Se registra y se genera alerta.
