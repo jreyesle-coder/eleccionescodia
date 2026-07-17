@@ -1987,7 +1987,246 @@ interface MesaResultado {
   total: number
 }
 
+// ─── Resultado en Actas (conteo oficial) ─────────────────────────────────────
+// Se cargan a mano las actas de escrutinio a medida que llegan del día de
+// elección. Un objeto por mesa. Editar el array ACTAS para ir actualizando.
+// Plancha de George Richardson = "A Favor". Las demás cuentan como "No A Favor".
+const PLANCHA_GEORGE: number = 2
+
+interface ActaMesa {
+  folio:        string   // número de acta (esquina rojo, ej. '0062')
+  nucleo:       string   // CDN / profesión (ej. 'Ingeniero Civil')
+  ubicacion:    string   // lugar de votación (ej. 'Fantino')
+  plancha1:     number   // Suma Votos Plancha 1 + fraccionados
+  plancha2:     number   // Suma Votos Plancha 2 + fraccionados  (George)
+  plancha3:     number   // Suma Votos Plancha 3 + fraccionados
+  nulos?:       number
+  observacion?: string
+}
+
+// ⬇️ CARGAR ACTAS AQUÍ (una por acta). Fantino — 17/7/2026.
+const ACTAS: ActaMesa[] = [
+  { folio: '0062', nucleo: 'Ingeniero Civil',    ubicacion: 'Fantino', plancha1: 0, plancha2: 7,  plancha3: 0, nulos: 0 },
+  { folio: '0063', nucleo: 'Arquitecto',         ubicacion: 'Fantino', plancha1: 0, plancha2: 12, plancha3: 0, nulos: 0 },
+  { folio: '0064', nucleo: 'Ingeniero Agrónomo', ubicacion: 'Fantino', plancha1: 1, plancha2: 1,  plancha3: 0, nulos: 0 },
+  { folio: '0065', nucleo: 'Ingeniero Químico',  ubicacion: 'Fantino', plancha1: 0, plancha2: 1,  plancha3: 0, nulos: 0 },
+  { folio: '0066', nucleo: 'Arquitectura',       ubicacion: 'Fantino', plancha1: 0, plancha2: 6,  plancha3: 0, nulos: 0 },
+]
+
+function planchaGeorge(a: ActaMesa) {
+  return [a.plancha1, a.plancha2, a.plancha3][PLANCHA_GEORGE - 1]
+}
+function planchasOtras(a: ActaMesa) {
+  return [a.plancha1, a.plancha2, a.plancha3].reduce((s, v, i) => i === PLANCHA_GEORGE - 1 ? s : s + v, 0)
+}
+
+function TabResultadoActas() {
+  const totalAFavor   = ACTAS.reduce((s, a) => s + planchaGeorge(a), 0)
+  const totalNoAFavor = ACTAS.reduce((s, a) => s + planchasOtras(a), 0)
+  const totalP1       = ACTAS.reduce((s, a) => s + a.plancha1, 0)
+  const totalP2       = ACTAS.reduce((s, a) => s + a.plancha2, 0)
+  const totalP3       = ACTAS.reduce((s, a) => s + a.plancha3, 0)
+  const totalNulos    = ACTAS.reduce((s, a) => s + (a.nulos ?? 0), 0)
+  const totalValidos  = totalAFavor + totalNoAFavor
+  const totalEmitidos = totalValidos + totalNulos
+  const pctFavor      = totalValidos > 0 ? (totalAFavor   / totalValidos * 100) : 0
+  const pctNoFavor    = totalValidos > 0 ? (totalNoAFavor / totalValidos * 100) : 0
+  const diferencia    = totalAFavor - totalNoAFavor
+  const vamosGanando  = diferencia >= 0
+
+  // Una tarjeta por acta (ordenadas por folio)
+  const actasOrdenadas = [...ACTAS].sort((a, b) => a.folio.localeCompare(b.folio))
+
+  if (ACTAS.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center space-y-2">
+        <p className="text-4xl">🗒️</p>
+        <p className="text-gray-700 font-semibold">Aún no hay actas cargadas</p>
+        <p className="text-xs text-gray-400 max-w-md mx-auto">
+          Envíame las actas de escrutinio (folio, núcleo, votos por plancha y nulos)
+          y las voy cargando aquí una por una.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Banner conteo oficial */}
+      <div
+        className="rounded-2xl p-6 text-white flex items-center justify-between gap-4 flex-wrap"
+        style={{ background: vamosGanando
+          ? 'linear-gradient(135deg, #0F1B33, #1F3A6B)'
+          : 'linear-gradient(135deg, #7f1d1d, #991b1b)'
+        }}
+      >
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">
+            Conteo oficial en actas · {vamosGanando ? 'VA GANANDO' : 'VA PERDIENDO'}
+          </p>
+          <p className="text-3xl font-black">{vamosGanando ? '✓ A Favor' : '✗ No A Favor'}</p>
+          <p className="text-blue-200 text-sm mt-1">
+            {(vamosGanando ? totalAFavor : totalNoAFavor).toLocaleString()} votos · {ACTAS.length} actas cargadas
+          </p>
+        </div>
+        <div
+          className="text-center rounded-xl px-6 py-4 shrink-0"
+          style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}
+        >
+          <p className="font-black text-3xl tabular-nums">{(vamosGanando ? pctFavor : pctNoFavor).toFixed(1)}%</p>
+          <p className="text-xs opacity-70 mt-1">de votos válidos</p>
+        </div>
+      </div>
+
+      {/* Tarjetas A Favor / No A Favor */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-3" style={{ borderColor: '#16a34a' }}>
+          <p className="text-xs font-bold uppercase tracking-wide text-green-700">✓ A Favor</p>
+          <p className="text-5xl font-black tabular-nums text-green-700">{totalAFavor.toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{pctFavor.toFixed(1)}% de votos válidos</p>
+          <div className="bg-gray-100 rounded-full h-2">
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pctFavor}%`, backgroundColor: '#16a34a' }} />
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-3" style={{ borderColor: '#dc2626' }}>
+          <p className="text-xs font-bold uppercase tracking-wide text-red-600">✗ No A Favor</p>
+          <p className="text-5xl font-black tabular-nums text-red-600">{totalNoAFavor.toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{pctNoFavor.toFixed(1)}% de votos válidos</p>
+          <div className="bg-gray-100 rounded-full h-2">
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pctNoFavor}%`, backgroundColor: '#dc2626' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Métricas */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Diferencia',     val: `${diferencia >= 0 ? '+' : ''}${diferencia.toLocaleString()}`, color: diferencia >= 0 ? '#16a34a' : '#dc2626' },
+          { label: 'Total emitidos', val: totalEmitidos.toLocaleString(), color: 'var(--color-marino)' },
+          { label: 'Nulos',          val: totalNulos.toLocaleString(),    color: '#6b7280' },
+          { label: 'Actas',          val: ACTAS.length.toLocaleString(),  color: '#6b7280' },
+        ].map(m => (
+          <div key={m.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{m.label}</p>
+            <p className="text-2xl font-black tabular-nums mt-1" style={{ color: m.color }}>{m.val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Totales por plancha */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Totales por plancha</p>
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { n: 1, val: totalP1 },
+            { n: 2, val: totalP2 },
+            { n: 3, val: totalP3 },
+          ].map(p => {
+            const esGeorge = p.n === PLANCHA_GEORGE
+            return (
+              <div key={p.n} className="text-center rounded-xl p-3"
+                style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.08)', border: '2px solid #16a34a' } : { backgroundColor: '#f8fafc' }}>
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: esGeorge ? '#16a34a' : '#6b7280' }}>
+                  Plancha {p.n}{esGeorge ? ' ★' : ''}
+                </p>
+                <p className="text-2xl font-black tabular-nums mt-1" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>
+                  {p.val.toLocaleString()}
+                </p>
+                {esGeorge && <p className="text-[10px] text-green-700 font-semibold">George Richardson</p>}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Detalle por acta */}
+      <div className="space-y-3">
+        <p className="text-sm font-semibold text-gray-700">Actas cargadas</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {actasOrdenadas.map(a => {
+            const geo = planchaGeorge(a)
+            const otras = planchasOtras(a)
+            const t = geo + otras
+            const pctF = t > 0 ? (geo / t * 100) : 0
+            const lidera = geo >= otras
+            return (
+              <div key={a.folio} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+                  <div>
+                    <p className="font-bold text-sm leading-tight">{a.nucleo}</p>
+                    <p className="text-[11px] text-blue-200">{a.ubicacion} · Acta {a.folio}</p>
+                  </div>
+                  <p className="text-xs shrink-0 opacity-90">{t.toLocaleString()} válidos</p>
+                </div>
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
+                      <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
+                      <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+                    </div>
+                    <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
+                      {lidera ? '✓' : '✗'} {pctF.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="px-5 py-3 grid grid-cols-4 gap-2 text-center">
+                  {[
+                    { label: 'Plancha 1', val: a.plancha1, geo: PLANCHA_GEORGE === 1 },
+                    { label: 'Plancha 2', val: a.plancha2, geo: PLANCHA_GEORGE === 2 },
+                    { label: 'Plancha 3', val: a.plancha3, geo: PLANCHA_GEORGE === 3 },
+                    { label: 'Nulos',     val: a.nulos ?? 0, geo: false },
+                  ].map(c => (
+                    <div key={c.label}>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: c.geo ? '#16a34a' : '#9ca3af' }}>
+                        {c.label}{c.geo ? ' ★' : ''}
+                      </p>
+                      <p className="text-lg font-bold tabular-nums" style={{ color: c.geo ? '#16a34a' : '#374151' }}>
+                        {c.val}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {a.observacion && (
+                  <p className="px-5 pb-3 text-xs text-gray-400 italic">{a.observacion}</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Día de Elección (con sub-tabs) ──────────────────────────────────────
 function TabDiaEleccion() {
+  const [subTab, setSubTab] = useState<'vivo' | 'actas'>('vivo')
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-2 border-b border-gray-200">
+        {([
+          { id: 'vivo'  as const, label: '📡 Tendencia en vivo' },
+          { id: 'actas' as const, label: '🗒️ Resultado en actas' },
+        ]).map(s => (
+          <button
+            key={s.id}
+            onClick={() => setSubTab(s.id)}
+            className="px-4 py-2 text-sm font-semibold -mb-px border-b-2 transition-colors"
+            style={subTab === s.id
+              ? { borderBottomColor: 'var(--color-marino)', color: 'var(--color-marino)' }
+              : { borderBottomColor: 'transparent', color: '#9ca3af' }}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      {subTab === 'vivo'  && <TabDiaEleccionVivo />}
+      {subTab === 'actas' && <TabResultadoActas />}
+    </div>
+  )
+}
+
+function TabDiaEleccionVivo() {
   const supabase = createClient()
   const [totalVotos, setTotalVotos]     = useState(0)
   const [aFavor, setAFavor]             = useState(0)
