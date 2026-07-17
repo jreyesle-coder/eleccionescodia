@@ -1988,89 +1988,49 @@ interface MesaResultado {
 }
 
 // ─── Resultado en Actas (conteo oficial) ─────────────────────────────────────
-// Se cargan a mano las actas de escrutinio a medida que llegan del día de
-// elección. Un objeto por mesa. Editar el array ACTAS para ir actualizando.
-// Plancha de George Richardson = "A Favor". Las demás cuentan como "No A Favor".
-const PLANCHA_GEORGE: number = 2
-
-interface ActaMesa {
-  folio:        string   // número de acta (esquina rojo, ej. '0062')
-  nucleo:       string   // CDN / profesión (ej. 'Ingeniero Civil')
-  ubicacion:    string   // lugar de votación (ej. 'Fantino')
-  plancha1:     number   // Suma Votos Plancha 1 + fraccionados
-  plancha2:     number   // Suma Votos Plancha 2 + fraccionados  (George)
-  plancha3:     number   // Suma Votos Plancha 3 + fraccionados
-  nulos?:       number
-  observacion?: string
+// George Richardson es el candidato #1 (renglón 1) de la PLANCHA 2, y solo
+// compite en el núcleo ARQUITECTURA. Por el voto fraccionado, cada uno de los
+// 5 candidatos de una plancha recibe votos por separado: que la Plancha 2 gane
+// NO significa que Richardson ganó. Por eso contamos SOLO su línea (Plancha 2,
+// renglón 1) contra el candidato rival del mismo puesto (Plancha 1 y 3, renglón 1),
+// y SOLO en actas del núcleo Arquitectura.
+interface ActaArq {
+  folio:         string   // número de acta (esquina rojo)
+  ubicacion:     string   // lugar de votación (ej. 'Fantino', 'EGEHID')
+  richardson:    number   // Plancha 2, renglón 1 = George Richardson
+  rivalP1:       number   // Plancha 1, renglón 1 (candidato rival del mismo puesto)
+  rivalP3:       number   // Plancha 3, renglón 1
+  nulos?:        number
+  porConfirmar?: boolean  // lectura tentativa, pendiente de verificar
 }
 
-// ⬇️ CARGAR ACTAS AQUÍ (una por acta). Los valores plancha1/2/3 son el
-// VOTO PRESIDENCIAL de cada plancha = renglón 1 de "Suma Votos Plancha más
-// Fraccionados" (votos enteros + fraccionados de la posición Presidente).
-const ACTAS: ActaMesa[] = [
-  // ── Fantino — 17/7/2026 ──
-  { folio: '0062', nucleo: 'Ingeniero Civil',    ubicacion: 'Fantino', plancha1: 0, plancha2: 7,  plancha3: 0, nulos: 0 },
-  { folio: '0063', nucleo: 'Arquitecto',         ubicacion: 'Fantino', plancha1: 0, plancha2: 12, plancha3: 0, nulos: 0 },
-  { folio: '0064', nucleo: 'Ingeniero Agrónomo', ubicacion: 'Fantino', plancha1: 1, plancha2: 1,  plancha3: 0, nulos: 0 },
-  { folio: '0065', nucleo: 'Ingeniero Químico',  ubicacion: 'Fantino', plancha1: 0, plancha2: 1,  plancha3: 0, nulos: 0 },
-  { folio: '0066', nucleo: 'Arquitectura',       ubicacion: 'Fantino', plancha1: 0, plancha2: 6,  plancha3: 0, nulos: 0 },
-  // ── EGEHID — 17/7/2026 ──
-  { folio: '0459', nucleo: 'Topógrafos e Ing. Geomáticos',      ubicacion: 'EGEHID', plancha1: 3, plancha2: 0, plancha3: 0, nulos: 0 },
-  { folio: '0461', nucleo: 'Agrimensura',                       ubicacion: 'EGEHID', plancha1: 2, plancha2: 7, plancha3: 5, nulos: 1 },
-  { folio: '0463', nucleo: 'Arquitectura',                      ubicacion: 'EGEHID', plancha1: 2, plancha2: 6, plancha3: 0, nulos: 0 },
-  { folio: '0465', nucleo: 'Ingenieros Químicos',              ubicacion: 'EGEHID', plancha1: 6, plancha2: 2, plancha3: 0, nulos: 0 },
-  { folio: '0466', nucleo: 'Electromecánicos Ind. y Afines',    ubicacion: 'EGEHID', plancha1: 8, plancha2: 9, plancha3: 0, nulos: 0 },
-  { folio: '0467', nucleo: 'Agrónomos',                         ubicacion: 'EGEHID', plancha1: 1, plancha2: 1, plancha3: 0, nulos: 0 },
+// ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. Números tomados del renglón 1 de
+// "Suma Votos Plancha más Fraccionados" de cada plancha.
+const ACTAS_ARQ: ActaArq[] = [
+  { folio: '0066', ubicacion: 'Fantino', richardson: 6, rivalP1: 0, rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0463', ubicacion: 'EGEHID',  richardson: 6, rivalP1: 2, rivalP3: 0, nulos: 0 },
 ]
 
-function planchaGeorge(a: ActaMesa) {
-  return [a.plancha1, a.plancha2, a.plancha3][PLANCHA_GEORGE - 1]
-}
-function planchasOtras(a: ActaMesa) {
-  return [a.plancha1, a.plancha2, a.plancha3].reduce((s, v, i) => i === PLANCHA_GEORGE - 1 ? s : s + v, 0)
-}
-
 function TabResultadoActas() {
-  const totalAFavor   = ACTAS.reduce((s, a) => s + planchaGeorge(a), 0)
-  const totalNoAFavor = ACTAS.reduce((s, a) => s + planchasOtras(a), 0)
-  const totalP1       = ACTAS.reduce((s, a) => s + a.plancha1, 0)
-  const totalP2       = ACTAS.reduce((s, a) => s + a.plancha2, 0)
-  const totalP3       = ACTAS.reduce((s, a) => s + a.plancha3, 0)
-  const totalNulos    = ACTAS.reduce((s, a) => s + (a.nulos ?? 0), 0)
-  const totalValidos  = totalAFavor + totalNoAFavor
-  const totalEmitidos = totalValidos + totalNulos
-  const pctFavor      = totalValidos > 0 ? (totalAFavor   / totalValidos * 100) : 0
-  const pctNoFavor    = totalValidos > 0 ? (totalNoAFavor / totalValidos * 100) : 0
-  const diferencia    = totalAFavor - totalNoAFavor
-  const vamosGanando  = diferencia >= 0
+  const rich    = ACTAS_ARQ.reduce((s, a) => s + a.richardson, 0)
+  const rivales = ACTAS_ARQ.reduce((s, a) => s + a.rivalP1 + a.rivalP3, 0)
+  const rP1     = ACTAS_ARQ.reduce((s, a) => s + a.rivalP1, 0)
+  const rP3     = ACTAS_ARQ.reduce((s, a) => s + a.rivalP3, 0)
+  const nulos   = ACTAS_ARQ.reduce((s, a) => s + (a.nulos ?? 0), 0)
+  const validos = rich + rivales
+  const pctRich = validos > 0 ? (rich / validos * 100) : 0
+  const dif     = rich - rivales
+  const gana    = dif >= 0
+  const hayTentativas = ACTAS_ARQ.some(a => a.porConfirmar)
 
-  // Agrupar por ubicación (una tarjeta por lugar de votación)
-  const grupos = Array.from(
-    ACTAS.reduce((map, a) => {
-      const arr = map.get(a.ubicacion) ?? []
-      arr.push(a)
-      map.set(a.ubicacion, arr)
-      return map
-    }, new Map<string, ActaMesa[]>())
-  ).map(([ubicacion, actas]) => ({
-    ubicacion,
-    actas: [...actas].sort((x, y) => x.folio.localeCompare(y.folio)),
-    aFavor:   actas.reduce((s, a) => s + planchaGeorge(a), 0),
-    noAFavor: actas.reduce((s, a) => s + planchasOtras(a), 0),
-    p1:       actas.reduce((s, a) => s + a.plancha1, 0),
-    p2:       actas.reduce((s, a) => s + a.plancha2, 0),
-    p3:       actas.reduce((s, a) => s + a.plancha3, 0),
-    nulos:    actas.reduce((s, a) => s + (a.nulos ?? 0), 0),
-  })).sort((a, b) => (b.aFavor + b.noAFavor) - (a.aFavor + a.noAFavor))
-
-  if (ACTAS.length === 0) {
+  if (ACTAS_ARQ.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center space-y-2">
         <p className="text-4xl">🗒️</p>
-        <p className="text-gray-700 font-semibold">Aún no hay actas cargadas</p>
+        <p className="text-gray-700 font-semibold">Aún no hay actas de Arquitectura cargadas</p>
         <p className="text-xs text-gray-400 max-w-md mx-auto">
-          Envíame las actas de escrutinio (folio, núcleo, votos por plancha y nulos)
-          y las voy cargando aquí una por una.
+          Solo cuentan las actas del núcleo Arquitectura, donde compite George Richardson
+          (Plancha 2, renglón 1). Envíamelas y las voy cargando.
         </p>
       </div>
     )
@@ -2078,48 +2038,55 @@ function TabResultadoActas() {
 
   return (
     <div className="space-y-5">
-      {/* Banner conteo oficial */}
+      {/* Aclaración del método */}
+      <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
+        Se cuenta <b>solo la línea de George Richardson</b> (Plancha 2 · renglón 1) en las actas del
+        núcleo <b>Arquitectura</b>, contra el candidato rival del mismo puesto. El voto por plancha completa
+        no aplica: cada candidato recibe votos por separado.
+      </div>
+
+      {/* Banner */}
       <div
         className="rounded-2xl p-6 text-white flex items-center justify-between gap-4 flex-wrap"
-        style={{ background: vamosGanando
+        style={{ background: gana
           ? 'linear-gradient(135deg, #0F1B33, #1F3A6B)'
           : 'linear-gradient(135deg, #7f1d1d, #991b1b)'
         }}
       >
         <div>
           <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">
-            Conteo oficial en actas · {vamosGanando ? 'VA GANANDO' : 'VA PERDIENDO'}
+            George Richardson · {gana ? 'VA GANANDO' : 'VA PERDIENDO'}
           </p>
-          <p className="text-3xl font-black">{vamosGanando ? '✓ A Favor' : '✗ No A Favor'}</p>
+          <p className="text-3xl font-black">{rich.toLocaleString()} votos</p>
           <p className="text-blue-200 text-sm mt-1">
-            {(vamosGanando ? totalAFavor : totalNoAFavor).toLocaleString()} votos · {ACTAS.length} actas cargadas
+            {dif >= 0 ? '+' : ''}{dif.toLocaleString()} vs. rivales · {ACTAS_ARQ.length} acta{ACTAS_ARQ.length !== 1 ? 's' : ''} de Arquitectura
           </p>
         </div>
         <div
           className="text-center rounded-xl px-6 py-4 shrink-0"
           style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}
         >
-          <p className="font-black text-3xl tabular-nums">{(vamosGanando ? pctFavor : pctNoFavor).toFixed(1)}%</p>
+          <p className="font-black text-3xl tabular-nums">{pctRich.toFixed(1)}%</p>
           <p className="text-xs opacity-70 mt-1">de votos válidos</p>
         </div>
       </div>
 
-      {/* Tarjetas A Favor / No A Favor */}
+      {/* Tarjetas Richardson / Rivales */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-3" style={{ borderColor: '#16a34a' }}>
-          <p className="text-xs font-bold uppercase tracking-wide text-green-700">✓ A Favor</p>
-          <p className="text-5xl font-black tabular-nums text-green-700">{totalAFavor.toLocaleString()}</p>
-          <p className="text-sm text-gray-400">{pctFavor.toFixed(1)}% de votos válidos</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-green-700">★ George Richardson (P2·1)</p>
+          <p className="text-5xl font-black tabular-nums text-green-700">{rich.toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{pctRich.toFixed(1)}% de votos válidos</p>
           <div className="bg-gray-100 rounded-full h-2">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pctFavor}%`, backgroundColor: '#16a34a' }} />
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pctRich}%`, backgroundColor: '#16a34a' }} />
           </div>
         </div>
         <div className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-3" style={{ borderColor: '#dc2626' }}>
-          <p className="text-xs font-bold uppercase tracking-wide text-red-600">✗ No A Favor</p>
-          <p className="text-5xl font-black tabular-nums text-red-600">{totalNoAFavor.toLocaleString()}</p>
-          <p className="text-sm text-gray-400">{pctNoFavor.toFixed(1)}% de votos válidos</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-red-600">Rivales (P1·1 + P3·1)</p>
+          <p className="text-5xl font-black tabular-nums text-red-600">{rivales.toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{(100 - pctRich).toFixed(1)}% de votos válidos</p>
           <div className="bg-gray-100 rounded-full h-2">
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pctNoFavor}%`, backgroundColor: '#dc2626' }} />
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${100 - pctRich}%`, backgroundColor: '#dc2626' }} />
           </div>
         </div>
       </div>
@@ -2127,10 +2094,10 @@ function TabResultadoActas() {
       {/* Métricas */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Diferencia',     val: `${diferencia >= 0 ? '+' : ''}${diferencia.toLocaleString()}`, color: diferencia >= 0 ? '#16a34a' : '#dc2626' },
-          { label: 'Total emitidos', val: totalEmitidos.toLocaleString(), color: 'var(--color-marino)' },
-          { label: 'Nulos',          val: totalNulos.toLocaleString(),    color: '#6b7280' },
-          { label: 'Actas',          val: ACTAS.length.toLocaleString(),  color: '#6b7280' },
+          { label: 'Diferencia', val: `${dif >= 0 ? '+' : ''}${dif.toLocaleString()}`, color: dif >= 0 ? '#16a34a' : '#dc2626' },
+          { label: 'Rival P1',   val: rP1.toLocaleString(),   color: 'var(--color-marino)' },
+          { label: 'Rival P3',   val: rP3.toLocaleString(),   color: 'var(--color-marino)' },
+          { label: 'Nulos',      val: nulos.toLocaleString(), color: '#6b7280' },
         ].map(m => (
           <div key={m.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{m.label}</p>
@@ -2139,105 +2106,61 @@ function TabResultadoActas() {
         ))}
       </div>
 
-      {/* Totales por plancha */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <p className="text-sm font-semibold text-gray-700 mb-3">Totales por plancha</p>
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { n: 1, val: totalP1 },
-            { n: 2, val: totalP2 },
-            { n: 3, val: totalP3 },
-          ].map(p => {
-            const esGeorge = p.n === PLANCHA_GEORGE
-            return (
-              <div key={p.n} className="text-center rounded-xl p-3"
-                style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.08)', border: '2px solid #16a34a' } : { backgroundColor: '#f8fafc' }}>
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: esGeorge ? '#16a34a' : '#6b7280' }}>
-                  Plancha {p.n}{esGeorge ? ' ★' : ''}
-                </p>
-                <p className="text-2xl font-black tabular-nums mt-1" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>
-                  {p.val.toLocaleString()}
-                </p>
-                {esGeorge && <p className="text-[10px] text-green-700 font-semibold">George Richardson</p>}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Resultados agrupados por lugar de votación */}
+      {/* Detalle por acta */}
       <div className="space-y-3">
-        <p className="text-sm font-semibold text-gray-700">Resultados por lugar de votación</p>
+        <p className="text-sm font-semibold text-gray-700">Actas de Arquitectura</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {grupos.map(g => {
-            const t = g.aFavor + g.noAFavor
-            const pctF = t > 0 ? (g.aFavor / t * 100) : 0
-            const lidera = g.aFavor >= g.noAFavor
+          {[...ACTAS_ARQ].sort((a, b) => a.folio.localeCompare(b.folio)).map(a => {
+            const otras = a.rivalP1 + a.rivalP3
+            const t = a.richardson + otras
+            const p = t > 0 ? (a.richardson / t * 100) : 0
+            const lidera = a.richardson >= otras
             return (
-              <div key={g.ubicacion} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {/* Cabecera del lugar */}
+              <div key={a.folio} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
                   <div>
-                    <p className="font-bold text-base leading-tight">{g.ubicacion}</p>
-                    <p className="text-[11px] text-blue-200">{g.actas.length} acta{g.actas.length !== 1 ? 's' : ''} · {t.toLocaleString()} votos válidos</p>
+                    <p className="font-bold text-sm leading-tight">
+                      {a.ubicacion} · Arquitectura
+                      {a.porConfirmar && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-dorado)', color: '#0F1B33' }}>por confirmar</span>}
+                    </p>
+                    <p className="text-[11px] text-blue-200">Acta {a.folio} · {t.toLocaleString()} votos válidos</p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-2xl font-black tabular-nums" style={{ color: lidera ? '#4ade80' : '#fca5a5' }}>{pctF.toFixed(0)}%</p>
-                    <p className="text-[10px] text-blue-200">{lidera ? '✓ A Favor' : '✗ No A Favor'}</p>
-                  </div>
+                  <p className="text-xl font-black tabular-nums shrink-0" style={{ color: lidera ? '#4ade80' : '#fca5a5' }}>{p.toFixed(0)}%</p>
                 </div>
-
-                {/* Barra + totales del lugar */}
                 <div className="px-5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
-                      <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
-                      <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
+                      <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
+                      <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
                     </div>
                   </div>
-                  <div className="flex justify-between mt-2 text-xs">
-                    <span className="font-semibold text-green-700 tabular-nums">✓ A Favor: {g.aFavor}</span>
-                    <span className="font-semibold text-red-600 tabular-nums">✗ No A Favor: {g.noAFavor}</span>
-                  </div>
-                  <div className="flex justify-between mt-1 text-[11px] text-gray-400 tabular-nums">
-                    <span>P1: {g.p1}</span>
-                    <span style={{ color: '#16a34a', fontWeight: 600 }}>P2 ★: {g.p2}</span>
-                    <span>P3: {g.p3}</span>
-                    <span>Nulos: {g.nulos}</span>
-                  </div>
                 </div>
-
-                {/* Desglose por acta / núcleo */}
-                <div className="divide-y divide-gray-50">
-                  {g.actas.map(a => {
-                    const geo = planchaGeorge(a)
-                    const otras = planchasOtras(a)
-                    const ta = geo + otras
-                    const p = ta > 0 ? (geo / ta * 100) : 0
-                    return (
-                      <div key={a.folio} className="px-5 py-2 flex items-center gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-gray-700 truncate">{a.nucleo}</p>
-                          <p className="text-[10px] text-gray-400">Acta {a.folio}</p>
-                        </div>
-                        <div className="w-20 sm:w-28 bg-gray-100 rounded-full h-1.5 overflow-hidden flex shrink-0">
-                          <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
-                          <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
-                        </div>
-                        <span className="text-xs tabular-nums text-gray-500 shrink-0 w-16 text-right">
-                          <span className="text-green-700 font-semibold">{geo}</span>
-                          {' / '}
-                          <span className="text-red-600 font-semibold">{otras}</span>
-                        </span>
-                      </div>
-                    )
-                  })}
+                <div className="px-5 py-3 grid grid-cols-4 gap-2 text-center">
+                  {[
+                    { label: 'Richardson', val: a.richardson, geo: true },
+                    { label: 'Rival P1',   val: a.rivalP1,    geo: false },
+                    { label: 'Rival P3',   val: a.rivalP3,    geo: false },
+                    { label: 'Nulos',      val: a.nulos ?? 0, geo: false },
+                  ].map(c => (
+                    <div key={c.label}>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: c.geo ? '#16a34a' : '#9ca3af' }}>
+                        {c.label}{c.geo ? ' ★' : ''}
+                      </p>
+                      <p className="text-lg font-bold tabular-nums" style={{ color: c.geo ? '#16a34a' : '#374151' }}>{c.val}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )
           })}
         </div>
       </div>
+
+      {hayTentativas && (
+        <p className="text-xs text-gray-400 text-center">
+          Las actas marcadas <b>“por confirmar”</b> tienen lectura tentativa del renglón 1; se ajustan al verificar.
+        </p>
+      )}
     </div>
   )
 }
