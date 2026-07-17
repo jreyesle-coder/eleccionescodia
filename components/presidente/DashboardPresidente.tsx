@@ -1998,13 +1998,23 @@ function TabDiaEleccion() {
   const [porMesa, setPorMesa]           = useState<MesaResultado[]>([])
   const [filtroMesa, setFiltroMesa]     = useState('')
   const [cargando, setCargando]         = useState(true)
+  const [nucleos, setNucleos]           = useState<string[]>([])
+  const [nucleoSel, setNucleoSel]       = useState<string>('ARQUITECTOS')
+
+  // Poblar el selector de núcleos una sola vez
+  useEffect(() => {
+    supabase.rpc('nucleos_disponibles').then(({ data }) => {
+      setNucleos(((data as { nucleo: string }[]) ?? []).map(r => r.nucleo))
+    })
+  }, [supabase])
 
   const cargar = useCallback(async () => {
+    const arg = { p_nucleo: nucleoSel || null }
     const [resConteo, resDoble, resNoHab, resMesa] = await Promise.all([
-      supabase.rpc('conteo_votos_dia'),
+      supabase.rpc('conteo_votos_dia', arg),
       supabase.from('v_alerta_doble_voto').select('*'),
       supabase.from('v_alerta_no_habilitado').select('*').order('created_at', { ascending: false }),
-      supabase.rpc('conteo_por_mesa'),
+      supabase.rpc('conteo_por_mesa', arg),
     ])
     const c = Array.isArray(resConteo.data) ? resConteo.data[0] : resConteo.data
     if (c) {
@@ -2022,7 +2032,7 @@ function TabDiaEleccion() {
       total:      Number(m.total),
     })))
     setCargando(false)
-  }, [supabase])
+  }, [supabase, nucleoSel])
 
   useEffect(() => {
     cargar()
@@ -2070,6 +2080,23 @@ function TabDiaEleccion() {
 
   return (
     <div className="space-y-5">
+
+      {/* ── Selector de núcleo ─────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3 flex-wrap">
+        <label className="text-sm font-semibold text-gray-700 shrink-0">Núcleo:</label>
+        <select
+          value={nucleoSel}
+          onChange={e => setNucleoSel(e.target.value)}
+          className="border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2"
+          style={{ '--tw-ring-color': 'var(--color-marino)' } as React.CSSProperties}
+        >
+          <option value="">Todos los núcleos</option>
+          {nucleos.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <span className="text-xs text-gray-400">
+          {nucleoSel ? `Mostrando solo ${nucleoSel}` : 'Mostrando el total combinado de todos los núcleos'}
+        </span>
+      </div>
 
       {/* ── Banner ganador ─────────────────────────────────────────────────── */}
       {totalVotos > 0 && (
