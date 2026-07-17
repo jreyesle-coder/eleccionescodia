@@ -2044,8 +2044,24 @@ function TabResultadoActas() {
   const diferencia    = totalAFavor - totalNoAFavor
   const vamosGanando  = diferencia >= 0
 
-  // Una tarjeta por acta (ordenadas por folio)
-  const actasOrdenadas = [...ACTAS].sort((a, b) => a.folio.localeCompare(b.folio))
+  // Agrupar por ubicación (una tarjeta por lugar de votación)
+  const grupos = Array.from(
+    ACTAS.reduce((map, a) => {
+      const arr = map.get(a.ubicacion) ?? []
+      arr.push(a)
+      map.set(a.ubicacion, arr)
+      return map
+    }, new Map<string, ActaMesa[]>())
+  ).map(([ubicacion, actas]) => ({
+    ubicacion,
+    actas: [...actas].sort((x, y) => x.folio.localeCompare(y.folio)),
+    aFavor:   actas.reduce((s, a) => s + planchaGeorge(a), 0),
+    noAFavor: actas.reduce((s, a) => s + planchasOtras(a), 0),
+    p1:       actas.reduce((s, a) => s + a.plancha1, 0),
+    p2:       actas.reduce((s, a) => s + a.plancha2, 0),
+    p3:       actas.reduce((s, a) => s + a.plancha3, 0),
+    nulos:    actas.reduce((s, a) => s + (a.nulos ?? 0), 0),
+  })).sort((a, b) => (b.aFavor + b.noAFavor) - (a.aFavor + a.noAFavor))
 
   if (ACTAS.length === 0) {
     return (
@@ -2149,56 +2165,74 @@ function TabResultadoActas() {
         </div>
       </div>
 
-      {/* Detalle por acta */}
+      {/* Resultados agrupados por lugar de votación */}
       <div className="space-y-3">
-        <p className="text-sm font-semibold text-gray-700">Actas cargadas</p>
+        <p className="text-sm font-semibold text-gray-700">Resultados por lugar de votación</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {actasOrdenadas.map(a => {
-            const geo = planchaGeorge(a)
-            const otras = planchasOtras(a)
-            const t = geo + otras
-            const pctF = t > 0 ? (geo / t * 100) : 0
-            const lidera = geo >= otras
+          {grupos.map(g => {
+            const t = g.aFavor + g.noAFavor
+            const pctF = t > 0 ? (g.aFavor / t * 100) : 0
+            const lidera = g.aFavor >= g.noAFavor
             return (
-              <div key={a.folio} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div key={g.ubicacion} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {/* Cabecera del lugar */}
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
                   <div>
-                    <p className="font-bold text-sm leading-tight">{a.nucleo}</p>
-                    <p className="text-[11px] text-blue-200">{a.ubicacion} · Acta {a.folio}</p>
+                    <p className="font-bold text-base leading-tight">{g.ubicacion}</p>
+                    <p className="text-[11px] text-blue-200">{g.actas.length} acta{g.actas.length !== 1 ? 's' : ''} · {t.toLocaleString()} votos válidos</p>
                   </div>
-                  <p className="text-xs shrink-0 opacity-90">{t.toLocaleString()} válidos</p>
+                  <div className="text-right shrink-0">
+                    <p className="text-2xl font-black tabular-nums" style={{ color: lidera ? '#4ade80' : '#fca5a5' }}>{pctF.toFixed(0)}%</p>
+                    <p className="text-[10px] text-blue-200">{lidera ? '✓ A Favor' : '✗ No A Favor'}</p>
+                  </div>
                 </div>
+
+                {/* Barra + totales del lugar */}
                 <div className="px-5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
                       <div className="h-full" style={{ width: `${pctF}%`, backgroundColor: '#16a34a' }} />
                       <div className="h-full" style={{ width: `${100 - pctF}%`, backgroundColor: '#dc2626' }} />
                     </div>
-                    <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: lidera ? '#16a34a' : '#dc2626' }}>
-                      {lidera ? '✓' : '✗'} {pctF.toFixed(0)}%
-                    </span>
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs">
+                    <span className="font-semibold text-green-700 tabular-nums">✓ A Favor: {g.aFavor}</span>
+                    <span className="font-semibold text-red-600 tabular-nums">✗ No A Favor: {g.noAFavor}</span>
+                  </div>
+                  <div className="flex justify-between mt-1 text-[11px] text-gray-400 tabular-nums">
+                    <span>P1: {g.p1}</span>
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>P2 ★: {g.p2}</span>
+                    <span>P3: {g.p3}</span>
+                    <span>Nulos: {g.nulos}</span>
                   </div>
                 </div>
-                <div className="px-5 py-3 grid grid-cols-4 gap-2 text-center">
-                  {[
-                    { label: 'Plancha 1', val: a.plancha1, geo: PLANCHA_GEORGE === 1 },
-                    { label: 'Plancha 2', val: a.plancha2, geo: PLANCHA_GEORGE === 2 },
-                    { label: 'Plancha 3', val: a.plancha3, geo: PLANCHA_GEORGE === 3 },
-                    { label: 'Nulos',     val: a.nulos ?? 0, geo: false },
-                  ].map(c => (
-                    <div key={c.label}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: c.geo ? '#16a34a' : '#9ca3af' }}>
-                        {c.label}{c.geo ? ' ★' : ''}
-                      </p>
-                      <p className="text-lg font-bold tabular-nums" style={{ color: c.geo ? '#16a34a' : '#374151' }}>
-                        {c.val}
-                      </p>
-                    </div>
-                  ))}
+
+                {/* Desglose por acta / núcleo */}
+                <div className="divide-y divide-gray-50">
+                  {g.actas.map(a => {
+                    const geo = planchaGeorge(a)
+                    const otras = planchasOtras(a)
+                    const ta = geo + otras
+                    const p = ta > 0 ? (geo / ta * 100) : 0
+                    return (
+                      <div key={a.folio} className="px-5 py-2 flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-gray-700 truncate">{a.nucleo}</p>
+                          <p className="text-[10px] text-gray-400">Acta {a.folio}</p>
+                        </div>
+                        <div className="w-20 sm:w-28 bg-gray-100 rounded-full h-1.5 overflow-hidden flex shrink-0">
+                          <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
+                          <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
+                        </div>
+                        <span className="text-xs tabular-nums text-gray-500 shrink-0 w-16 text-right">
+                          <span className="text-green-700 font-semibold">{geo}</span>
+                          {' / '}
+                          <span className="text-red-600 font-semibold">{otras}</span>
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
-                {a.observacion && (
-                  <p className="px-5 pb-3 text-xs text-gray-400 italic">{a.observacion}</p>
-                )}
               </div>
             )
           })}
