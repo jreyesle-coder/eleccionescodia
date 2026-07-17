@@ -2007,7 +2007,9 @@ interface ActaArq {
 // ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. Números tomados del renglón 1 de
 // "Suma Votos Plancha más Fraccionados" de cada plancha.
 const ACTAS_ARQ: ActaArq[] = [
-  { folio: '0066', ubicacion: 'Fantino', richardson: 6, rivalP1: 0, rivalP3: 0, nulos: 0, porConfirmar: true },
+  // Fantino 0063: 12 votos fraccionados, pero fueron a renglones 3-4 de la Plancha 1.
+  // La posición 1 (Richardson) quedó en 0 → no ganó aquí.
+  { folio: '0063', ubicacion: 'Fantino', richardson: 0, rivalP1: 0, rivalP3: 0, nulos: 0 },
   { folio: '0463', ubicacion: 'EGEHID',  richardson: 6, rivalP1: 2, rivalP3: 0, nulos: 0 },
 ]
 
@@ -2113,6 +2115,7 @@ function TabResultadoActas() {
           {[...ACTAS_ARQ].sort((a, b) => a.folio.localeCompare(b.folio)).map(a => {
             const otras = a.rivalP1 + a.rivalP3
             const t = a.richardson + otras
+            const sinVotos = t === 0
             const p = t > 0 ? (a.richardson / t * 100) : 0
             const lidera = a.richardson >= otras
             return (
@@ -2123,15 +2126,21 @@ function TabResultadoActas() {
                       {a.ubicacion} · Arquitectura
                       {a.porConfirmar && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-dorado)', color: '#0F1B33' }}>por confirmar</span>}
                     </p>
-                    <p className="text-[11px] text-blue-200">Acta {a.folio} · {t.toLocaleString()} votos válidos</p>
+                    <p className="text-[11px] text-blue-200">
+                      Acta {a.folio} · {sinVotos ? 'sin votos en posición 1' : `${t.toLocaleString()} votos válidos`}
+                    </p>
                   </div>
-                  <p className="text-xl font-black tabular-nums shrink-0" style={{ color: lidera ? '#4ade80' : '#fca5a5' }}>{p.toFixed(0)}%</p>
+                  <p className="text-xl font-black tabular-nums shrink-0" style={{ color: sinVotos ? '#94a3b8' : (lidera ? '#4ade80' : '#fca5a5') }}>
+                    {sinVotos ? '—' : `${p.toFixed(0)}%`}
+                  </p>
                 </div>
                 <div className="px-5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
-                      <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
-                      <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
+                      {!sinVotos && <>
+                        <div className="h-full" style={{ width: `${p}%`, backgroundColor: '#16a34a' }} />
+                        <div className="h-full" style={{ width: `${100 - p}%`, backgroundColor: '#dc2626' }} />
+                      </>}
                     </div>
                   </div>
                 </div>
