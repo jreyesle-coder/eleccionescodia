@@ -2004,13 +2004,23 @@ interface ActaMesa {
   observacion?: string
 }
 
-// ⬇️ CARGAR ACTAS AQUÍ (una por acta). Fantino — 17/7/2026.
+// ⬇️ CARGAR ACTAS AQUÍ (una por acta). Los valores plancha1/2/3 son el
+// VOTO PRESIDENCIAL de cada plancha = renglón 1 de "Suma Votos Plancha más
+// Fraccionados" (votos enteros + fraccionados de la posición Presidente).
 const ACTAS: ActaMesa[] = [
+  // ── Fantino — 17/7/2026 ──
   { folio: '0062', nucleo: 'Ingeniero Civil',    ubicacion: 'Fantino', plancha1: 0, plancha2: 7,  plancha3: 0, nulos: 0 },
   { folio: '0063', nucleo: 'Arquitecto',         ubicacion: 'Fantino', plancha1: 0, plancha2: 12, plancha3: 0, nulos: 0 },
   { folio: '0064', nucleo: 'Ingeniero Agrónomo', ubicacion: 'Fantino', plancha1: 1, plancha2: 1,  plancha3: 0, nulos: 0 },
   { folio: '0065', nucleo: 'Ingeniero Químico',  ubicacion: 'Fantino', plancha1: 0, plancha2: 1,  plancha3: 0, nulos: 0 },
   { folio: '0066', nucleo: 'Arquitectura',       ubicacion: 'Fantino', plancha1: 0, plancha2: 6,  plancha3: 0, nulos: 0 },
+  // ── EGEHID — 17/7/2026 ──
+  { folio: '0459', nucleo: 'Topógrafos e Ing. Geomáticos',      ubicacion: 'EGEHID', plancha1: 3, plancha2: 0, plancha3: 0, nulos: 0 },
+  { folio: '0461', nucleo: 'Agrimensura',                       ubicacion: 'EGEHID', plancha1: 2, plancha2: 7, plancha3: 5, nulos: 1 },
+  { folio: '0463', nucleo: 'Arquitectura',                      ubicacion: 'EGEHID', plancha1: 2, plancha2: 6, plancha3: 0, nulos: 0 },
+  { folio: '0465', nucleo: 'Ingenieros Químicos',              ubicacion: 'EGEHID', plancha1: 6, plancha2: 2, plancha3: 0, nulos: 0 },
+  { folio: '0466', nucleo: 'Electromecánicos Ind. y Afines',    ubicacion: 'EGEHID', plancha1: 8, plancha2: 9, plancha3: 0, nulos: 0 },
+  { folio: '0467', nucleo: 'Agrónomos',                         ubicacion: 'EGEHID', plancha1: 1, plancha2: 1, plancha3: 0, nulos: 0 },
 ]
 
 function planchaGeorge(a: ActaMesa) {
