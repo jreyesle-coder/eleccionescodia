@@ -35,3 +35,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 node_modules echo .next echo .env.local echo .env echo .vercel
+
+# Archivos con credenciales — nunca subir al repo
+Accesos_Delegados_*.xlsx
