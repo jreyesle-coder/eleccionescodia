@@ -2028,7 +2028,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0150', ubicacion: 'Barahona',                           p2: [21,12,9,9,7],      rivalP1: 2,  rivalP3: 0, nulos: 0 },
   { folio: '0217', ubicacion: 'La Vega (Reg. Norcentral)',          p2: [39,35,40,26,41],   rivalP1: 3,  rivalP3: 0, nulos: 0 },
   { folio: '0407', ubicacion: 'MOPC',                               p2: [134,120,108,88,105], rivalP1: 20, rivalP3: 0, nulos: 0 },
-  { folio: '0112', ubicacion: 'Regional Suroeste',                  p2: [11,6,18,16,0],     rivalP1: 1,  rivalP3: 0, nulos: 0 },
+  { folio: '0112', ubicacion: 'Regional Suroeste (San Juan)',       p2: [11,6,18,16,0],     rivalP1: 1,  rivalP3: 0, nulos: 0 },
   { folio: '0181', ubicacion: 'La Altagracia',                      p2: [76,13,19,4,13],    rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0195', ubicacion: 'INDRHI',                             p2: [79,62,40,32,46],   rivalP1: 7,  rivalP3: 0, nulos: 0 },
   { folio: '0175', ubicacion: 'Regional Este / La Romana',          p2: [46,37,76,59,34],   rivalP1: 2,  rivalP3: 0, nulos: 1 },
