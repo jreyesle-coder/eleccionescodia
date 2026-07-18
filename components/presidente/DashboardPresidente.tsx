@@ -2031,6 +2031,9 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0112', ubicacion: 'Regional Suroeste',                  p2: [11,6,18,16,0],     rivalP1: 1,  rivalP3: 0, nulos: 0 },
   { folio: '0181', ubicacion: 'La Altagracia',                      p2: [76,13,19,4,13],    rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0195', ubicacion: 'ENDHI',                              p2: [79,62,40,32,46],   rivalP1: 7,  rivalP3: 0, nulos: 0 },
+  { folio: '0175', ubicacion: 'Regional Este / La Romana',          p2: [46,37,76,59,34],   rivalP1: 2,  rivalP3: 0, nulos: 1 },
+  { folio: '0036', ubicacion: 'Santiago',                           p2: [84,86,29,26,85],   rivalP1: 9,  rivalP3: 0, nulos: 4 },
+  { folio: '0047', ubicacion: 'Regional Sureste',                   p2: [10,7,28,25,7],     rivalP1: 2,  rivalP3: 0, nulos: 0, porConfirmar: true },
 ]
 
 function TabResultadoActas() {
