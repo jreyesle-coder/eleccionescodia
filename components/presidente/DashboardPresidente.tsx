@@ -2026,6 +2026,8 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0150', ubicacion: 'Barahona',                           richardson: 21,  rivalP1: 2,  rivalP3: 0, nulos: 0 },
   { folio: '0217', ubicacion: 'La Vega (Reg. Norcentral)',          richardson: 39,  rivalP1: 3,  rivalP3: 0, nulos: 0 },
   { folio: '0407', ubicacion: 'MOPC',                               richardson: 134, rivalP1: 20, rivalP3: 0, nulos: 0 },
+  { folio: '0112', ubicacion: 'Regional Suroeste',                  richardson: 11,  rivalP1: 1,  rivalP3: 0, nulos: 0 },
+  { folio: '0181', ubicacion: 'La Altagracia',                      richardson: 76,  rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
 ]
 
 function TabResultadoActas() {
