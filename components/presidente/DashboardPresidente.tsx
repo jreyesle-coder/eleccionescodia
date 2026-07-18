@@ -2046,6 +2046,8 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0204', ubicacion: 'Elías Piña',                         p2: [0,0,1,0,4],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0129', ubicacion: 'Peravia (Baní)',                     p2: [11,10,10,9,10],    rivalP1: 1,  rivalP3: 0, nulos: 1, porConfirmar: true },
   { folio: '0453', ubicacion: 'Ministerio de Agricultura',          p2: [3,3,3,3,3],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0236', ubicacion: 'Espaillat (Moca)',                   p2: [5,5,5,3,5],        rivalP1: 5,  rivalP3: 0, nulos: 0 },
+  { folio: '0006', ubicacion: 'Dajabón',                            p2: [2,0,1,1,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
 ]
 
 function TabResultadoActas() {
