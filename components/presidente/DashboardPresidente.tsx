@@ -2005,7 +2005,7 @@ interface ActaArq {
 }
 
 // Nombres de las 5 posiciones de la Plancha 2 (editar cuando se tengan).
-const POSICIONES_P2 = ['George Richardson', 'Posición 2', 'Posición 3', 'Posición 4', 'Posición 5']
+const POSICIONES_P2 = ['George Richardson', 'Dominic Abud', 'Surelis Calderón', 'Anthonely García', 'Yahaira Mejía']
 
 // ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. p2 = las 5 líneas del renglón
 // "Suma Votos Plancha más Fraccionados No.2". pos 1 = Richardson.
