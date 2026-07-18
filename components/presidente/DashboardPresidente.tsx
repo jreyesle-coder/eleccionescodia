@@ -2035,6 +2035,9 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0036', ubicacion: 'Santiago',                           p2: [84,86,29,26,85],   rivalP1: 9,  rivalP3: 0, nulos: 4 },
   { folio: '0047', ubicacion: 'Regional Sureste',                   p2: [10,7,28,25,7],     rivalP1: 2,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0140', ubicacion: 'Monte Plata',                        p2: [15,1,9,7,9],       rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0210', ubicacion: 'Monseñor Nouel (Bonao)',             p2: [4,1,11,0,0],       rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0038', ubicacion: 'Jarabacoa',                          p2: [5,5,6,4,5],        rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0025', ubicacion: 'La Altagracia (acta 0025)',          p2: [37,26,41,26,25],   rivalP1: 7,  rivalP3: 0, nulos: 4, porConfirmar: true },
 ]
 
 function TabResultadoActas() {
