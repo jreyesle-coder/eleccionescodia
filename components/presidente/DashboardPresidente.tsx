@@ -1995,45 +1995,50 @@ interface MesaResultado {
 // renglón 1) contra el candidato rival del mismo puesto (Plancha 1 y 3, renglón 1),
 // y SOLO en actas del núcleo Arquitectura.
 interface ActaArq {
-  folio:         string   // número de acta (esquina rojo)
-  ubicacion:     string   // lugar de votación (ej. 'Fantino', 'EGEHID')
-  richardson:    number   // Plancha 2, renglón 1 = George Richardson
-  rivalP1:       number   // Plancha 1, renglón 1 (candidato rival del mismo puesto)
-  rivalP3:       number   // Plancha 3, renglón 1
+  folio:         string             // número de acta (esquina rojo)
+  ubicacion:     string             // lugar de votación (ej. 'Fantino', 'EGEHID')
+  p2:            [number, number, number, number, number] // Plancha 2 · posiciones 1-5 (pos 1 = Richardson)
+  rivalP1:       number             // Plancha 1, renglón 1 (rival de Richardson)
+  rivalP3:       number             // Plancha 3, renglón 1
   nulos?:        number
-  porConfirmar?: boolean  // lectura tentativa, pendiente de verificar
+  porConfirmar?: boolean            // lectura tentativa, pendiente de verificar
 }
 
-// ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. Números tomados del renglón 1 de
-// "Suma Votos Plancha más Fraccionados" de cada plancha.
+// Nombres de las 5 posiciones de la Plancha 2 (editar cuando se tengan).
+const POSICIONES_P2 = ['George Richardson', 'Posición 2', 'Posición 3', 'Posición 4', 'Posición 5']
+
+// ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. p2 = las 5 líneas del renglón
+// "Suma Votos Plancha más Fraccionados No.2". pos 1 = Richardson.
 const ACTAS_ARQ: ActaArq[] = [
-  // Fantino 0063: 12 votos fraccionados fueron a renglones 3-4 de la Plancha 1;
-  // la posición 1 (Richardson) quedó en 0.
-  { folio: '0063', ubicacion: 'Fantino',                            richardson: 0,   rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0463', ubicacion: 'EGEHID',                             richardson: 6,   rivalP1: 2,  rivalP3: 0, nulos: 0 },
-  { folio: '0019', ubicacion: 'Montecristi',                        richardson: 7,   rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
-  { folio: '0088', ubicacion: 'María Trinidad Sánchez',             richardson: 18,  rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0478', ubicacion: 'Boca Chica',                         richardson: 9,   rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0054', ubicacion: 'Villa la Mata (Sánchez Ramírez)',    richardson: 3,   rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0489', ubicacion: 'Delegación Prov. Sto. Dgo.',         richardson: 46,  rivalP1: 27, rivalP3: 0, nulos: 0 },
-  { folio: '0470', ubicacion: 'Santo Domingo Oeste',               richardson: 13,  rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0200', ubicacion: 'Santo Domingo Norte',               richardson: 25,  rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0074', ubicacion: 'Samaná',                             richardson: 18,  rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
-  { folio: '0156', ubicacion: 'Hato Mayor del Rey',                 richardson: 13,  rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
-  { folio: '0120', ubicacion: 'San Cristóbal (Reg. Sur Central)',   richardson: 22,  rivalP1: 3,  rivalP3: 0, nulos: 0 },
-  { folio: '0082', ubicacion: 'San Francisco de Macorís (Nordeste)', richardson: 10, rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0254', ubicacion: 'DIE',                                richardson: 9,   rivalP1: 7,  rivalP3: 0, nulos: 2 },
-  { folio: '0150', ubicacion: 'Barahona',                           richardson: 21,  rivalP1: 2,  rivalP3: 0, nulos: 0 },
-  { folio: '0217', ubicacion: 'La Vega (Reg. Norcentral)',          richardson: 39,  rivalP1: 3,  rivalP3: 0, nulos: 0 },
-  { folio: '0407', ubicacion: 'MOPC',                               richardson: 134, rivalP1: 20, rivalP3: 0, nulos: 0 },
-  { folio: '0112', ubicacion: 'Regional Suroeste',                  richardson: 11,  rivalP1: 1,  rivalP3: 0, nulos: 0 },
-  { folio: '0181', ubicacion: 'La Altagracia',                      richardson: 76,  rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
-  { folio: '0195', ubicacion: 'ENDHI',                              richardson: 79,  rivalP1: 7,  rivalP3: 0, nulos: 0 },
+  // Fantino 0063: los 12 votos fraccionados fueron a la Plancha 1; la Plancha 2 quedó en 0.
+  { folio: '0063', ubicacion: 'Fantino',                            p2: [0,0,0,0,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0463', ubicacion: 'EGEHID',                             p2: [6,5,3,2,4],        rivalP1: 2,  rivalP3: 0, nulos: 0 },
+  { folio: '0019', ubicacion: 'Montecristi',                        p2: [7,7,1,2,7],        rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0088', ubicacion: 'María Trinidad Sánchez',             p2: [18,16,18,16,13],   rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0478', ubicacion: 'Boca Chica',                         p2: [9,5,0,0,5],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0054', ubicacion: 'Villa la Mata (Sánchez Ramírez)',    p2: [3,4,6,5,3],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0489', ubicacion: 'Delegación Prov. Sto. Dgo.',         p2: [46,38,53,38,34],   rivalP1: 27, rivalP3: 0, nulos: 0 },
+  { folio: '0470', ubicacion: 'Santo Domingo Oeste',               p2: [13,9,7,4,11],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0200', ubicacion: 'Santo Domingo Norte',               p2: [25,17,14,8,18],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0074', ubicacion: 'Samaná',                             p2: [18,14,22,21,7],    rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0156', ubicacion: 'Hato Mayor del Rey',                 p2: [13,4,12,6,6],      rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0120', ubicacion: 'San Cristóbal (Reg. Sur Central)',   p2: [22,22,19,14,16],   rivalP1: 3,  rivalP3: 0, nulos: 0 },
+  { folio: '0082', ubicacion: 'San Francisco de Macorís (Nordeste)', p2: [10,9,42,42,4],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0254', ubicacion: 'DIE',                                p2: [9,8,10,6,9],       rivalP1: 7,  rivalP3: 0, nulos: 2 },
+  { folio: '0150', ubicacion: 'Barahona',                           p2: [21,12,9,9,7],      rivalP1: 2,  rivalP3: 0, nulos: 0 },
+  { folio: '0217', ubicacion: 'La Vega (Reg. Norcentral)',          p2: [39,35,40,26,41],   rivalP1: 3,  rivalP3: 0, nulos: 0 },
+  { folio: '0407', ubicacion: 'MOPC',                               p2: [134,120,108,88,105], rivalP1: 20, rivalP3: 0, nulos: 0 },
+  { folio: '0112', ubicacion: 'Regional Suroeste',                  p2: [11,6,18,16,0],     rivalP1: 1,  rivalP3: 0, nulos: 0 },
+  { folio: '0181', ubicacion: 'La Altagracia',                      p2: [76,13,19,4,13],    rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0195', ubicacion: 'ENDHI',                              p2: [79,62,40,32,46],   rivalP1: 7,  rivalP3: 0, nulos: 0 },
 ]
 
 function TabResultadoActas() {
-  const rich    = ACTAS_ARQ.reduce((s, a) => s + a.richardson, 0)
+  const rich    = ACTAS_ARQ.reduce((s, a) => s + a.p2[0], 0)
   const rivales = ACTAS_ARQ.reduce((s, a) => s + a.rivalP1 + a.rivalP3, 0)
+  // Totales por posición de la Plancha 2 (los 5 candidatos arquitectos)
+  const totPos  = [0,1,2,3,4].map(i => ACTAS_ARQ.reduce((s, a) => s + a.p2[i], 0))
+  const totP2   = totPos.reduce((s, v) => s + v, 0)
   const rP1     = ACTAS_ARQ.reduce((s, a) => s + a.rivalP1, 0)
   const rP3     = ACTAS_ARQ.reduce((s, a) => s + a.rivalP3, 0)
   const nulos   = ACTAS_ARQ.reduce((s, a) => s + (a.nulos ?? 0), 0)
@@ -2126,16 +2131,59 @@ function TabResultadoActas() {
         ))}
       </div>
 
+      {/* Votos por posición — Plancha 2 (los 5 candidatos arquitectos) */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm font-semibold text-gray-700">Votos por posición — Plancha 2</p>
+          <p className="text-xs text-gray-400">Total plancha: {totP2.toLocaleString()} votos-candidato</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                <th className="text-left px-5 py-2 font-semibold">Pos.</th>
+                <th className="text-left px-5 py-2 font-semibold">Candidato</th>
+                <th className="text-right px-5 py-2 font-semibold">Votos</th>
+                <th className="text-left px-5 py-2 font-semibold w-1/3">Peso relativo</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {totPos.map((v, i) => {
+                const esGeorge = i === 0
+                const pct = totP2 > 0 ? (v / totPos[0] * 100) : 0  // relativo al líder (pos 1)
+                return (
+                  <tr key={i} style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.06)' } : undefined}>
+                    <td className="px-5 py-2.5 font-bold tabular-nums" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>{i + 1}</td>
+                    <td className="px-5 py-2.5 font-medium" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>
+                      {POSICIONES_P2[i]}{esGeorge ? ' ★' : ''}
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-black tabular-nums" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{v.toLocaleString()}</td>
+                    <td className="px-5 py-2.5">
+                      <div className="bg-gray-100 rounded-full h-2">
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: esGeorge ? '#16a34a' : 'var(--color-real)' }} />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="px-5 py-2 text-[11px] text-gray-400">
+          Cada posición es un candidato distinto de la Plancha 2. Richardson (pos. 1) va de referencia; las demás son sus compañeros de plancha.
+        </p>
+      </div>
+
       {/* Detalle por acta */}
       <div className="space-y-3">
         <p className="text-sm font-semibold text-gray-700">Actas de Arquitectura</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {[...ACTAS_ARQ].sort((a, b) => a.folio.localeCompare(b.folio)).map(a => {
             const otras = a.rivalP1 + a.rivalP3
-            const t = a.richardson + otras
+            const t = a.p2[0] + otras
             const sinVotos = t === 0
-            const p = t > 0 ? (a.richardson / t * 100) : 0
-            const lidera = a.richardson >= otras
+            const p = t > 0 ? (a.p2[0] / t * 100) : 0
+            const lidera = a.p2[0] >= otras
             return (
               <div key={a.folio} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
@@ -2162,20 +2210,22 @@ function TabResultadoActas() {
                     </div>
                   </div>
                 </div>
-                <div className="px-5 py-3 grid grid-cols-4 gap-2 text-center">
-                  {[
-                    { label: 'Richardson', val: a.richardson, geo: true },
-                    { label: 'Rival P1',   val: a.rivalP1,    geo: false },
-                    { label: 'Rival P3',   val: a.rivalP3,    geo: false },
-                    { label: 'Nulos',      val: a.nulos ?? 0, geo: false },
-                  ].map(c => (
-                    <div key={c.label}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: c.geo ? '#16a34a' : '#9ca3af' }}>
-                        {c.label}{c.geo ? ' ★' : ''}
-                      </p>
-                      <p className="text-lg font-bold tabular-nums" style={{ color: c.geo ? '#16a34a' : '#374151' }}>{c.val}</p>
-                    </div>
-                  ))}
+                {/* Las 5 posiciones de la Plancha 2 en esta acta */}
+                <div className="px-5 pt-3 grid grid-cols-5 gap-1 text-center">
+                  {a.p2.map((v, i) => {
+                    const esGeorge = i === 0
+                    return (
+                      <div key={i} className="rounded-lg py-1" style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.08)' } : undefined}>
+                        <p className="text-[9px] uppercase tracking-wide" style={{ color: esGeorge ? '#16a34a' : '#9ca3af' }}>P{i + 1}{esGeorge ? '★' : ''}</p>
+                        <p className="text-base font-bold tabular-nums" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{v}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="px-5 py-2 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div><span className="text-gray-400">Rival P1: </span><span className="font-semibold tabular-nums">{a.rivalP1}</span></div>
+                  <div><span className="text-gray-400">Rival P3: </span><span className="font-semibold tabular-nums">{a.rivalP3}</span></div>
+                  <div><span className="text-gray-400">Nulos: </span><span className="font-semibold tabular-nums">{a.nulos ?? 0}</span></div>
                 </div>
               </div>
             )
