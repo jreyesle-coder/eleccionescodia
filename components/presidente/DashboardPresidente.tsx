@@ -2007,10 +2007,25 @@ interface ActaArq {
 // ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. Números tomados del renglón 1 de
 // "Suma Votos Plancha más Fraccionados" de cada plancha.
 const ACTAS_ARQ: ActaArq[] = [
-  // Fantino 0063: 12 votos fraccionados, pero fueron a renglones 3-4 de la Plancha 1.
-  // La posición 1 (Richardson) quedó en 0 → no ganó aquí.
-  { folio: '0063', ubicacion: 'Fantino', richardson: 0, rivalP1: 0, rivalP3: 0, nulos: 0 },
-  { folio: '0463', ubicacion: 'EGEHID',  richardson: 6, rivalP1: 2, rivalP3: 0, nulos: 0 },
+  // Fantino 0063: 12 votos fraccionados fueron a renglones 3-4 de la Plancha 1;
+  // la posición 1 (Richardson) quedó en 0.
+  { folio: '0063', ubicacion: 'Fantino',                            richardson: 0,   rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0463', ubicacion: 'EGEHID',                             richardson: 6,   rivalP1: 2,  rivalP3: 0, nulos: 0 },
+  { folio: '0019', ubicacion: 'Montecristi',                        richardson: 7,   rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0088', ubicacion: 'María Trinidad Sánchez',             richardson: 18,  rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0478', ubicacion: 'Boca Chica',                         richardson: 9,   rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0054', ubicacion: 'Villa la Mata (Sánchez Ramírez)',    richardson: 3,   rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0489', ubicacion: 'Delegación Prov. Sto. Dgo.',         richardson: 46,  rivalP1: 27, rivalP3: 0, nulos: 0 },
+  { folio: '0470', ubicacion: 'Santo Domingo Oeste',               richardson: 13,  rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0200', ubicacion: 'Santo Domingo Norte',               richardson: 25,  rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0074', ubicacion: 'Samaná',                             richardson: 18,  rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0156', ubicacion: 'Hato Mayor del Rey',                 richardson: 13,  rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0120', ubicacion: 'San Cristóbal (Reg. Sur Central)',   richardson: 22,  rivalP1: 3,  rivalP3: 0, nulos: 0 },
+  { folio: '0082', ubicacion: 'San Francisco de Macorís (Nordeste)', richardson: 10, rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0254', ubicacion: 'DIE',                                richardson: 9,   rivalP1: 7,  rivalP3: 0, nulos: 2 },
+  { folio: '0150', ubicacion: 'Barahona',                           richardson: 21,  rivalP1: 2,  rivalP3: 0, nulos: 0 },
+  { folio: '0217', ubicacion: 'La Vega (Reg. Norcentral)',          richardson: 39,  rivalP1: 3,  rivalP3: 0, nulos: 0 },
+  { folio: '0407', ubicacion: 'MOPC',                               richardson: 134, rivalP1: 20, rivalP3: 0, nulos: 0 },
 ]
 
 function TabResultadoActas() {
