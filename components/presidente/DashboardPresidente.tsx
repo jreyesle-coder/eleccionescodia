@@ -2010,8 +2010,9 @@ const POSICIONES_P2 = ['George Richardson', 'Dominic Abud', 'Surelis Calderón',
 // ⬇️ CARGAR ACTAS DE ARQUITECTURA AQUÍ. p2 = las 5 líneas del renglón
 // "Suma Votos Plancha más Fraccionados No.2". pos 1 = Richardson.
 const ACTAS_ARQ: ActaArq[] = [
-  // Fantino 0063: los 12 votos fraccionados fueron a la Plancha 1; la Plancha 2 quedó en 0.
-  { folio: '0063', ubicacion: 'Fantino',                            p2: [0,0,0,0,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  // Fantino 0063: 12 votos fraccionados, todos en Plancha 2 renglones 3 y 4 (Calderón y García).
+  // Richardson (renglón 1) = 0 y rivales (P1·1, P3·1) = 0. Confirmado con acta física y boletín.
+  { folio: '0063', ubicacion: 'Fantino',                            p2: [0,0,12,12,0],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0463', ubicacion: 'EGEHID',                             p2: [6,5,3,2,4],        rivalP1: 2,  rivalP3: 0, nulos: 0 },
   { folio: '0019', ubicacion: 'Montecristi',                        p2: [7,7,1,2,7],        rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0088', ubicacion: 'María Trinidad Sánchez',             p2: [18,16,18,16,13],   rivalP1: 0,  rivalP3: 0, nulos: 0 },
