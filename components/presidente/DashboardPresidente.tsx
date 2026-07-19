@@ -2022,7 +2022,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0470', ubicacion: 'Santo Domingo Oeste',               p2: [13,9,7,4,11],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0200', ubicacion: 'Santo Domingo Norte',               p2: [25,17,14,8,18],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0074', ubicacion: 'Samaná',                             p2: [18,14,22,21,7],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0156', ubicacion: 'Hato Mayor del Rey',                 p2: [13,4,12,6,6],      rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0156', ubicacion: 'Hato Mayor del Rey',                 p2: [13,4,12,6,6],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0120', ubicacion: 'San Cristóbal (Reg. Sur Central)',   p2: [22,22,19,14,16],   rivalP1: 3,  rivalP3: 0, nulos: 0 },
   { folio: '0082', ubicacion: 'San Francisco de Macorís (Nordeste)', p2: [10,9,42,42,4],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0254', ubicacion: 'DIE',                                p2: [9,8,10,6,9],       rivalP1: 7,  rivalP3: 0, nulos: 2 },
@@ -2097,7 +2097,7 @@ const BOLETIN_CMP: CmpBoletin[] = [
   { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, nos: 76, verificado: true, nota: 'Acta 0181 verificada: 73 fraccionados + 3 votos por plancha = 76. El boletín omitió los 3 votos por plancha (el acta traía la fila "Suma" en blanco).' },
   { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, verificado: true, nota: 'Acta 0074 verificada: la fila "Suma" del acta dice 18. El boletín la registró en 0.' },
   { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
-  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
+  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada contra el acta física: Votos Plancha No.2 = 2, fraccionado renglón 1 = 11 → Suma = 13. El boletín omitió los 2 votos por plancha que suman al renglón 1.' },
   { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
   // Pendientes de conciliar (falta en un lado)
   { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 7 },
@@ -2453,9 +2453,10 @@ function TabBoletines() {
             <li><b>Puerto Plata</b> (37 vs 25): nuestra acta 0025 está validada; el boletín mantiene un acta objetada sin corregir.</li>
             <li><b>Samaná</b> (18 vs 0): la fila “Suma” del acta 0074 dice 18; el boletín la dejó en 0.</li>
             <li><b>La Altagracia</b> (76 vs 73): 73 fraccionados + 3 votos por plancha; el boletín omitió los 3 votos por plancha porque el acta 0181 traía esa fila en blanco.</li>
+            <li><b>Hato Mayor</b> (13 vs 11): acta 0156 verificada; 11 fraccionados + 2 votos por plancha = 13; el boletín omitió los 2 votos por plancha.</li>
           </ul>
           <p>
-            Quedan <b>3 por cotejar</b> con el acta física (Reg. Sureste, Hato Mayor, Santiago Rodríguez); no cambian
+            Quedan <b>2 por cotejar</b> con el acta física (Reg. Sureste, Santiago Rodríguez); no cambian
             el liderazgo. Patrón claro: <b>el boletín tiende a quedarse corto</b>, nunca por encima de nuestro conteo.
           </p>
           <p>
