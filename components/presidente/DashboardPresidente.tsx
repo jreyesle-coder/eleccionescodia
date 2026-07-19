@@ -2016,7 +2016,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0019', ubicacion: 'Montecristi',                        p2: [7,7,1,2,7],        rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0088', ubicacion: 'María Trinidad Sánchez',             p2: [18,16,18,16,13],   rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0478', ubicacion: 'Boca Chica',                         p2: [9,5,0,0,5],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0054', ubicacion: 'Villa la Mata (Sánchez Ramírez)',    p2: [3,4,6,5,3],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0054', ubicacion: 'Villa la Mata (Cotuí)',              p2: [3,4,6,5,3],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0489', ubicacion: 'Delegación Prov. Sto. Dgo.',         p2: [46,38,53,38,34],   rivalP1: 27, rivalP3: 0, nulos: 0 },
   { folio: '0470', ubicacion: 'Santo Domingo Oeste',               p2: [13,9,7,4,11],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0200', ubicacion: 'Santo Domingo Norte',               p2: [25,17,14,8,18],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
