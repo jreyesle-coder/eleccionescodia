@@ -2321,7 +2321,6 @@ function TabBoletines() {
   // Métricas de conciliación
   const enComun    = BOLETIN_CMP.filter(r => r.b2 != null && r.nos != null)
   const coinciden  = enComun.filter(r => r.b2 === r.nos).length
-  const difieren   = enComun.filter(r => r.b2 !== r.nos)
   const nuevasB2   = BOLETIN_CMP.filter(r => r.b1 == null && r.b2 != null).map(r => r.dem)
 
   const estado = (r: CmpBoletin) => {
