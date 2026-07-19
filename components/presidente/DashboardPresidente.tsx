@@ -2048,6 +2048,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0453', ubicacion: 'Ministerio de Agricultura',          p2: [3,3,3,3,3],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0236', ubicacion: 'Espaillat (Moca)',                   p2: [5,5,5,3,5],        rivalP1: 5,  rivalP3: 0, nulos: 0 },
   { folio: '0006', ubicacion: 'Dajabón',                            p2: [2,0,1,1,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0100', ubicacion: 'Sánchez Ramírez (Cotuí)',           p2: [7,7,29,29,7],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
 ]
 
 // ── Comparación con los boletines oficiales de la CNE (línea de George Richardson,
@@ -2095,10 +2096,10 @@ const BOLETIN_CMP: CmpBoletin[] = [
   { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar".' },
   { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, nota: 'Acta nuestra marcada "por confirmar".' },
   { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, nos: 76, nota: 'Acta nuestra marcada "por confirmar".' },
-  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Posible cruce de etiqueta con Samaná (ambos con 18). Verificar con acta física.' },
-  { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, nota: 'Posible cruce de etiqueta con Santiago Rodríguez. Verificar con acta física.' },
+  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Acta nuestra marcada "por confirmar".' },
+  { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, nota: 'Acta nuestra marcada "por confirmar".' },
   // Pendientes de conciliar (falta en un lado)
-  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: null, nota: 'El boletín ya la trae (7); nos falta cargar el acta.' },
+  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 7 },
   { dem: 'María Trinidad Sánchez',     b1: null, b2: null, nos: 18, nota: 'La tenemos nosotros; ningún boletín la ha computado aún.' },
 ]
 
@@ -2445,14 +2446,12 @@ function TabBoletines() {
           <p>
             <b>3. Diferencias puntuales, todas explicables ({difieren.length}).</b> La única confirmada es
             <b> Puerto Plata</b> (nosotros 37 / boletín 25): nuestra acta fue validada y el boletín mantiene un acta
-            objetada sin corregir. El resto son actas que en nuestro sistema aún figuran <b>“por confirmar”</b>
-            {' '}(Reg. Sureste, Hato Mayor, La Altagracia) o un posible <b>cruce de etiqueta Samaná ↔ Santiago Rodríguez</b>
-            {' '}(los mismos 18 votos aparecen en columnas distintas). Se verifican con el acta física antes de darlas por firmes.
+            objetada sin corregir. El resto corresponde a actas que en nuestro sistema aún figuran <b>“por confirmar”</b>
+            {' '}(Reg. Sureste, Hato Mayor, La Altagracia, Samaná, Santiago Rodríguez) y se ajustan al verificar el acta física.
           </p>
           <p>
-            <b>4. Dos pendientes de conciliar.</b> El boletín ya trae <b>Sánchez Ramírez (Cotuí)</b> con 7 votos que
-            aún no hemos cargado (los sumaríamos), y nosotros tenemos <b>María Trinidad Sánchez</b> (18) que ningún
-            boletín ha computado todavía.
+            <b>4. Pendiente de conciliar.</b> Nosotros tenemos <b>María Trinidad Sánchez</b> (18 votos) que ningún
+            boletín ha computado todavía; se reflejará cuando la CNE la incorpore.
           </p>
           <p className="text-[12px] text-gray-400 pt-1 border-t border-gray-100">
             Cifras transcritas de los boletines oficiales escaneados (Preliminar 01 y 02). Los totales oficiales
