@@ -2049,7 +2049,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0453', ubicacion: 'Ministerio de Agricultura',          p2: [3,3,3,3,3],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0236', ubicacion: 'Espaillat (Moca)',                   p2: [5,5,5,3,5],        rivalP1: 5,  rivalP3: 0, nulos: 0 },
   { folio: '0006', ubicacion: 'Dajabón',                            p2: [2,0,1,1,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0100', ubicacion: 'Sánchez Ramírez (Cotuí)',           p2: [7,7,29,29,7],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0100', ubicacion: 'Sánchez Ramírez (Cotuí)',           p2: [41,41,63,63,41],   rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
 ]
 
 // ── Comparación con los boletines oficiales de la CNE (línea de George Richardson,
@@ -2100,7 +2100,7 @@ const BOLETIN_CMP: CmpBoletin[] = [
   { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada contra el acta física: Votos Plancha No.2 = 2, fraccionado renglón 1 = 11 → Suma = 13. El boletín omitió los 2 votos por plancha que suman al renglón 1.' },
   { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
   // Pendientes de conciliar (falta en un lado)
-  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 7 },
+  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 votos de plancha en la fila "Suma", y el boletín recogió solo el 7. Se mantiene "A verificar" porque los 34 no figuran sumados en el acta.' },
   { dem: 'María Trinidad Sánchez',     b1: null, b2: null, nos: 18, nota: 'La tenemos nosotros; ningún boletín la ha computado aún.' },
 ]
 
