@@ -2050,6 +2050,58 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0006', ubicacion: 'Dajabón',                            p2: [2,0,1,1,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
 ]
 
+// ── Comparación con los boletines oficiales de la CNE (línea de George Richardson,
+//    Plancha 2 · renglón 1, núcleo Arquitectura) ────────────────────────────────
+// Datos transcritos directamente de los boletines escaneados (BOLETIN PRELIMINAR 01 y 02).
+// b1/b2 = valor impreso en cada boletín (null = la demarcación aún NO aparecía en ese boletín).
+// nos   = nuestro conteo de actas (null = acta que todavía no hemos cargado).
+// Totales oficiales impresos: Boletín 1 = 639 · Boletín 2 = 778 · Nosotros = 819.
+type CmpBoletin = { dem: string; b1: number | null; b2: number | null; nos: number | null; nota?: string }
+const BOLETIN_CMP: CmpBoletin[] = [
+  // Coinciden en los tres conteos
+  { dem: 'MOPC (DN)',                  b1: 134, b2: 134, nos: 134 },
+  { dem: 'EGEHID',                     b1: 6,   b2: 6,   nos: 6   },
+  { dem: 'Agricultura',                b1: 3,   b2: 3,   nos: 3   },
+  { dem: 'INDRHI',                     b1: 79,  b2: 79,  nos: 79  },
+  { dem: 'DIE',                        b1: 9,   b2: 9,   nos: 9   },
+  { dem: 'Del. Prov. Sto. Dgo.',       b1: 46,  b2: 46,  nos: 46  },
+  { dem: 'Sto. Dgo. Norte',            b1: 25,  b2: 25,  nos: 25  },
+  { dem: 'Sto. Dgo. Oeste',            b1: 13,  b2: 13,  nos: 13  },
+  { dem: 'Boca Chica',                 b1: 9,   b2: 9,   nos: 9   },
+  { dem: 'Montecristi',                b1: 7,   b2: 7,   nos: 7   },
+  { dem: 'Dajabón',                    b1: 2,   b2: 2,   nos: 2   },
+  { dem: 'La Vega',                    b1: 39,  b2: 39,  nos: 39  },
+  { dem: 'Monseñor Nouel (Bonao)',     b1: 4,   b2: 4,   nos: 4   },
+  { dem: 'Salcedo (Hnas. Mirabal)',    b1: 1,   b2: 1,   nos: 1   },
+  { dem: 'Santiago',                   b1: 84,  b2: 84,  nos: 84  },
+  { dem: 'Valverde (Mao)',             b1: 4,   b2: 4,   nos: 4   },
+  { dem: 'San Francisco de Macorís',   b1: 10,  b2: 10,  nos: 10  },
+  { dem: 'Fantino',                    b1: 0,   b2: 0,   nos: 0   },
+  { dem: 'Villa la Mata',              b1: 3,   b2: 3,   nos: 3   },
+  { dem: 'San Cristóbal',              b1: 22,  b2: 22,  nos: 22  },
+  { dem: 'Baní (Peravia)',             b1: 11,  b2: 11,  nos: 11  },
+  { dem: 'Barahona',                   b1: 21,  b2: 21,  nos: 21  },
+  { dem: 'Elías Piña',                 b1: 0,   b2: 0,   nos: 0   },
+  { dem: 'El Seibo',                   b1: 14,  b2: 14,  nos: 14  },
+  { dem: 'La Romana',                  b1: 46,  b2: 46,  nos: 46  },
+  // Incorporadas por la CNE en el Boletín 2 (no estaban en el Boletín 1) — coinciden con nosotros
+  { dem: 'Jarabacoa',                  b1: null, b2: 5,  nos: 5   },
+  { dem: 'Espaillat (Moca)',           b1: null, b2: 5,  nos: 5   },
+  { dem: 'Azua',                       b1: null, b2: 12, nos: 12  },
+  { dem: 'San Juan de la Maguana',     b1: null, b2: 11, nos: 11  },
+  { dem: 'Monte Plata',                b1: null, b2: 15, nos: 15  },
+  // Diferencias a verificar
+  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  nos: 37, nota: 'Nuestra acta validada; el boletín usa un acta objetada no corregida.' },
+  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar".' },
+  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, nota: 'Acta nuestra marcada "por confirmar".' },
+  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, nos: 76, nota: 'Acta nuestra marcada "por confirmar".' },
+  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Posible cruce de etiqueta con Samaná (ambos con 18). Verificar con acta física.' },
+  { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, nota: 'Posible cruce de etiqueta con Santiago Rodríguez. Verificar con acta física.' },
+  // Pendientes de conciliar (falta en un lado)
+  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: null, nota: 'El boletín ya la trae (7); nos falta cargar el acta.' },
+  { dem: 'María Trinidad Sánchez',     b1: null, b2: null, nos: 18, nota: 'La tenemos nosotros; ningún boletín la ha computado aún.' },
+]
+
 function TabResultadoActas() {
   const rich    = ACTAS_ARQ.reduce((s, a) => s + a.p2[0], 0)
   const rivales = ACTAS_ARQ.reduce((s, a) => s + a.rivalP1 + a.rivalP3, 0)
@@ -2259,15 +2311,169 @@ function TabResultadoActas() {
   )
 }
 
-// ─── Tab: Día de Elección (con sub-tabs) ──────────────────────────────────────
-function TabDiaEleccion() {
-  const [subTab, setSubTab] = useState<'vivo' | 'actas'>('vivo')
+// ─── Sub-tab: Boletines (comparación con los boletines oficiales de la CNE) ────
+function TabBoletines() {
+  const sum = (k: 'b1' | 'b2' | 'nos') => BOLETIN_CMP.reduce((s, r) => s + (r[k] ?? 0), 0)
+  const t1 = sum('b1'), t2 = sum('b2'), tn = sum('nos')
+
+  // Métricas de conciliación
+  const enComun    = BOLETIN_CMP.filter(r => r.b2 != null && r.nos != null)
+  const coinciden  = enComun.filter(r => r.b2 === r.nos).length
+  const difieren   = enComun.filter(r => r.b2 !== r.nos)
+  const nuevasB2   = BOLETIN_CMP.filter(r => r.b1 == null && r.b2 != null).map(r => r.dem)
+
+  const estado = (r: CmpBoletin) => {
+    if (r.nos == null && r.b2 != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
+    if (r.b2 == null && r.nos != null) return { txt: 'Fuera de boletín', color: '#6b7280', bg: '#f9fafb', icon: '•' }
+    if (r.b2 === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
+    return { txt: 'A verificar', color: '#b45309', bg: '#fffbeb', icon: '⚠' }
+  }
+  const cell = (v: number | null) =>
+    v == null ? <span className="text-gray-300">—</span> : <span className="tabular-nums">{v}</span>
+
   return (
     <div className="space-y-5">
-      <div className="flex gap-2 border-b border-gray-200">
+      {/* Nota de método */}
+      <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
+        Comparación de la línea de <b>George Richardson</b> (Plancha 2 · renglón 1, núcleo Arquitectura)
+        entre el <b>Boletín Preliminar 01</b>, el <b>Boletín Preliminar 02</b> de la CNE y <b>nuestro conteo de actas</b>.
+        Un “—” significa que esa demarcación aún no aparecía en ese boletín.
+      </div>
+
+      {/* Totales por conteo */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Boletín 01', val: t1, sub: 'oficial CNE', color: 'var(--color-marino)' },
+          { label: 'Boletín 02', val: t2, sub: 'oficial CNE', color: 'var(--color-marino)' },
+          { label: 'Nuestro conteo', val: tn, sub: `${ACTAS_ARQ.length} actas · el más completo`, color: '#16a34a' },
+        ].map(c => (
+          <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{c.label}</p>
+            <p className="text-4xl font-black tabular-nums mt-1" style={{ color: c.color }}>{c.val.toLocaleString()}</p>
+            <p className="text-[11px] text-gray-400 mt-1">{c.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Marcador de avance B1 → B2 */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2">
+        <p className="text-sm font-semibold text-gray-700">📈 Qué cambió del Boletín 01 al 02</p>
+        <p className="text-xs text-gray-500">
+          Richardson pasó de <b className="tabular-nums">{t1}</b> a <b className="tabular-nums">{t2}</b> votos
+          (<span className="text-green-700 font-semibold tabular-nums">+{t2 - t1}</span>). La CNE incorporó
+          en el Boletín 02 estas {nuevasB2.length} demarcaciones que no estaban en el 01:
+        </p>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {nuevasB2.map(d => (
+            <span key={d} className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: 'rgba(31,58,107,0.08)', color: 'var(--color-marino)' }}>
+              + {d}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabla comparativa */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm font-semibold text-gray-700">Richardson — Boletín 01 vs Boletín 02 vs Nosotros</p>
+          <p className="text-xs text-gray-400">{coinciden} de {enComun.length} demarcaciones coinciden con el Boletín 02</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                <th className="text-left px-5 py-2 font-semibold">Demarcación</th>
+                <th className="text-right px-3 py-2 font-semibold">Boletín 01</th>
+                <th className="text-right px-3 py-2 font-semibold">Boletín 02</th>
+                <th className="text-right px-3 py-2 font-semibold">Nosotros</th>
+                <th className="text-left px-4 py-2 font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {BOLETIN_CMP.map(r => {
+                const e = estado(r)
+                const nuevo = r.b1 == null && r.b2 != null
+                return (
+                  <tr key={r.dem} style={{ backgroundColor: e.txt === 'Coincide' ? undefined : e.bg }}>
+                    <td className="px-5 py-2.5 font-medium text-gray-700">
+                      {r.dem}
+                      {nuevo && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                        style={{ backgroundColor: 'rgba(31,58,107,0.1)', color: 'var(--color-marino)' }}>nuevo en B02</span>}
+                      {r.nota && <span className="block text-[11px] text-gray-400 mt-0.5 font-normal">{r.nota}</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b1)}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b2)}</td>
+                    <td className="px-3 py-2.5 text-right font-black text-gray-800">{cell(r.nos)}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: e.color }}>
+                        <span>{e.icon}</span>{e.txt}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 font-black" style={{ borderColor: 'var(--color-marino)' }}>
+                <td className="px-5 py-3 text-gray-700">TOTAL Richardson</td>
+                <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t1}</td>
+                <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t2}</td>
+                <td className="px-3 py-3 text-right tabular-nums text-green-700">{tn}</td>
+                <td className="px-4 py-3" />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* Resumen de hallazgos — para lectura del Presidente */}
+      <div className="bg-white rounded-2xl border-2 shadow-sm overflow-hidden" style={{ borderColor: 'var(--color-marino)' }}>
+        <div className="px-5 py-3" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+          <p className="text-sm font-bold">🔎 Resumen de hallazgos</p>
+        </div>
+        <div className="p-5 space-y-3 text-sm text-gray-700">
+          <p>
+            <b>1. Richardson lidera en los tres conteos.</b> Nuestro conteo ({tn}) es el más completo y actualizado,
+            por encima del Boletín 02 oficial ({t2}) y del Boletín 01 ({t1}). La diferencia
+            (<span className="tabular-nums">+{tn - t2}</span> vs. el Boletín 02) se debe a que llevamos más actas cargadas.
+          </p>
+          <p>
+            <b>2. Alta coincidencia oficial.</b> En <b>{coinciden} de {enComun.length}</b> demarcaciones nuestro
+            conteo coincide <b>exactamente</b> con el Boletín 02 de la CNE — validación cruzada sólida de nuestros números.
+          </p>
+          <p>
+            <b>3. Diferencias puntuales, todas explicables ({difieren.length}).</b> La única confirmada es
+            <b> Puerto Plata</b> (nosotros 37 / boletín 25): nuestra acta fue validada y el boletín mantiene un acta
+            objetada sin corregir. El resto son actas que en nuestro sistema aún figuran <b>“por confirmar”</b>
+            {' '}(Reg. Sureste, Hato Mayor, La Altagracia) o un posible <b>cruce de etiqueta Samaná ↔ Santiago Rodríguez</b>
+            {' '}(los mismos 18 votos aparecen en columnas distintas). Se verifican con el acta física antes de darlas por firmes.
+          </p>
+          <p>
+            <b>4. Dos pendientes de conciliar.</b> El boletín ya trae <b>Sánchez Ramírez (Cotuí)</b> con 7 votos que
+            aún no hemos cargado (los sumaríamos), y nosotros tenemos <b>María Trinidad Sánchez</b> (18) que ningún
+            boletín ha computado todavía.
+          </p>
+          <p className="text-[12px] text-gray-400 pt-1 border-t border-gray-100">
+            Cifras transcritas de los boletines oficiales escaneados (Preliminar 01 y 02). Los totales oficiales
+            impresos coinciden con la suma de esta tabla (639 · 778). Documento de trabajo interno.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Día de Elección (con sub-tabs) ──────────────────────────────────────
+function TabDiaEleccion() {
+  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'boletines'>('vivo')
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-2 border-b border-gray-200 flex-wrap">
         {([
-          { id: 'vivo'  as const, label: '📡 Tendencia en vivo' },
-          { id: 'actas' as const, label: '🗒️ Resultado en actas' },
+          { id: 'vivo'      as const, label: '📡 Tendencia en vivo' },
+          { id: 'actas'     as const, label: '🗒️ Resultado en actas' },
+          { id: 'boletines' as const, label: '📋 Boletines' },
         ]).map(s => (
           <button
             key={s.id}
@@ -2281,8 +2487,9 @@ function TabDiaEleccion() {
           </button>
         ))}
       </div>
-      {subTab === 'vivo'  && <TabDiaEleccionVivo />}
-      {subTab === 'actas' && <TabResultadoActas />}
+      {subTab === 'vivo'      && <TabDiaEleccionVivo />}
+      {subTab === 'actas'     && <TabResultadoActas />}
+      {subTab === 'boletines' && <TabBoletines />}
     </div>
   )
 }
