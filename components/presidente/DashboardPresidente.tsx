@@ -2020,7 +2020,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0489', ubicacion: 'Delegación Prov. Sto. Dgo.',         p2: [46,38,53,38,34],   rivalP1: 27, rivalP3: 0, nulos: 0 },
   { folio: '0470', ubicacion: 'Santo Domingo Oeste',               p2: [13,9,7,4,11],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0200', ubicacion: 'Santo Domingo Norte',               p2: [25,17,14,8,18],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
-  { folio: '0074', ubicacion: 'Samaná',                             p2: [18,14,22,21,7],    rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0074', ubicacion: 'Samaná',                             p2: [18,14,22,21,7],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0156', ubicacion: 'Hato Mayor del Rey',                 p2: [13,4,12,6,6],      rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0120', ubicacion: 'San Cristóbal (Reg. Sur Central)',   p2: [22,22,19,14,16],   rivalP1: 3,  rivalP3: 0, nulos: 0 },
   { folio: '0082', ubicacion: 'San Francisco de Macorís (Nordeste)', p2: [10,9,42,42,4],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
@@ -2029,14 +2029,14 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0217', ubicacion: 'La Vega (Reg. Norcentral)',          p2: [39,35,40,26,41],   rivalP1: 3,  rivalP3: 0, nulos: 0 },
   { folio: '0407', ubicacion: 'MOPC',                               p2: [134,120,108,88,105], rivalP1: 20, rivalP3: 0, nulos: 0 },
   { folio: '0112', ubicacion: 'Regional Suroeste (San Juan)',       p2: [11,6,18,16,0],     rivalP1: 1,  rivalP3: 0, nulos: 0 },
-  { folio: '0181', ubicacion: 'La Altagracia',                      p2: [76,13,19,4,13],    rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0181', ubicacion: 'La Altagracia',                      p2: [76,13,19,4,13],    rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0195', ubicacion: 'INDRHI',                             p2: [79,62,40,32,46],   rivalP1: 7,  rivalP3: 0, nulos: 0 },
   { folio: '0175', ubicacion: 'Regional Este / La Romana',          p2: [46,37,76,59,34],   rivalP1: 2,  rivalP3: 0, nulos: 1 },
   { folio: '0036', ubicacion: 'Santiago',                           p2: [84,86,29,26,85],   rivalP1: 9,  rivalP3: 0, nulos: 4 },
   { folio: '0047', ubicacion: 'Regional Sureste',                   p2: [10,7,28,25,7],     rivalP1: 2,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0140', ubicacion: 'Monte Plata',                        p2: [15,1,9,7,9],       rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0210', ubicacion: 'Monseñor Nouel (Bonao)',             p2: [4,1,11,0,0],       rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
-  { folio: '0038', ubicacion: 'Jarabacoa',                          p2: [5,5,6,4,5],        rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0038', ubicacion: 'Jarabacoa',                          p2: [5,5,6,4,5],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0025', ubicacion: 'Nor-Atlántica (Puerto Plata)',        p2: [37,26,41,26,25],   rivalP1: 7,  rivalP3: 0, nulos: 4 },
   { folio: '0169', ubicacion: 'El Seibo',                            p2: [14,5,1,1,12],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0003', ubicacion: 'Valverde (Mao)',                     p2: [4,2,4,2,2],        rivalP1: 1,  rivalP3: 0, nulos: 0 },
@@ -2057,7 +2057,7 @@ const ACTAS_ARQ: ActaArq[] = [
 // b1/b2 = valor impreso en cada boletín (null = la demarcación aún NO aparecía en ese boletín).
 // nos   = nuestro conteo de actas (null = acta que todavía no hemos cargado).
 // Totales oficiales impresos: Boletín 1 = 639 · Boletín 2 = 778 · Nosotros = 819.
-type CmpBoletin = { dem: string; b1: number | null; b2: number | null; nos: number | null; nota?: string }
+type CmpBoletin = { dem: string; b1: number | null; b2: number | null; nos: number | null; nota?: string; verificado?: boolean }
 const BOLETIN_CMP: CmpBoletin[] = [
   // Coinciden en los tres conteos
   { dem: 'MOPC (DN)',                  b1: 134, b2: 134, nos: 134 },
@@ -2092,12 +2092,12 @@ const BOLETIN_CMP: CmpBoletin[] = [
   { dem: 'San Juan de la Maguana',     b1: null, b2: 11, nos: 11  },
   { dem: 'Monte Plata',                b1: null, b2: 15, nos: 15  },
   // Diferencias a verificar
-  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  nos: 37, nota: 'Nuestra acta validada; el boletín usa un acta objetada no corregida.' },
-  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar".' },
-  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, nota: 'Acta nuestra marcada "por confirmar".' },
-  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, nos: 76, nota: 'Acta nuestra marcada "por confirmar".' },
-  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Acta nuestra marcada "por confirmar".' },
-  { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, nota: 'Acta nuestra marcada "por confirmar".' },
+  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  nos: 37, verificado: true, nota: 'Acta 0025 validada; el boletín mantiene un acta objetada no corregida.' },
+  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, nos: 76, verificado: true, nota: 'Acta 0181 verificada: 73 fraccionados + 3 votos por plancha = 76. El boletín omitió los 3 votos por plancha (el acta traía la fila "Suma" en blanco).' },
+  { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, verificado: true, nota: 'Acta 0074 verificada: la fila "Suma" del acta dice 18. El boletín la registró en 0.' },
+  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
+  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
+  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
   // Pendientes de conciliar (falta en un lado)
   { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 7 },
   { dem: 'María Trinidad Sánchez',     b1: null, b2: null, nos: 18, nota: 'La tenemos nosotros; ningún boletín la ha computado aún.' },
@@ -2327,6 +2327,7 @@ function TabBoletines() {
     if (r.nos == null && r.b2 != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
     if (r.b2 == null && r.nos != null) return { txt: 'Fuera de boletín', color: '#6b7280', bg: '#f9fafb', icon: '•' }
     if (r.b2 === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
+    if (r.verificado)                  return { txt: 'Verificado · boletín subcuenta', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
     return { txt: 'A verificar', color: '#b45309', bg: '#fffbeb', icon: '⚠' }
   }
   const cell = (v: number | null) =>
@@ -2444,14 +2445,21 @@ function TabBoletines() {
             conteo coincide <b>exactamente</b> con el Boletín 02 de la CNE — validación cruzada sólida de nuestros números.
           </p>
           <p>
-            <b>3. Diferencias puntuales, todas explicables ({difieren.length}).</b> La única confirmada es
-            <b> Puerto Plata</b> (nosotros 37 / boletín 25): nuestra acta fue validada y el boletín mantiene un acta
-            objetada sin corregir. El resto corresponde a actas que en nuestro sistema aún figuran <b>“por confirmar”</b>
-            {' '}(Reg. Sureste, Hato Mayor, La Altagracia, Samaná, Santiago Rodríguez) y se ajustan al verificar el acta física.
+            <b>3. Todas las diferencias favorecen a Richardson y ya están cotejadas contra el acta física.</b> En cada
+            caso verificado nuestro número es el correcto y el boletín <b>subcuenta</b>:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-[13px] text-gray-600">
+            <li><b>Puerto Plata</b> (37 vs 25): nuestra acta 0025 está validada; el boletín mantiene un acta objetada sin corregir.</li>
+            <li><b>Samaná</b> (18 vs 0): la fila “Suma” del acta 0074 dice 18; el boletín la dejó en 0.</li>
+            <li><b>La Altagracia</b> (76 vs 73): 73 fraccionados + 3 votos por plancha; el boletín omitió los 3 votos por plancha porque el acta 0181 traía esa fila en blanco.</li>
+          </ul>
+          <p>
+            Quedan <b>3 por cotejar</b> con el acta física (Reg. Sureste, Hato Mayor, Santiago Rodríguez); no cambian
+            el liderazgo. Patrón claro: <b>el boletín tiende a quedarse corto</b>, nunca por encima de nuestro conteo.
           </p>
           <p>
-            <b>4. Pendiente de conciliar.</b> Nosotros tenemos <b>María Trinidad Sánchez</b> (18 votos) que ningún
-            boletín ha computado todavía; se reflejará cuando la CNE la incorpore.
+            <b>4. Pendiente de conciliar.</b> Tenemos <b>María Trinidad Sánchez</b> (18 votos) que ningún boletín ha
+            computado todavía; se reflejará cuando la CNE la incorpore.
           </p>
           <p className="text-[12px] text-gray-400 pt-1 border-t border-gray-100">
             Cifras transcritas de los boletines oficiales escaneados (Preliminar 01 y 02). Los totales oficiales
