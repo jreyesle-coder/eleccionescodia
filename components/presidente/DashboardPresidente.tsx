@@ -2041,7 +2041,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0025', ubicacion: 'Nor-Atlántica (Puerto Plata)',        p2: [37,26,41,26,25],   rivalP1: 7,  rivalP3: 0, nulos: 4 },
   { folio: '0169', ubicacion: 'El Seibo',                            p2: [14,5,1,1,12],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0003', ubicacion: 'Valverde (Mao)',                     p2: [4,2,4,2,2],        rivalP1: 1,  rivalP3: 0, nulos: 0 },
-  { folio: '0239', ubicacion: 'Santiago Rodríguez',                 p2: [7,7,7,7,7],        rivalP1: 0,  rivalP3: 0, nulos: 0, porConfirmar: true },
+  { folio: '0239', ubicacion: 'Santiago Rodríguez',                 p2: [7,7,7,7,7],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0225', ubicacion: 'Hermanas Mirabal (Salcedo)',         p2: [1,0,9,9,0],        rivalP1: 3,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0105', ubicacion: 'Azua',                               p2: [12,9,10,10,9],     rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0204', ubicacion: 'Elías Piña',                         p2: [0,0,1,0,4],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
@@ -2098,7 +2098,7 @@ const BOLETIN_CMP: CmpBoletin[] = [
   { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, verificado: true, nota: 'Acta 0074 verificada: la fila "Suma" del acta dice 18. El boletín la registró en 0.' },
   { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
   { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada contra el acta física: Votos Plancha No.2 = 2, fraccionado renglón 1 = 11 → Suma = 13. El boletín omitió los 2 votos por plancha que suman al renglón 1.' },
-  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
+  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  verificado: true, nota: 'Acta 0239 verificada: 7 votos totales, todos de plancha completa a la Plancha 2 → renglón 1 = 7. El boletín trae 18 (sobrecuenta); coincide con el cruce de etiqueta con Samaná (cuyos 18 reales el boletín puso en 0).' },
   // Pendientes de conciliar (falta en un lado)
   { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 votos de plancha en la fila "Suma", y el boletín recogió solo el 7. Se mantiene "A verificar" porque los 34 no figuran sumados en el acta.' },
   { dem: 'María Trinidad Sánchez',     b1: null, b2: null, nos: 18, nota: 'La tenemos nosotros; ningún boletín la ha computado aún.' },
@@ -2327,7 +2327,10 @@ function TabBoletines() {
     if (r.nos == null && r.b2 != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
     if (r.b2 == null && r.nos != null) return { txt: 'Fuera de boletín', color: '#6b7280', bg: '#f9fafb', icon: '•' }
     if (r.b2 === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
-    if (r.verificado)                  return { txt: 'Verificado · boletín subcuenta', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
+    if (r.verificado) {
+      const dir = (r.nos ?? 0) > (r.b2 ?? 0) ? 'boletín subcuenta' : 'boletín sobrecuenta'
+      return { txt: `Verificado · ${dir}`, color: '#15803d', bg: '#f0fdf4', icon: '✓' }
+    }
     return { txt: 'A verificar', color: '#b45309', bg: '#fffbeb', icon: '⚠' }
   }
   const cell = (v: number | null) =>
@@ -2445,18 +2448,21 @@ function TabBoletines() {
             conteo coincide <b>exactamente</b> con el Boletín 02 de la CNE — validación cruzada sólida de nuestros números.
           </p>
           <p>
-            <b>3. Todas las diferencias favorecen a Richardson y ya están cotejadas contra el acta física.</b> En cada
-            caso verificado nuestro número es el correcto y el boletín <b>subcuenta</b>:
+            <b>3. Diferencias cotejadas contra el acta física.</b> En cada caso verificado nuestro número es el
+            respaldado por el acta:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-[13px] text-gray-600">
             <li><b>Puerto Plata</b> (37 vs 25): nuestra acta 0025 está validada; el boletín mantiene un acta objetada sin corregir.</li>
             <li><b>Samaná</b> (18 vs 0): la fila “Suma” del acta 0074 dice 18; el boletín la dejó en 0.</li>
             <li><b>La Altagracia</b> (76 vs 73): 73 fraccionados + 3 votos por plancha; el boletín omitió los 3 votos por plancha porque el acta 0181 traía esa fila en blanco.</li>
             <li><b>Hato Mayor</b> (13 vs 11): acta 0156 verificada; 11 fraccionados + 2 votos por plancha = 13; el boletín omitió los 2 votos por plancha.</li>
+            <li><b>Sánchez Ramírez</b> (41 vs 7): acta 0100 trae 34 votos de plancha completa a la Plancha 2 + 7 fraccionados = 41; el delegado no sumó los 34 en la fila “Suma” y el boletín recogió solo el 7. Sigue “a verificar” hasta cotejo conjunto.</li>
+            <li><b>Santiago Rodríguez</b> (7 vs 18): acta 0239 verificada; 7 votos totales, todos de plancha a la Plancha 2 → 7. Aquí el boletín <b>sobrecuenta</b> (18), consistente con el cruce de etiqueta con Samaná.</li>
           </ul>
           <p>
-            Quedan <b>2 por cotejar</b> con el acta física (Reg. Sureste, Santiago Rodríguez); no cambian
-            el liderazgo. Patrón claro: <b>el boletín tiende a quedarse corto</b>, nunca por encima de nuestro conteo.
+            Queda <b>1 por cotejar</b> con el acta física (Reg. Sureste); no cambia el liderazgo. Patrón general:
+            <b>el boletín tiende a quedarse corto</b> frente a nuestro conteo, salvo Santiago Rodríguez donde el
+            error es de etiqueta.
           </p>
           <p>
             <b>4. Pendiente de conciliar.</b> Tenemos <b>María Trinidad Sánchez</b> (18 votos) que ningún boletín ha
