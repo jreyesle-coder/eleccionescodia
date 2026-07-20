@@ -2055,53 +2055,54 @@ const ACTAS_ARQ: ActaArq[] = [
 // ── Comparación con los boletines oficiales de la CNE (línea de George Richardson,
 //    Plancha 2 · renglón 1, núcleo Arquitectura) ────────────────────────────────
 // Datos transcritos directamente de los boletines escaneados (BOLETIN PRELIMINAR 01 y 02).
-// b1/b2 = valor impreso en cada boletín (null = la demarcación aún NO aparecía en ese boletín).
+// b1/b2/b3 = valor impreso en cada boletín preliminar (null = la demarcación aún NO aparecía en ese boletín).
 // nos   = nuestro conteo de actas (null = acta que todavía no hemos cargado).
-// Totales oficiales impresos: Boletín 1 = 639 · Boletín 2 = 778 · Nosotros = 819.
-type CmpBoletin = { dem: string; b1: number | null; b2: number | null; nos: number | null; nota?: string; verificado?: boolean }
+// Totales oficiales impresos: Boletín 1 = 639 · Boletín 2 = 778 · Boletín 3 = 790 · Nosotros = 869.
+// El Boletín 03 (CDN Arquitectura) da: Richardson 790, Abud 600, Calderón 714, García 551, Mejía 559; válidos 1261.
+type CmpBoletin = { dem: string; b1: number | null; b2: number | null; b3: number | null; nos: number | null; nota?: string; verificado?: boolean }
 const BOLETIN_CMP: CmpBoletin[] = [
   // Coinciden en los tres conteos
-  { dem: 'MOPC (DN)',                  b1: 134, b2: 134, nos: 134 },
-  { dem: 'EGEHID',                     b1: 6,   b2: 6,   nos: 6   },
-  { dem: 'Agricultura',                b1: 3,   b2: 3,   nos: 3   },
-  { dem: 'INDRHI',                     b1: 79,  b2: 79,  nos: 79  },
-  { dem: 'DIE',                        b1: 9,   b2: 9,   nos: 9   },
-  { dem: 'Del. Prov. Sto. Dgo.',       b1: 46,  b2: 46,  nos: 46  },
-  { dem: 'Sto. Dgo. Norte',            b1: 25,  b2: 25,  nos: 25  },
-  { dem: 'Sto. Dgo. Oeste',            b1: 13,  b2: 13,  nos: 13  },
-  { dem: 'Boca Chica',                 b1: 9,   b2: 9,   nos: 18, nota: 'Acta 0478: "Votos Plancha No.2 = 9" (voto de plancha completa que suma a los 5 renglones) + fila Suma renglón 1 = 9 → 18. El acta está internamente descuadrada (total 9 votos vs fila Suma que suma 19); se aplica el criterio de sumar los votos de plancha. Se mantiene "A verificar" y se solicita cotejo del acta física.' },
-  { dem: 'Montecristi',                b1: 7,   b2: 7,   nos: 7   },
-  { dem: 'Dajabón',                    b1: 2,   b2: 2,   nos: 2   },
-  { dem: 'La Vega',                    b1: 39,  b2: 39,  nos: 39  },
-  { dem: 'Monseñor Nouel (Bonao)',     b1: 4,   b2: 4,   nos: 4   },
-  { dem: 'Salcedo (Hnas. Mirabal)',    b1: 1,   b2: 1,   nos: 1   },
-  { dem: 'Santiago',                   b1: 84,  b2: 84,  nos: 84  },
-  { dem: 'Valverde (Mao)',             b1: 4,   b2: 4,   nos: 4   },
-  { dem: 'San Francisco de Macorís',   b1: 10,  b2: 10,  nos: 10  },
-  { dem: 'Fantino',                    b1: 0,   b2: 0,   nos: 0   },
-  { dem: 'Villa la Mata',              b1: 3,   b2: 3,   nos: 3   },
-  { dem: 'San Cristóbal',              b1: 22,  b2: 22,  nos: 22  },
-  { dem: 'Baní (Peravia)',             b1: 11,  b2: 11,  nos: 11  },
-  { dem: 'Barahona',                   b1: 21,  b2: 21,  nos: 21  },
-  { dem: 'Elías Piña',                 b1: 0,   b2: 0,   nos: 0   },
-  { dem: 'El Seibo',                   b1: 14,  b2: 14,  nos: 14  },
-  { dem: 'La Romana',                  b1: 46,  b2: 46,  nos: 46  },
+  { dem: 'MOPC (DN)',                  b1: 134, b2: 134, b3: 134, nos: 134 },
+  { dem: 'EGEHID',                     b1: 6,   b2: 6,   b3: 6,   nos: 6   },
+  { dem: 'Agricultura',                b1: 3,   b2: 3,   b3: 3,   nos: 3   },
+  { dem: 'INDRHI',                     b1: 79,  b2: 79,  b3: 79,  nos: 79  },
+  { dem: 'DIE',                        b1: 9,   b2: 9,   b3: 9,   nos: 9   },
+  { dem: 'Del. Prov. Sto. Dgo.',       b1: 46,  b2: 46,  b3: 46,  nos: 46  },
+  { dem: 'Sto. Dgo. Norte',            b1: 25,  b2: 25,  b3: 25,  nos: 25  },
+  { dem: 'Sto. Dgo. Oeste',            b1: 13,  b2: 13,  b3: 13,  nos: 13  },
+  { dem: 'Boca Chica',                 b1: 9,   b2: 9,   b3: 9,   nos: 18, nota: 'Acta 0478: "Votos Plancha No.2 = 9" (voto de plancha completa que suma a los 5 renglones) + fila Suma renglón 1 = 9 → 18. El acta está internamente descuadrada (total 9 votos vs fila Suma que suma 19); se aplica el criterio de sumar los votos de plancha. El Boletín 03 sigue en 9; se mantiene "A verificar" y se solicita cotejo del acta física.' },
+  { dem: 'Montecristi',                b1: 7,   b2: 7,   b3: 7,   nos: 7   },
+  { dem: 'Dajabón',                    b1: 2,   b2: 2,   b3: 2,   nos: 2   },
+  { dem: 'La Vega',                    b1: 39,  b2: 39,  b3: 39,  nos: 39  },
+  { dem: 'Monseñor Nouel (Bonao)',     b1: 4,   b2: 4,   b3: 4,   nos: 4   },
+  { dem: 'Salcedo (Hnas. Mirabal)',    b1: 1,   b2: 1,   b3: 1,   nos: 1   },
+  { dem: 'Santiago',                   b1: 84,  b2: 84,  b3: 84,  nos: 84  },
+  { dem: 'Valverde (Mao)',             b1: 4,   b2: 4,   b3: 4,   nos: 4   },
+  { dem: 'San Francisco de Macorís',   b1: 10,  b2: 10,  b3: 10,  nos: 10  },
+  { dem: 'Fantino',                    b1: 0,   b2: 0,   b3: 0,   nos: 0   },
+  { dem: 'Villa la Mata',              b1: 3,   b2: 3,   b3: 3,   nos: 3   },
+  { dem: 'San Cristóbal',              b1: 22,  b2: 22,  b3: 22,  nos: 22  },
+  { dem: 'Baní (Peravia)',             b1: 11,  b2: 11,  b3: 11,  nos: 11  },
+  { dem: 'Barahona',                   b1: 21,  b2: 21,  b3: 21,  nos: 21  },
+  { dem: 'Elías Piña',                 b1: 0,   b2: 0,   b3: 0,   nos: 0   },
+  { dem: 'El Seibo',                   b1: 14,  b2: 14,  b3: 14,  nos: 14  },
+  { dem: 'La Romana',                  b1: 46,  b2: 46,  b3: 46,  nos: 46  },
   // Incorporadas por la CNE en el Boletín 2 (no estaban en el Boletín 1) — coinciden con nosotros
-  { dem: 'Jarabacoa',                  b1: null, b2: 5,  nos: 5   },
-  { dem: 'Espaillat (Moca)',           b1: null, b2: 5,  nos: 5   },
-  { dem: 'Azua',                       b1: null, b2: 12, nos: 12  },
-  { dem: 'San Juan de la Maguana',     b1: null, b2: 11, nos: 11  },
-  { dem: 'Monte Plata',                b1: null, b2: 15, nos: 15  },
-  // Diferencias a verificar
-  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  nos: 37, verificado: true, nota: 'Acta 0025 validada; el boletín mantiene un acta objetada no corregida.' },
-  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, nos: 76, verificado: true, nota: 'Acta 0181 verificada: 73 fraccionados + 3 votos por plancha = 76. El boletín omitió los 3 votos por plancha (el acta traía la fila "Suma" en blanco).' },
-  { dem: 'Samaná',                     b1: null, b2: 0,  nos: 18, verificado: true, nota: 'Acta 0074 verificada: la fila "Suma" del acta dice 18. El boletín la registró en 0.' },
-  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   nos: 10, nota: 'Acta nuestra marcada "por confirmar" (falta cotejar con el acta física).' },
-  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada contra el acta física: Votos Plancha No.2 = 2, fraccionado renglón 1 = 11 → Suma = 13. El boletín omitió los 2 votos por plancha que suman al renglón 1.' },
-  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, nos: 7,  verificado: true, nota: 'Acta 0239 verificada: 7 votos totales, todos de plancha completa a la Plancha 2 → renglón 1 = 7. El boletín trae 18 (sobrecuenta); coincide con el cruce de etiqueta con Samaná (cuyos 18 reales el boletín puso en 0).' },
-  // Pendientes de conciliar (falta en un lado)
-  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 votos de plancha en la fila "Suma", y el boletín recogió solo el 7. Se mantiene "A verificar" porque los 34 no figuran sumados en el acta.' },
-  { dem: 'María Trinidad Sánchez',     b1: null, b2: null, nos: 18, nota: 'La tenemos nosotros; ningún boletín la ha computado aún.' },
+  { dem: 'Jarabacoa',                  b1: null, b2: 5,  b3: 5,   nos: 5   },
+  { dem: 'Espaillat (Moca)',           b1: null, b2: 5,  b3: 5,   nos: 5   },
+  { dem: 'Azua',                       b1: null, b2: 12, b3: 12,  nos: 12  },
+  { dem: 'San Juan de la Maguana',     b1: null, b2: 11, b3: 11,  nos: 11  },
+  { dem: 'Monte Plata',                b1: null, b2: 15, b3: 15,  nos: 15  },
+  // Corregidas por la CNE en el Boletín 3 — ya coinciden con nuestro conteo
+  { dem: 'Samaná',                     b1: null, b2: 0,  b3: 18,  nos: 18, nota: 'El Boletín 03 corrigió Samaná de 0 a 18 → ya coincide con nuestro conteo (acta 0074).' },
+  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   b3: 10,  nos: 10, nota: 'El Boletín 03 subió de 4 a 10 → ya coincide con nuestro conteo (acta 0047).' },
+  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, b3: 7,   nos: 7,  nota: 'El Boletín 03 corrigió de 18 a 7 → ya coincide con nuestro conteo (acta 0239). Se resolvió el cruce de etiqueta con Samaná.' },
+  { dem: 'María Trinidad Sánchez',     b1: null, b2: null, b3: 18, nos: 18, nota: 'El Boletín 03 la incorporó con 18 → coincide con nuestro conteo.' },
+  // Diferencias que persisten en el Boletín 3
+  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  b3: 27,  nos: 37, verificado: true, nota: 'Acta 0025 validada (37). El Boletín 03 subió de 25 a 27 pero mantiene el acta objetada sin corregir del todo.' },
+  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, b3: 52,  nos: 76, verificado: true, nota: 'Acta 0181 verificada (76). ATENCIÓN: el Boletín 03 BAJÓ Higüey de 73 a 52; un boletín no debería reducir votos — se solicita revisión, posible reasignación/error de columna.' },
+  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  b3: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada (13): Votos Plancha No.2 = 2 + fraccionado renglón 1 = 11 → 13. El Boletín 03 sigue en 11; omite los 2 votos por plancha.' },
+  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   b3: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 en la fila "Suma"; el Boletín 03 sigue en 7. Se mantiene "A verificar".' },
 ]
 
 function TabResultadoActas() {
@@ -2315,20 +2316,19 @@ function TabResultadoActas() {
 
 // ─── Sub-tab: Boletines (comparación con los boletines oficiales de la CNE) ────
 function TabBoletines() {
-  const sum = (k: 'b1' | 'b2' | 'nos') => BOLETIN_CMP.reduce((s, r) => s + (r[k] ?? 0), 0)
-  const t1 = sum('b1'), t2 = sum('b2'), tn = sum('nos')
+  const sum = (k: 'b1' | 'b2' | 'b3' | 'nos') => BOLETIN_CMP.reduce((s, r) => s + (r[k] ?? 0), 0)
+  const t1 = sum('b1'), t2 = sum('b2'), t3 = sum('b3'), tn = sum('nos')
 
-  // Métricas de conciliación
-  const enComun    = BOLETIN_CMP.filter(r => r.b2 != null && r.nos != null)
-  const coinciden  = enComun.filter(r => r.b2 === r.nos).length
-  const nuevasB2   = BOLETIN_CMP.filter(r => r.b1 == null && r.b2 != null).map(r => r.dem)
+  // Métricas de conciliación (contra el boletín más reciente = B03)
+  const enComun    = BOLETIN_CMP.filter(r => r.b3 != null && r.nos != null)
+  const coinciden  = enComun.filter(r => r.b3 === r.nos).length
 
   const estado = (r: CmpBoletin) => {
-    if (r.nos == null && r.b2 != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
-    if (r.b2 == null && r.nos != null) return { txt: 'Fuera de boletín', color: '#6b7280', bg: '#f9fafb', icon: '•' }
-    if (r.b2 === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
+    if (r.nos == null && r.b3 != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
+    if (r.b3 == null && r.nos != null) return { txt: 'Fuera de boletín', color: '#6b7280', bg: '#f9fafb', icon: '•' }
+    if (r.b3 === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
     if (r.verificado) {
-      const dir = (r.nos ?? 0) > (r.b2 ?? 0) ? 'boletín subcuenta' : 'boletín sobrecuenta'
+      const dir = (r.nos ?? 0) > (r.b3 ?? 0) ? 'boletín subcuenta' : 'boletín sobrecuenta'
       return { txt: `Verificado · ${dir}`, color: '#15803d', bg: '#f0fdf4', icon: '✓' }
     }
     return { txt: 'A verificar', color: '#b45309', bg: '#fffbeb', icon: '⚠' }
@@ -2341,15 +2341,16 @@ function TabBoletines() {
       {/* Nota de método */}
       <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
         Comparación de la línea de <b>George Richardson</b> (Plancha 2 · renglón 1, núcleo Arquitectura)
-        entre el <b>Boletín Preliminar 01</b>, el <b>Boletín Preliminar 02</b> de la CNE y <b>nuestro conteo de actas</b>.
-        Un “—” significa que esa demarcación aún no aparecía en ese boletín.
+        entre los <b>Boletines Preliminares 01, 02 y 03</b> de la CNE y <b>nuestro conteo de actas</b>.
+        El estado compara contra el <b>Boletín 03</b> (el más reciente). Un “—” significa que esa demarcación aún no aparecía en ese boletín.
       </div>
 
       {/* Totales por conteo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Boletín 01', val: t1, sub: 'oficial CNE', color: 'var(--color-marino)' },
           { label: 'Boletín 02', val: t2, sub: 'oficial CNE', color: 'var(--color-marino)' },
+          { label: 'Boletín 03', val: t3, sub: 'oficial CNE · último', color: 'var(--color-marino)' },
           { label: 'Nuestro conteo', val: tn, sub: `${ACTAS_ARQ.length} actas · el más completo`, color: '#16a34a' },
         ].map(c => (
           <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
@@ -2360,37 +2361,41 @@ function TabBoletines() {
         ))}
       </div>
 
-      {/* Marcador de avance B1 → B2 */}
+      {/* Marcador de avance B2 → B3 */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2">
-        <p className="text-sm font-semibold text-gray-700">📈 Qué cambió del Boletín 01 al 02</p>
+        <p className="text-sm font-semibold text-gray-700">📈 Qué cambió del Boletín 02 al 03</p>
         <p className="text-xs text-gray-500">
-          Richardson pasó de <b className="tabular-nums">{t1}</b> a <b className="tabular-nums">{t2}</b> votos
-          (<span className="text-green-700 font-semibold tabular-nums">+{t2 - t1}</span>). La CNE incorporó
-          en el Boletín 02 estas {nuevasB2.length} demarcaciones que no estaban en el 01:
+          Richardson pasó de <b className="tabular-nums">{t2}</b> a <b className="tabular-nums">{t3}</b> votos
+          (<span className="text-green-700 font-semibold tabular-nums">{t3 - t2 >= 0 ? '+' : ''}{t3 - t2}</span>).
+          La CNE <b>incorporó/corrigió</b> en el Boletín 03 estas demarcaciones (varias ya coinciden con nosotros):
         </p>
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {nuevasB2.map(d => (
-            <span key={d} className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: 'rgba(31,58,107,0.08)', color: 'var(--color-marino)' }}>
-              + {d}
-            </span>
-          ))}
+          {BOLETIN_CMP.filter(r => (r.b2 ?? -1) !== (r.b3 ?? -1)).map(r => {
+            const sube = (r.b3 ?? 0) >= (r.b2 ?? 0)
+            return (
+              <span key={r.dem} className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: sube ? 'rgba(22,163,74,0.10)' : 'rgba(220,38,38,0.10)', color: sube ? '#15803d' : '#b91c1c' }}>
+                {r.dem}: {r.b2 ?? '—'} → {r.b3 ?? '—'}
+              </span>
+            )
+          })}
         </div>
       </div>
 
       {/* Tabla comparativa */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
-          <p className="text-sm font-semibold text-gray-700">Richardson — Boletín 01 vs Boletín 02 vs Nosotros</p>
-          <p className="text-xs text-gray-400">{coinciden} de {enComun.length} demarcaciones coinciden con el Boletín 02</p>
+          <p className="text-sm font-semibold text-gray-700">Richardson — Boletín 01 vs 02 vs 03 vs Nosotros</p>
+          <p className="text-xs text-gray-400">{coinciden} de {enComun.length} demarcaciones coinciden con el Boletín 03</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
                 <th className="text-left px-5 py-2 font-semibold">Demarcación</th>
-                <th className="text-right px-3 py-2 font-semibold">Boletín 01</th>
-                <th className="text-right px-3 py-2 font-semibold">Boletín 02</th>
+                <th className="text-right px-3 py-2 font-semibold">Bol. 01</th>
+                <th className="text-right px-3 py-2 font-semibold">Bol. 02</th>
+                <th className="text-right px-3 py-2 font-semibold">Bol. 03</th>
                 <th className="text-right px-3 py-2 font-semibold">Nosotros</th>
                 <th className="text-left px-4 py-2 font-semibold">Estado</th>
               </tr>
@@ -2398,17 +2403,18 @@ function TabBoletines() {
             <tbody className="divide-y divide-gray-50">
               {BOLETIN_CMP.map(r => {
                 const e = estado(r)
-                const nuevo = r.b1 == null && r.b2 != null
+                const nuevo = r.b2 == null && r.b3 != null
                 return (
                   <tr key={r.dem} style={{ backgroundColor: e.txt === 'Coincide' ? undefined : e.bg }}>
                     <td className="px-5 py-2.5 font-medium text-gray-700">
                       {r.dem}
                       {nuevo && <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                        style={{ backgroundColor: 'rgba(31,58,107,0.1)', color: 'var(--color-marino)' }}>nuevo en B02</span>}
+                        style={{ backgroundColor: 'rgba(31,58,107,0.1)', color: 'var(--color-marino)' }}>nuevo en B03</span>}
                       {r.nota && <span className="block text-[11px] text-gray-400 mt-0.5 font-normal">{r.nota}</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b1)}</td>
                     <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b2)}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-gray-700">{cell(r.b3)}</td>
                     <td className="px-3 py-2.5 text-right font-black text-gray-800">{cell(r.nos)}</td>
                     <td className="px-4 py-2.5">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: e.color }}>
@@ -2424,6 +2430,7 @@ function TabBoletines() {
                 <td className="px-5 py-3 text-gray-700">TOTAL Richardson</td>
                 <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t1}</td>
                 <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t2}</td>
+                <td className="px-3 py-3 text-right tabular-nums text-gray-700">{t3}</td>
                 <td className="px-3 py-3 text-right tabular-nums text-green-700">{tn}</td>
                 <td className="px-4 py-3" />
               </tr>
@@ -2439,38 +2446,33 @@ function TabBoletines() {
         </div>
         <div className="p-5 space-y-3 text-sm text-gray-700">
           <p>
-            <b>1. Richardson lidera en los tres conteos.</b> Nuestro conteo ({tn}) es el más completo y actualizado,
-            por encima del Boletín 02 oficial ({t2}) y del Boletín 01 ({t1}). La diferencia
-            (<span className="tabular-nums">+{tn - t2}</span> vs. el Boletín 02) se debe a que llevamos más actas cargadas.
+            <b>1. Richardson lidera en los tres boletines.</b> Nuestro conteo ({tn}) es el más completo,
+            por encima del Boletín 03 ({t3}), el 02 ({t2}) y el 01 ({t1}). La diferencia
+            (<span className="tabular-nums">+{tn - t3}</span> vs. el Boletín 03) se debe a las actas que aún no incorpora la CNE.
           </p>
           <p>
-            <b>2. Alta coincidencia oficial.</b> En <b>{coinciden} de {enComun.length}</b> demarcaciones nuestro
-            conteo coincide <b>exactamente</b> con el Boletín 02 de la CNE — validación cruzada sólida de nuestros números.
+            <b>2. El Boletín 03 nos dio la razón en varias demarcaciones.</b> La CNE corrigió e incorporó:
+            <b> Samaná</b> (0→18), <b>Santiago Rodríguez</b> (18→7), <b>Reg. Sureste</b> (4→10) y sumó
+            <b> María Trinidad Sánchez</b> (18) — las cuatro <b>ya coinciden con nuestro conteo</b>. En total,
+            <b> {coinciden} de {enComun.length}</b> demarcaciones ya coinciden con el Boletín 03.
           </p>
           <p>
-            <b>3. Diferencias cotejadas contra el acta física.</b> En cada caso verificado nuestro número es el
-            respaldado por el acta:
+            <b>3. Diferencias que persisten en el Boletín 03</b> (cotejadas contra el acta física):
           </p>
           <ul className="list-disc pl-5 space-y-1 text-[13px] text-gray-600">
-            <li><b>Puerto Plata</b> (37 vs 25): nuestra acta 0025 está validada; el boletín mantiene un acta objetada sin corregir.</li>
-            <li><b>Samaná</b> (18 vs 0): la fila “Suma” del acta 0074 dice 18; el boletín la dejó en 0.</li>
-            <li><b>La Altagracia</b> (76 vs 73): 73 fraccionados + 3 votos por plancha; el boletín omitió los 3 votos por plancha porque el acta 0181 traía esa fila en blanco.</li>
-            <li><b>Hato Mayor</b> (13 vs 11): acta 0156 verificada; 11 fraccionados + 2 votos por plancha = 13; el boletín omitió los 2 votos por plancha.</li>
-            <li><b>Sánchez Ramírez</b> (41 vs 7): acta 0100 trae 34 votos de plancha completa a la Plancha 2 + 7 fraccionados = 41; el delegado no sumó los 34 en la fila “Suma” y el boletín recogió solo el 7. Sigue “a verificar” hasta cotejo conjunto.</li>
-            <li><b>Santiago Rodríguez</b> (7 vs 18): acta 0239 verificada; 7 votos totales, todos de plancha a la Plancha 2 → 7. Aquí el boletín <b>sobrecuenta</b> (18), consistente con el cruce de etiqueta con Samaná.</li>
+            <li><b>Puerto Plata</b> (37 vs 27): el B03 subió de 25 a 27, pero sigue con el acta objetada sin corregir del todo.</li>
+            <li><b>La Altagracia / Higüey</b> (76 vs 52): <b>ojo</b>, el B03 BAJÓ de 73 a 52; un boletín no debería reducir votos — pedimos revisión (posible reasignación de columna).</li>
+            <li><b>Hato Mayor</b> (13 vs 11): acta 0156; 11 fraccionados + 2 votos por plancha = 13; el B03 sigue omitiendo los 2 votos por plancha.</li>
+            <li><b>Sánchez Ramírez</b> (41 vs 7): acta 0100 trae 34 votos de plancha completa + 7 fraccionados = 41; el B03 sigue en 7. “A verificar” hasta cotejo conjunto.</li>
+            <li><b>Boca Chica</b> (18 vs 9): acta 0478 descuadrada (9 votos de plancha + fila Suma); el B03 sigue en 9. “A verificar”.</li>
           </ul>
           <p>
-            Queda <b>1 por cotejar</b> con el acta física (Reg. Sureste); no cambia el liderazgo. Patrón general:
-            <b>el boletín tiende a quedarse corto</b> frente a nuestro conteo, salvo Santiago Rodríguez donde el
-            error es de etiqueta.
-          </p>
-          <p>
-            <b>4. Pendiente de conciliar.</b> Tenemos <b>María Trinidad Sánchez</b> (18 votos) que ningún boletín ha
-            computado todavía; se reflejará cuando la CNE la incorpore.
+            Ninguna de estas diferencias cambia el liderazgo. La más relevante a reclamar es <b>La Altagracia</b>,
+            porque el boletín <b>redujo</b> votos, algo que amerita explicación de la CNE.
           </p>
           <p className="text-[12px] text-gray-400 pt-1 border-t border-gray-100">
-            Cifras transcritas de los boletines oficiales escaneados (Preliminar 01 y 02). Los totales oficiales
-            impresos coinciden con la suma de esta tabla (639 · 778). Documento de trabajo interno.
+            Cifras transcritas de los boletines oficiales escaneados (Preliminar 01, 02 y 03). Los totales oficiales
+            impresos coinciden con la suma de esta tabla (639 · 778 · 790). Documento de trabajo interno.
           </p>
         </div>
       </div>
