@@ -2041,7 +2041,7 @@ const ACTAS_ARQ: ActaArq[] = [
   { folio: '0025', ubicacion: 'Nor-Atlántica (Puerto Plata)',        p2: [37,26,41,26,25],   rivalP1: 7,  rivalP3: 0, nulos: 4 },
   { folio: '0169', ubicacion: 'El Seibo',                            p2: [14,5,1,1,12],      rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0003', ubicacion: 'Valverde (Mao)',                     p2: [4,2,4,2,2],        rivalP1: 1,  rivalP3: 0, nulos: 0 },
-  { folio: '0239', ubicacion: 'Santiago Rodríguez',                 p2: [7,7,7,7,7],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
+  { folio: '0239', ubicacion: 'Santiago Rodríguez',                 p2: [7,1,1,1,0],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0225', ubicacion: 'Hermanas Mirabal (Salcedo)',         p2: [1,0,9,9,0],        rivalP1: 3,  rivalP3: 0, nulos: 0, porConfirmar: true },
   { folio: '0105', ubicacion: 'Azua',                               p2: [12,9,10,10,9],     rivalP1: 0,  rivalP3: 0, nulos: 0 },
   { folio: '0204', ubicacion: 'Elías Piña',                         p2: [0,0,1,0,4],        rivalP1: 0,  rivalP3: 0, nulos: 0 },
