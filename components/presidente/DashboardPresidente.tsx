@@ -2105,6 +2105,134 @@ const BOLETIN_CMP: CmpBoletin[] = [
   { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   b3: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 en la fila "Suma"; el Boletín 03 sigue en 7. Se mantiene "A verificar".' },
 ]
 
+// ── Votos por demarcación: los 5 candidatos de Plancha 2 en cada boletín ─────
+// b3 = Boletín Preliminar 03 (CDN Arquitectura), fila por fila verificada contra el total impreso.
+// `folio` enlaza con ACTAS_ARQ para tomar nuestro conteo (p2) sin duplicar datos.
+// Orden de los 5 valores = POSICIONES_P2 (Richardson, Abud, Calderón, García, Mejía).
+type DemBoletin = { dem: string; folio: string; b3: [number, number, number, number, number] }
+const POR_DEMARCACION: DemBoletin[] = [
+  { dem: 'MOPC (DN)',                folio: '0407', b3: [134,120,108,88,105] },
+  { dem: 'EGEHID',                   folio: '0463', b3: [6,5,3,2,4] },
+  { dem: 'Agricultura',              folio: '0453', b3: [3,3,3,3,3] },
+  { dem: 'INDRHI',                   folio: '0195', b3: [79,62,40,32,46] },
+  { dem: 'DIE',                      folio: '0254', b3: [9,8,10,6,9] },
+  { dem: 'Del. Prov. Sto. Dgo.',     folio: '0489', b3: [46,38,53,38,34] },
+  { dem: 'Sto. Dgo. Norte',          folio: '0200', b3: [25,17,14,8,18] },
+  { dem: 'Sto. Dgo. Oeste',          folio: '0470', b3: [13,9,7,4,11] },
+  { dem: 'Boca Chica',               folio: '0478', b3: [9,5,0,0,5] },
+  { dem: 'Puerto Plata',             folio: '0025', b3: [27,15,31,14,14] },
+  { dem: 'Dajabón',                  folio: '0006', b3: [2,0,1,1,0] },
+  { dem: 'Montecristi',              folio: '0019', b3: [7,7,1,2,7] },
+  { dem: 'La Vega',                  folio: '0217', b3: [39,35,40,26,41] },
+  { dem: 'Monseñor Nouel (Bonao)',   folio: '0210', b3: [4,1,11,0,0] },
+  { dem: 'Salcedo (Hnas. Mirabal)',  folio: '0225', b3: [1,0,9,9,0] },
+  { dem: 'Jarabacoa',                folio: '0038', b3: [5,5,6,4,5] },
+  { dem: 'Santiago',                 folio: '0036', b3: [84,86,29,26,85] },
+  { dem: 'Espaillat (Moca)',         folio: '0236', b3: [5,5,5,3,5] },
+  { dem: 'Valverde (Mao)',           folio: '0003', b3: [4,2,4,2,2] },
+  { dem: 'Santiago Rodríguez',       folio: '0239', b3: [7,6,6,6,6] },
+  { dem: 'San Francisco de Macorís', folio: '0082', b3: [10,9,42,42,4] },
+  { dem: 'Samaná',                   folio: '0074', b3: [18,14,21,20,6] },
+  { dem: 'María Trinidad Sánchez',   folio: '0088', b3: [18,16,18,16,13] },
+  { dem: 'Sánchez Ramírez (Cotuí)',  folio: '0100', b3: [7,7,29,29,7] },
+  { dem: 'Fantino',                  folio: '0063', b3: [0,0,12,12,0] },
+  { dem: 'Villa la Mata',            folio: '0054', b3: [3,4,6,5,3] },
+  { dem: 'San Cristóbal',            folio: '0120', b3: [22,22,19,14,16] },
+  { dem: 'Azua',                     folio: '0105', b3: [12,9,10,10,9] },
+  { dem: 'Baní (Peravia)',           folio: '0129', b3: [11,10,10,0,10] },
+  { dem: 'Barahona',                 folio: '0150', b3: [21,12,9,9,7] },
+  { dem: 'San Juan de la Maguana',   folio: '0112', b3: [11,6,18,16,4] },
+  { dem: 'Elías Piña',               folio: '0204', b3: [0,0,1,4,4] },
+  { dem: 'La Romana',                folio: '0175', b3: [46,37,76,59,34] },
+  { dem: 'La Altagracia (Higüey)',   folio: '0181', b3: [52,10,14,4,10] },
+  { dem: 'El Seibo',                 folio: '0169', b3: [14,5,1,1,12] },
+  { dem: 'Reg. Sureste (S.P.M.)',    folio: '0047', b3: [10,7,28,25,7] },
+  { dem: 'Monte Plata',              folio: '0140', b3: [15,1,9,7,9] },
+  { dem: 'Hato Mayor',               folio: '0156', b3: [11,2,10,4,4] },
+]
+
+function TabPorDemarcacion() {
+  const [folio, setFolio] = useState<string>(POR_DEMARCACION[0].folio)
+  const sel  = POR_DEMARCACION.find(d => d.folio === folio) ?? POR_DEMARCACION[0]
+  const acta = ACTAS_ARQ.find(a => a.folio === sel.folio)
+  const nos  = acta?.p2 ?? null
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
+        Votos de los <b>5 candidatos de la Plancha 2</b> en la demarcación elegida: <b>Boletín Preliminar 03</b> de la
+        CNE vs <b>nuestro conteo de actas</b>. (Boletines 01 y 02 aún no cargados por candidato; se agregan al recibir esos PDF.)
+      </div>
+
+      {/* Selector de demarcación */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="text-sm font-semibold text-gray-600">Demarcación:</label>
+        <select
+          value={folio}
+          onChange={e => setFolio(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-white min-w-[16rem]"
+        >
+          {[...POR_DEMARCACION].sort((a, b) => a.dem.localeCompare(b.dem)).map(d => (
+            <option key={d.folio} value={d.folio}>{d.dem}</option>
+          ))}
+        </select>
+        <span className="text-xs text-gray-400">Acta {sel.folio}</span>
+      </div>
+
+      {/* Tabla de candidatos */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100" style={{ backgroundColor: 'var(--color-marino)' }}>
+          <p className="text-sm font-bold text-white">{sel.dem} — Plancha 2</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                <th className="text-left px-5 py-2 font-semibold">Pos.</th>
+                <th className="text-left px-5 py-2 font-semibold">Candidato</th>
+                <th className="text-right px-4 py-2 font-semibold">Boletín 03</th>
+                <th className="text-right px-4 py-2 font-semibold">Nuestro conteo</th>
+                <th className="text-right px-4 py-2 font-semibold">Diferencia</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {POSICIONES_P2.map((cand, i) => {
+                const esGeorge = i === 0
+                const vb3 = sel.b3[i]
+                const vno = nos ? nos[i] : null
+                const dif = vno != null ? vno - vb3 : null
+                return (
+                  <tr key={i} style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.06)' } : undefined}>
+                    <td className="px-5 py-2.5 font-bold tabular-nums" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>{i + 1}</td>
+                    <td className="px-5 py-2.5 font-medium" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{cand}{esGeorge ? ' ★' : ''}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{vb3}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-black text-gray-800">{vno ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold"
+                      style={{ color: dif == null ? '#9ca3af' : dif === 0 ? '#15803d' : dif > 0 ? '#b45309' : '#b91c1c' }}>
+                      {dif == null ? '—' : dif === 0 ? '✓ igual' : `${dif > 0 ? '+' : ''}${dif}`}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 font-black" style={{ borderColor: 'var(--color-marino)' }}>
+                <td className="px-5 py-3 text-gray-700" colSpan={2}>TOTAL Plancha 2</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b3.reduce((a, b) => a + b, 0)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{nos ? nos.reduce((a, b) => a + b, 0) : '—'}</td>
+                <td className="px-4 py-3" />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p className="px-5 py-2 text-[11px] text-gray-400">
+          “Diferencia” = nuestro conteo − Boletín 03. Verde = coincide · ámbar = tenemos más · rojo = el boletín tiene más.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function TabResultadoActas() {
   const rich    = ACTAS_ARQ.reduce((s, a) => s + a.p2[0], 0)
   const rivales = ACTAS_ARQ.reduce((s, a) => s + a.rivalP1 + a.rivalP3, 0)
@@ -2319,6 +2447,18 @@ function TabBoletines() {
   const sum = (k: 'b1' | 'b2' | 'b3' | 'nos') => BOLETIN_CMP.reduce((s, r) => s + (r[k] ?? 0), 0)
   const t1 = sum('b1'), t2 = sum('b2'), t3 = sum('b3'), tn = sum('nos')
 
+  // Detección automática de anomalías: un boletín posterior NO debería reducir votos.
+  // Solo se marca si además la baja deja la cifra POR DEBAJO de nuestro conteo (la queja real);
+  // una baja que corrige hacia nuestro número (o lo iguala/supera) no se alerta. Se recalcula
+  // automáticamente al cargar cualquier boletín nuevo.
+  const anomalias = BOLETIN_CMP.flatMap(r => {
+    const out: { dem: string; de: string; a: string; v1: number; v2: number }[] = []
+    const bajoDeNos = (v: number) => r.nos == null || v < r.nos
+    if (r.b1 != null && r.b2 != null && r.b2 < r.b1 && bajoDeNos(r.b2)) out.push({ dem: r.dem, de: 'Boletín 01', a: 'Boletín 02', v1: r.b1, v2: r.b2 })
+    if (r.b2 != null && r.b3 != null && r.b3 < r.b2 && bajoDeNos(r.b3)) out.push({ dem: r.dem, de: 'Boletín 02', a: 'Boletín 03', v1: r.b2, v2: r.b3 })
+    return out
+  })
+
   // Métricas de conciliación (contra el boletín más reciente = B03)
   const enComun    = BOLETIN_CMP.filter(r => r.b3 != null && r.nos != null)
   const coinciden  = enComun.filter(r => r.b3 === r.nos).length
@@ -2338,6 +2478,24 @@ function TabBoletines() {
 
   return (
     <div className="space-y-5">
+      {/* Alerta automática de anomalías: boletín que redujo votos */}
+      {anomalias.length > 0 && (
+        <div className="rounded-xl px-4 py-3" style={{ backgroundColor: '#fef2f2', border: '2px solid #fca5a5' }}>
+          <p className="text-sm font-bold text-red-800">⚠ Anomalía detectada: un boletín redujo votos</p>
+          <p className="text-xs text-red-700 mt-0.5">
+            Un boletín posterior no debería tener menos votos que uno anterior. Casos a reclamar a la CNE:
+          </p>
+          <ul className="mt-2 space-y-1">
+            {anomalias.map((a, i) => (
+              <li key={i} className="text-[13px] text-red-800">
+                <b>{a.dem}</b>: bajó de <b className="tabular-nums">{a.v1}</b> ({a.de}) a
+                <b className="tabular-nums"> {a.v2}</b> ({a.a}) — <span className="tabular-nums">−{a.v1 - a.v2}</span> votos.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Nota de método */}
       <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
         Comparación de la línea de <b>George Richardson</b> (Plancha 2 · renglón 1, núcleo Arquitectura)
@@ -2482,14 +2640,15 @@ function TabBoletines() {
 
 // ─── Tab: Día de Elección (con sub-tabs) ──────────────────────────────────────
 function TabDiaEleccion() {
-  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'boletines'>('vivo')
+  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'boletines' | 'demarcacion'>('vivo')
   return (
     <div className="space-y-5">
       <div className="flex gap-2 border-b border-gray-200 flex-wrap">
         {([
-          { id: 'vivo'      as const, label: '📡 Tendencia en vivo' },
-          { id: 'actas'     as const, label: '🗒️ Resultado en actas' },
-          { id: 'boletines' as const, label: '📋 Boletines' },
+          { id: 'vivo'        as const, label: '📡 Tendencia en vivo' },
+          { id: 'actas'       as const, label: '🗒️ Resultado en actas' },
+          { id: 'boletines'   as const, label: '📋 Boletines' },
+          { id: 'demarcacion' as const, label: '📍 Por demarcación' },
         ]).map(s => (
           <button
             key={s.id}
@@ -2503,9 +2662,10 @@ function TabDiaEleccion() {
           </button>
         ))}
       </div>
-      {subTab === 'vivo'      && <TabDiaEleccionVivo />}
-      {subTab === 'actas'     && <TabResultadoActas />}
-      {subTab === 'boletines' && <TabBoletines />}
+      {subTab === 'vivo'        && <TabDiaEleccionVivo />}
+      {subTab === 'actas'       && <TabResultadoActas />}
+      {subTab === 'boletines'   && <TabBoletines />}
+      {subTab === 'demarcacion' && <TabPorDemarcacion />}
     </div>
   )
 }
