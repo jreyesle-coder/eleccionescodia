@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   ResponsiveContainer,
@@ -2109,59 +2109,138 @@ const BOLETIN_CMP: CmpBoletin[] = [
 // b3 = Boletín Preliminar 03 (CDN Arquitectura), fila por fila verificada contra el total impreso.
 // `folio` enlaza con ACTAS_ARQ para tomar nuestro conteo (p2) sin duplicar datos.
 // Orden de los 5 valores = POSICIONES_P2 (Richardson, Abud, Calderón, García, Mejía).
-type DemBoletin = { dem: string; folio: string; b3: [number, number, number, number, number] }
+// b1/b2 = Boletines Preliminares 01 y 02 (CDN de Arquitectura), transcritos de los PDF
+// escaneados. `null` = la demarcación aún NO aparecía en ese boletín.
+// Totales de control por boletín (fila de cada candidato):
+//   B01 → 639 / 521 / 599 / 459 / 485   ·   B02 → 778 / 571 / 685 / 521 / 534
+type P2 = [number, number, number, number, number]
+type DemBoletin = { dem: string; folio: string; b1: P2 | null; b2: P2 | null; b3: P2 }
 const POR_DEMARCACION: DemBoletin[] = [
-  { dem: 'MOPC (DN)',                folio: '0407', b3: [134,120,108,88,105] },
-  { dem: 'EGEHID',                   folio: '0463', b3: [6,5,3,2,4] },
-  { dem: 'Agricultura',              folio: '0453', b3: [3,3,3,3,3] },
-  { dem: 'INDRHI',                   folio: '0195', b3: [79,62,40,32,46] },
-  { dem: 'DIE',                      folio: '0254', b3: [9,8,10,6,9] },
-  { dem: 'Del. Prov. Sto. Dgo.',     folio: '0489', b3: [46,38,53,38,34] },
-  { dem: 'Sto. Dgo. Norte',          folio: '0200', b3: [25,17,14,8,18] },
-  { dem: 'Sto. Dgo. Oeste',          folio: '0470', b3: [13,9,7,4,11] },
-  { dem: 'Boca Chica',               folio: '0478', b3: [9,5,0,0,5] },
-  { dem: 'Puerto Plata',             folio: '0025', b3: [27,15,31,14,14] },
-  { dem: 'Dajabón',                  folio: '0006', b3: [2,0,1,1,0] },
-  { dem: 'Montecristi',              folio: '0019', b3: [7,7,1,2,7] },
-  { dem: 'La Vega',                  folio: '0217', b3: [39,35,40,26,41] },
-  { dem: 'Monseñor Nouel (Bonao)',   folio: '0210', b3: [4,1,11,0,0] },
-  { dem: 'Salcedo (Hnas. Mirabal)',  folio: '0225', b3: [1,0,9,9,0] },
-  { dem: 'Jarabacoa',                folio: '0038', b3: [5,5,6,4,5] },
-  { dem: 'Santiago',                 folio: '0036', b3: [84,86,29,26,85] },
-  { dem: 'Espaillat (Moca)',         folio: '0236', b3: [5,5,5,3,5] },
-  { dem: 'Valverde (Mao)',           folio: '0003', b3: [4,2,4,2,2] },
-  { dem: 'Santiago Rodríguez',       folio: '0239', b3: [7,6,6,6,6] },
-  { dem: 'San Francisco de Macorís', folio: '0082', b3: [10,9,42,42,4] },
-  { dem: 'Samaná',                   folio: '0074', b3: [18,14,21,20,6] },
-  { dem: 'María Trinidad Sánchez',   folio: '0088', b3: [18,16,18,16,13] },
-  { dem: 'Sánchez Ramírez (Cotuí)',  folio: '0100', b3: [7,7,29,29,7] },
-  { dem: 'Fantino',                  folio: '0063', b3: [0,0,12,12,0] },
-  { dem: 'Villa la Mata',            folio: '0054', b3: [3,4,6,5,3] },
-  { dem: 'San Cristóbal',            folio: '0120', b3: [22,22,19,14,16] },
-  { dem: 'Azua',                     folio: '0105', b3: [12,9,10,10,9] },
-  { dem: 'Baní (Peravia)',           folio: '0129', b3: [11,10,10,0,10] },
-  { dem: 'Barahona',                 folio: '0150', b3: [21,12,9,9,7] },
-  { dem: 'San Juan de la Maguana',   folio: '0112', b3: [11,6,18,16,4] },
-  { dem: 'Elías Piña',               folio: '0204', b3: [0,0,1,4,4] },
-  { dem: 'La Romana',                folio: '0175', b3: [46,37,76,59,34] },
-  { dem: 'La Altagracia (Higüey)',   folio: '0181', b3: [52,10,14,4,10] },
-  { dem: 'El Seibo',                 folio: '0169', b3: [14,5,1,1,12] },
-  { dem: 'Reg. Sureste (S.P.M.)',    folio: '0047', b3: [10,7,28,25,7] },
-  { dem: 'Monte Plata',              folio: '0140', b3: [15,1,9,7,9] },
-  { dem: 'Hato Mayor',               folio: '0156', b3: [11,2,10,4,4] },
+  { dem: 'MOPC (DN)',                folio: '0407', b1: [134,120,108,88,105], b2: [134,120,108,88,105], b3: [134,120,108,88,105] },
+  { dem: 'EGEHID',                   folio: '0463', b1: [6,5,3,2,4],      b2: [6,5,3,2,4],      b3: [6,5,3,2,4] },
+  { dem: 'Agricultura',              folio: '0453', b1: [3,3,3,3,3],      b2: [3,3,3,3,3],      b3: [3,3,3,3,3] },
+  { dem: 'INDRHI',                   folio: '0195', b1: [79,62,40,32,46], b2: [79,62,40,32,46], b3: [79,62,40,32,46] },
+  { dem: 'DIE',                      folio: '0254', b1: [9,8,10,6,9],     b2: [9,8,10,6,9],     b3: [9,8,10,6,9] },
+  { dem: 'Del. Prov. Sto. Dgo.',     folio: '0489', b1: [46,38,53,38,34], b2: [46,38,53,38,34], b3: [46,38,53,38,34] },
+  { dem: 'Sto. Dgo. Norte',          folio: '0200', b1: [25,17,14,8,18],  b2: [25,17,14,8,18],  b3: [25,17,14,8,18] },
+  { dem: 'Sto. Dgo. Oeste',          folio: '0470', b1: [13,9,7,4,11],    b2: [13,9,7,4,11],    b3: [13,9,7,4,11] },
+  { dem: 'Boca Chica',               folio: '0478', b1: [9,5,0,0,5],      b2: [9,5,0,0,5],      b3: [9,5,0,0,5] },
+  { dem: 'Puerto Plata',             folio: '0025', b1: [25,14,29,14,13], b2: [25,14,29,14,13], b3: [27,15,31,14,14] },
+  { dem: 'Dajabón',                  folio: '0006', b1: [2,0,1,1,0],      b2: [2,0,1,1,0],      b3: [2,0,1,1,0] },
+  { dem: 'Montecristi',              folio: '0019', b1: [7,7,1,2,7],      b2: [7,7,1,2,7],      b3: [7,7,1,2,7] },
+  { dem: 'La Vega',                  folio: '0217', b1: [39,35,40,26,41], b2: [39,35,40,26,41], b3: [39,35,40,26,41] },
+  { dem: 'Monseñor Nouel (Bonao)',   folio: '0210', b1: [4,1,11,0,0],     b2: [4,1,11,0,0],     b3: [4,1,11,0,0] },
+  { dem: 'Salcedo (Hnas. Mirabal)',  folio: '0225', b1: [1,0,9,9,0],      b2: [1,0,9,9,0],      b3: [1,0,9,9,0] },
+  { dem: 'Jarabacoa',                folio: '0038', b1: null,             b2: [5,5,6,4,5],      b3: [5,5,6,4,5] },
+  { dem: 'Santiago',                 folio: '0036', b1: [84,86,29,26,85], b2: [84,86,29,26,85], b3: [84,86,29,26,85] },
+  { dem: 'Espaillat (Moca)',         folio: '0236', b1: null,             b2: [5,5,5,3,5],      b3: [5,5,5,3,5] },
+  { dem: 'Valverde (Mao)',           folio: '0003', b1: [4,2,4,2,2],      b2: [4,2,4,2,2],      b3: [4,2,4,2,2] },
+  { dem: 'Santiago Rodríguez',       folio: '0239', b1: null,             b2: [18,14,22,21,7],  b3: [7,6,6,6,6] },
+  { dem: 'San Francisco de Macorís', folio: '0082', b1: [10,9,42,42,4],   b2: [10,9,42,42,4],   b3: [10,9,42,42,4] },
+  { dem: 'Samaná',                   folio: '0074', b1: null,             b2: [0,0,0,0,0],      b3: [18,14,21,20,6] },
+  { dem: 'María Trinidad Sánchez',   folio: '0088', b1: null,             b2: null,             b3: [18,16,18,16,13] },
+  { dem: 'Sánchez Ramírez (Cotuí)',  folio: '0100', b1: [7,7,29,29,7],    b2: [7,7,29,29,7],    b3: [7,7,29,29,7] },
+  { dem: 'Fantino',                  folio: '0063', b1: [0,0,12,12,0],    b2: [0,0,12,12,0],    b3: [0,0,12,12,0] },
+  { dem: 'Villa la Mata',            folio: '0054', b1: [3,4,6,5,3],      b2: [3,4,6,5,3],      b3: [3,4,6,5,3] },
+  { dem: 'San Cristóbal',            folio: '0120', b1: [22,22,19,14,16], b2: [22,22,19,14,16], b3: [22,22,19,14,16] },
+  { dem: 'Azua',                     folio: '0105', b1: null,             b2: [12,9,10,10,9],   b3: [12,9,10,10,9] },
+  { dem: 'Baní (Peravia)',           folio: '0129', b1: [11,10,10,0,10],  b2: [11,10,10,0,10],  b3: [11,10,10,0,10] },
+  { dem: 'Barahona',                 folio: '0150', b1: [21,12,9,9,7],    b2: [21,12,9,9,7],    b3: [21,12,9,9,7] },
+  { dem: 'San Juan de la Maguana',   folio: '0112', b1: null,             b2: [11,6,18,16,4],   b3: [11,6,18,16,4] },
+  { dem: 'Elías Piña',               folio: '0204', b1: [0,0,1,4,4],      b2: [0,0,1,4,4],      b3: [0,0,1,4,4] },
+  { dem: 'La Romana',                folio: '0175', b1: [46,37,76,59,34], b2: [46,37,76,59,34], b3: [46,37,76,59,34] },
+  { dem: 'La Altagracia (Higüey)',   folio: '0181', b1: null,             b2: [73,10,16,1,10],  b3: [52,10,14,4,10] },
+  { dem: 'El Seibo',                 folio: '0169', b1: [14,5,1,1,12],    b2: [14,5,1,1,12],    b3: [14,5,1,1,12] },
+  { dem: 'Reg. Sureste (S.P.M.)',    folio: '0047', b1: [4,1,22,19,1],    b2: [4,1,22,19,1],    b3: [10,7,28,25,7] },
+  { dem: 'Monte Plata',              folio: '0140', b1: null,             b2: [15,1,9,7,9],     b3: [15,1,9,7,9] },
+  { dem: 'Hato Mayor',               folio: '0156', b1: [11,2,10,4,4],    b2: [11,2,10,4,4],    b3: [11,2,10,4,4] },
 ]
 
+// ── Detección de novedades por demarcación ───────────────────────────────────
+// Una demarcación tiene "novedad" si: (a) el Boletín 03 no cuadra con nuestro conteo
+// de actas, (b) un boletín posterior redujo votos de algún candidato (anomalía grave),
+// o (c) cambió entre boletines (incorporación o corrección de la CNE).
+type Novedad = { d: DemBoletin; tipo: 'descuadre' | 'bajada' | 'cambio'; detalle: string }
+function novedadesDemarcacion(): Novedad[] {
+  const out: Novedad[] = []
+  for (const d of POR_DEMARCACION) {
+    const nos = ACTAS_ARQ.find(a => a.folio === d.folio)?.p2 ?? null
+    const bajo = (prev: P2 | null, cur: P2 | null) =>
+      prev != null && cur != null && cur.some((v, i) => v < prev[i])
+    const cambio = (prev: P2 | null, cur: P2 | null) =>
+      (prev == null) !== (cur == null) || (prev != null && cur != null && cur.some((v, i) => v !== prev[i]))
+
+    if (bajo(d.b1, d.b2) || bajo(d.b2, d.b3)) {
+      out.push({ d, tipo: 'bajada', detalle: 'Un boletín posterior REDUJO votos de algún candidato' })
+    } else if (nos && d.b3.some((v, i) => v !== nos[i])) {
+      const dif = nos.reduce((s, v, i) => s + (v - d.b3[i]), 0)
+      out.push({ d, tipo: 'descuadre', detalle: `Nuestro conteo no cuadra con el Boletín 03 (${dif > 0 ? '+' : ''}${dif} en total de plancha)` })
+    } else if (cambio(d.b1, d.b2) || cambio(d.b2, d.b3)) {
+      out.push({ d, tipo: 'cambio', detalle: 'La CNE la incorporó o corrigió entre boletines' })
+    }
+  }
+  // Orden de prioridad: bajadas primero, luego descuadres, luego cambios.
+  const rank = { bajada: 0, descuadre: 1, cambio: 2 } as const
+  return out.sort((a, b) => rank[a.tipo] - rank[b.tipo] || a.d.dem.localeCompare(b.d.dem))
+}
+
 function TabPorDemarcacion() {
-  const [folio, setFolio] = useState<string>(POR_DEMARCACION[0].folio)
+  const novedades = useMemo(() => novedadesDemarcacion(), [])
+  // Por defecto se abre en la primera demarcación con novedad (la de mayor prioridad).
+  const [folio, setFolio] = useState<string>(novedades[0]?.d.folio ?? POR_DEMARCACION[0].folio)
   const sel  = POR_DEMARCACION.find(d => d.folio === folio) ?? POR_DEMARCACION[0]
   const acta = ACTAS_ARQ.find(a => a.folio === sel.folio)
   const nos  = acta?.p2 ?? null
 
+  const estiloNov = {
+    bajada:    { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c', icon: '⚠', txt: 'Boletín redujo votos' },
+    descuadre: { bg: '#fffbeb', border: '#fde68a', color: '#b45309', icon: '≠', txt: 'No cuadra con nuestro conteo' },
+    cambio:    { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8', icon: '↻', txt: 'Corregida/incorporada por la CNE' },
+  } as const
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
-        Votos de los <b>5 candidatos de la Plancha 2</b> en la demarcación elegida: <b>Boletín Preliminar 03</b> de la
-        CNE vs <b>nuestro conteo de actas</b>. (Boletines 01 y 02 aún no cargados por candidato; se agregan al recibir esos PDF.)
+        Votos de los <b>5 candidatos de la Plancha 2</b> en la demarcación elegida a lo largo de los
+        <b> Boletines Preliminares 01, 02 y 03</b> de la CNE vs <b>nuestro conteo de actas</b>.
+        Un “—” significa que esa demarcación aún no aparecía en ese boletín.
+      </div>
+
+      {/* Novedades detectadas — se muestran de entrada, sin tener que buscarlas */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-baseline gap-2 flex-wrap">
+          <p className="text-sm font-bold" style={{ color: 'var(--color-marino)' }}>🔎 Demarcaciones con novedad</p>
+          <p className="text-xs text-gray-400">
+            {novedades.length} de {POR_DEMARCACION.length} · haz clic en una para verla en detalle
+          </p>
+        </div>
+        {novedades.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-gray-500">Sin novedades: todas las demarcaciones cuadran con el Boletín 03.</p>
+        ) : (
+          <div className="p-3 flex flex-wrap gap-2">
+            {novedades.map(n => {
+              const st = estiloNov[n.tipo]
+              const activa = n.d.folio === folio
+              return (
+                <button
+                  key={n.d.folio}
+                  onClick={() => setFolio(n.d.folio)}
+                  title={n.detalle}
+                  className="text-left rounded-xl px-3 py-2 text-xs transition"
+                  style={{
+                    backgroundColor: st.bg,
+                    border: `1px solid ${activa ? st.color : st.border}`,
+                    boxShadow: activa ? `0 0 0 2px ${st.border}` : undefined,
+                    color: st.color,
+                  }}
+                >
+                  <span className="font-bold">{st.icon} {n.d.dem}</span>
+                  <span className="block text-[11px] opacity-80">{st.txt}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Selector de demarcación */}
@@ -2173,7 +2252,9 @@ function TabPorDemarcacion() {
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-white min-w-[16rem]"
         >
           {[...POR_DEMARCACION].sort((a, b) => a.dem.localeCompare(b.dem)).map(d => (
-            <option key={d.folio} value={d.folio}>{d.dem}</option>
+            <option key={d.folio} value={d.folio}>
+              {novedades.find(n => n.d.folio === d.folio) ? `${estiloNov[novedades.find(n => n.d.folio === d.folio)!.tipo].icon} ` : ''}{d.dem}
+            </option>
           ))}
         </select>
         <span className="text-xs text-gray-400">Acta {sel.folio}</span>
@@ -2190,7 +2271,10 @@ function TabPorDemarcacion() {
               <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
                 <th className="text-left px-5 py-2 font-semibold">Pos.</th>
                 <th className="text-left px-5 py-2 font-semibold">Candidato</th>
+                <th className="text-right px-4 py-2 font-semibold">Boletín 01</th>
+                <th className="text-right px-4 py-2 font-semibold">Boletín 02</th>
                 <th className="text-right px-4 py-2 font-semibold">Boletín 03</th>
+                <th className="text-right px-4 py-2 font-semibold">Δ 01→03</th>
                 <th className="text-right px-4 py-2 font-semibold">Nuestro conteo</th>
                 <th className="text-right px-4 py-2 font-semibold">Diferencia</th>
               </tr>
@@ -2198,14 +2282,33 @@ function TabPorDemarcacion() {
             <tbody className="divide-y divide-gray-50">
               {POSICIONES_P2.map((cand, i) => {
                 const esGeorge = i === 0
+                const vb1 = sel.b1 ? sel.b1[i] : null
+                const vb2 = sel.b2 ? sel.b2[i] : null
                 const vb3 = sel.b3[i]
                 const vno = nos ? nos[i] : null
                 const dif = vno != null ? vno - vb3 : null
+                // Evolución entre boletines: rojo si algún boletín bajó respecto al anterior.
+                const bajo = (vb2 != null && vb1 != null && vb2 < vb1) || (vb2 != null && vb3 < vb2)
+                const evol = vb1 != null ? vb3 - vb1 : vb2 != null ? vb3 - vb2 : null
+                const celda = (v: number | null, prev: number | null) => (
+                  <td className="px-4 py-2.5 text-right tabular-nums"
+                    style={{ color: v == null ? '#d1d5db' : prev != null && v < prev ? '#b91c1c' : prev != null && v > prev ? '#1d4ed8' : '#6b7280',
+                             fontWeight: prev != null && v != null && v !== prev ? 700 : 400 }}>
+                    {v ?? '—'}
+                  </td>
+                )
                 return (
                   <tr key={i} style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.06)' } : undefined}>
                     <td className="px-5 py-2.5 font-bold tabular-nums" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>{i + 1}</td>
                     <td className="px-5 py-2.5 font-medium" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{cand}{esGeorge ? ' ★' : ''}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{vb3}</td>
+                    {celda(vb1, null)}
+                    {celda(vb2, vb1)}
+                    {celda(vb3, vb2)}
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold"
+                      style={{ color: evol == null ? '#9ca3af' : bajo ? '#b91c1c' : evol > 0 ? '#1d4ed8' : '#6b7280' }}>
+                      {evol == null ? '—' : evol === 0 ? '=' : `${evol > 0 ? '+' : ''}${evol}`}
+                      {bajo ? ' ⚠' : ''}
+                    </td>
                     <td className="px-4 py-2.5 text-right tabular-nums font-black text-gray-800">{vno ?? '—'}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums font-semibold"
                       style={{ color: dif == null ? '#9ca3af' : dif === 0 ? '#15803d' : dif > 0 ? '#b45309' : '#b91c1c' }}>
@@ -2218,7 +2321,10 @@ function TabPorDemarcacion() {
             <tfoot>
               <tr className="border-t-2 font-black" style={{ borderColor: 'var(--color-marino)' }}>
                 <td className="px-5 py-3 text-gray-700" colSpan={2}>TOTAL Plancha 2</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b1 ? sel.b1.reduce((a, b) => a + b, 0) : '—'}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b2 ? sel.b2.reduce((a, b) => a + b, 0) : '—'}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b3.reduce((a, b) => a + b, 0)}</td>
+                <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right tabular-nums text-gray-800">{nos ? nos.reduce((a, b) => a + b, 0) : '—'}</td>
                 <td className="px-4 py-3" />
               </tr>
@@ -2226,6 +2332,7 @@ function TabPorDemarcacion() {
           </table>
         </div>
         <p className="px-5 py-2 text-[11px] text-gray-400">
+          “Δ 01→03” = cuánto movió la CNE ese candidato entre el primer y el último boletín (⚠ = algún boletín le <b>bajó</b> votos).
           “Diferencia” = nuestro conteo − Boletín 03. Verde = coincide · ámbar = tenemos más · rojo = el boletín tiene más.
         </p>
       </div>
