@@ -2054,55 +2054,59 @@ const ACTAS_ARQ: ActaArq[] = [
 
 // ── Comparación con los boletines oficiales de la CNE (línea de George Richardson,
 //    Plancha 2 · renglón 1, núcleo Arquitectura) ────────────────────────────────
-// Datos transcritos directamente de los boletines escaneados (BOLETIN PRELIMINAR 01 y 02).
+// Datos transcritos directamente de los boletines escaneados.
 // b1/b2/b3 = valor impreso en cada boletín preliminar (null = la demarcación aún NO aparecía en ese boletín).
+// bf    = RELACIÓN GENERAL DEFINITIVA DEL CÓMPUTO ELECTORAL (21/07/2026) — el resultado firme.
 // nos   = nuestro conteo de actas (null = acta que todavía no hemos cargado).
-// Totales oficiales impresos: Boletín 1 = 639 · Boletín 2 = 778 · Boletín 3 = 790 · Nosotros = 869.
-// El Boletín 03 (CDN Arquitectura) da: Richardson 790, Abud 600, Calderón 714, García 551, Mejía 559; válidos 1261.
-type CmpBoletin = { dem: string; b1: number | null; b2: number | null; b3: number | null; nos: number | null; nota?: string; verificado?: boolean }
+// Totales oficiales impresos: Boletín 1 = 639 · Boletín 2 = 778 · Boletín 3 = 790 · Definitivo = 790 · Nosotros = 869.
+// El cómputo definitivo (CDN Arquitectura) da: Richardson 790, Abud 600, Calderón 717, García 556, Mejía 558;
+// emitidos 1294, nulos 33, observados 0, válidos 1261. Único cambio frente al B03: Boca Chica renglones 3, 4 y 5.
+// Aritmética verificada: las 10 filas de candidatos suman su total impreso y emitidos = válidos + nulos + observados
+// en las 38 demarcaciones y en el total.
+type CmpBoletin = { dem: string; b1: number | null; b2: number | null; b3: number | null; bf: number | null; nos: number | null; nota?: string; verificado?: boolean }
 const BOLETIN_CMP: CmpBoletin[] = [
   // Coinciden en los tres conteos
-  { dem: 'MOPC (DN)',                  b1: 134, b2: 134, b3: 134, nos: 134 },
-  { dem: 'EGEHID',                     b1: 6,   b2: 6,   b3: 6,   nos: 6   },
-  { dem: 'Agricultura',                b1: 3,   b2: 3,   b3: 3,   nos: 3   },
-  { dem: 'INDRHI',                     b1: 79,  b2: 79,  b3: 79,  nos: 79  },
-  { dem: 'DIE',                        b1: 9,   b2: 9,   b3: 9,   nos: 9   },
-  { dem: 'Del. Prov. Sto. Dgo.',       b1: 46,  b2: 46,  b3: 46,  nos: 46  },
-  { dem: 'Sto. Dgo. Norte',            b1: 25,  b2: 25,  b3: 25,  nos: 25  },
-  { dem: 'Sto. Dgo. Oeste',            b1: 13,  b2: 13,  b3: 13,  nos: 13  },
-  { dem: 'Boca Chica',                 b1: 9,   b2: 9,   b3: 9,   nos: 18, nota: 'Acta 0478: "Votos Plancha No.2 = 9" (voto de plancha completa que suma a los 5 renglones) + fila Suma renglón 1 = 9 → 18. El acta está internamente descuadrada (total 9 votos vs fila Suma que suma 19); se aplica el criterio de sumar los votos de plancha. El Boletín 03 sigue en 9; se mantiene "A verificar" y se solicita cotejo del acta física.' },
-  { dem: 'Montecristi',                b1: 7,   b2: 7,   b3: 7,   nos: 7   },
-  { dem: 'Dajabón',                    b1: 2,   b2: 2,   b3: 2,   nos: 2   },
-  { dem: 'La Vega',                    b1: 39,  b2: 39,  b3: 39,  nos: 39  },
-  { dem: 'Monseñor Nouel (Bonao)',     b1: 4,   b2: 4,   b3: 4,   nos: 4   },
-  { dem: 'Salcedo (Hnas. Mirabal)',    b1: 1,   b2: 1,   b3: 1,   nos: 1   },
-  { dem: 'Santiago',                   b1: 84,  b2: 84,  b3: 84,  nos: 84  },
-  { dem: 'Valverde (Mao)',             b1: 4,   b2: 4,   b3: 4,   nos: 4   },
-  { dem: 'San Francisco de Macorís',   b1: 10,  b2: 10,  b3: 10,  nos: 10  },
-  { dem: 'Fantino',                    b1: 0,   b2: 0,   b3: 0,   nos: 0   },
-  { dem: 'Villa la Mata',              b1: 3,   b2: 3,   b3: 3,   nos: 3   },
-  { dem: 'San Cristóbal',              b1: 22,  b2: 22,  b3: 22,  nos: 22  },
-  { dem: 'Baní (Peravia)',             b1: 11,  b2: 11,  b3: 11,  nos: 11  },
-  { dem: 'Barahona',                   b1: 21,  b2: 21,  b3: 21,  nos: 21  },
-  { dem: 'Elías Piña',                 b1: 0,   b2: 0,   b3: 0,   nos: 0   },
-  { dem: 'El Seibo',                   b1: 14,  b2: 14,  b3: 14,  nos: 14  },
-  { dem: 'La Romana',                  b1: 46,  b2: 46,  b3: 46,  nos: 46  },
+  { dem: 'MOPC (DN)',                  b1: 134, b2: 134, b3: 134, bf: 134, nos: 134 },
+  { dem: 'EGEHID',                     b1: 6,   b2: 6,   b3: 6,   bf: 6,   nos: 6   },
+  { dem: 'Agricultura',                b1: 3,   b2: 3,   b3: 3,   bf: 3,   nos: 3   },
+  { dem: 'INDRHI',                     b1: 79,  b2: 79,  b3: 79,  bf: 79,  nos: 79  },
+  { dem: 'DIE',                        b1: 9,   b2: 9,   b3: 9,   bf: 9,   nos: 9   },
+  { dem: 'Del. Prov. Sto. Dgo.',       b1: 46,  b2: 46,  b3: 46,  bf: 46,  nos: 46  },
+  { dem: 'Sto. Dgo. Norte',            b1: 25,  b2: 25,  b3: 25,  bf: 25,  nos: 25  },
+  { dem: 'Sto. Dgo. Oeste',            b1: 13,  b2: 13,  b3: 13,  bf: 13,  nos: 13  },
+  { dem: 'Boca Chica',                 b1: 9,   b2: 9,   b3: 9,   bf: 9,   nos: 18, nota: 'Acta 0478: "Votos Plancha No.2 = 9" (voto de plancha completa que suma a los 5 renglones) + fila Suma renglón 1 = 9 → 18. El acta está internamente descuadrada (total 9 votos vs fila Suma que suma 19); se aplica el criterio de sumar los votos de plancha. El cómputo definitivo corrigió los renglones 3, 4 y 5 de esta mesa (Calderón 0→3, García 0→5, Mejía 5→4) pero dejó a Richardson en 9.' },
+  { dem: 'Montecristi',                b1: 7,   b2: 7,   b3: 7,   bf: 7,   nos: 7   },
+  { dem: 'Dajabón',                    b1: 2,   b2: 2,   b3: 2,   bf: 2,   nos: 2   },
+  { dem: 'La Vega',                    b1: 39,  b2: 39,  b3: 39,  bf: 39,  nos: 39  },
+  { dem: 'Monseñor Nouel (Bonao)',     b1: 4,   b2: 4,   b3: 4,   bf: 4,   nos: 4   },
+  { dem: 'Salcedo (Hnas. Mirabal)',    b1: 1,   b2: 1,   b3: 1,   bf: 1,   nos: 1   },
+  { dem: 'Santiago',                   b1: 84,  b2: 84,  b3: 84,  bf: 84,  nos: 84  },
+  { dem: 'Valverde (Mao)',             b1: 4,   b2: 4,   b3: 4,   bf: 4,   nos: 4   },
+  { dem: 'San Francisco de Macorís',   b1: 10,  b2: 10,  b3: 10,  bf: 10,  nos: 10  },
+  { dem: 'Fantino',                    b1: 0,   b2: 0,   b3: 0,   bf: 0,   nos: 0   },
+  { dem: 'Villa la Mata',              b1: 3,   b2: 3,   b3: 3,   bf: 3,   nos: 3   },
+  { dem: 'San Cristóbal',              b1: 22,  b2: 22,  b3: 22,  bf: 22,  nos: 22  },
+  { dem: 'Baní (Peravia)',             b1: 11,  b2: 11,  b3: 11,  bf: 11,  nos: 11  },
+  { dem: 'Barahona',                   b1: 21,  b2: 21,  b3: 21,  bf: 21,  nos: 21  },
+  { dem: 'Elías Piña',                 b1: 0,   b2: 0,   b3: 0,   bf: 0,   nos: 0   },
+  { dem: 'El Seibo',                   b1: 14,  b2: 14,  b3: 14,  bf: 14,  nos: 14  },
+  { dem: 'La Romana',                  b1: 46,  b2: 46,  b3: 46,  bf: 46,  nos: 46  },
   // Incorporadas por la CNE en el Boletín 2 (no estaban en el Boletín 1) — coinciden con nosotros
-  { dem: 'Jarabacoa',                  b1: null, b2: 5,  b3: 5,   nos: 5   },
-  { dem: 'Espaillat (Moca)',           b1: null, b2: 5,  b3: 5,   nos: 5   },
-  { dem: 'Azua',                       b1: null, b2: 12, b3: 12,  nos: 12  },
-  { dem: 'San Juan de la Maguana',     b1: null, b2: 11, b3: 11,  nos: 11  },
-  { dem: 'Monte Plata',                b1: null, b2: 15, b3: 15,  nos: 15  },
+  { dem: 'Jarabacoa',                  b1: null, b2: 5,  b3: 5,   bf: 5,   nos: 5   },
+  { dem: 'Espaillat (Moca)',           b1: null, b2: 5,  b3: 5,   bf: 5,   nos: 5   },
+  { dem: 'Azua',                       b1: null, b2: 12, b3: 12,  bf: 12,  nos: 12  },
+  { dem: 'San Juan de la Maguana',     b1: null, b2: 11, b3: 11,  bf: 11,  nos: 11  },
+  { dem: 'Monte Plata',                b1: null, b2: 15, b3: 15,  bf: 15,  nos: 15  },
   // Corregidas por la CNE en el Boletín 3 — ya coinciden con nuestro conteo
-  { dem: 'Samaná',                     b1: null, b2: 0,  b3: 18,  nos: 18, nota: 'El Boletín 03 corrigió Samaná de 0 a 18 → ya coincide con nuestro conteo (acta 0074).' },
-  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   b3: 10,  nos: 10, nota: 'El Boletín 03 subió de 4 a 10 → ya coincide con nuestro conteo (acta 0047).' },
-  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, b3: 7,   nos: 7,  nota: 'El Boletín 03 corrigió de 18 a 7 → ya coincide con nuestro conteo (acta 0239). Se resolvió el cruce de etiqueta con Samaná.' },
-  { dem: 'María Trinidad Sánchez',     b1: null, b2: null, b3: 18, nos: 18, nota: 'El Boletín 03 la incorporó con 18 → coincide con nuestro conteo.' },
+  { dem: 'Samaná',                     b1: null, b2: 0,  b3: 18,  bf: 18,  nos: 18, nota: 'El Boletín 03 corrigió Samaná de 0 a 18 y el cómputo definitivo lo mantuvo → coincide con nuestro conteo (acta 0074).' },
+  { dem: 'Reg. Sureste (S.P.M.)',      b1: 4,   b2: 4,   b3: 10,  bf: 10,  nos: 10, nota: 'El Boletín 03 subió de 4 a 10 y el cómputo definitivo lo mantuvo → coincide con nuestro conteo (acta 0047).' },
+  { dem: 'Santiago Rodríguez',         b1: null, b2: 18, b3: 7,   bf: 7,   nos: 7,  nota: 'El Boletín 03 corrigió de 18 a 7 y el cómputo definitivo lo mantuvo → coincide con nuestro conteo (acta 0239). Se resolvió el cruce de etiqueta con Samaná.' },
+  { dem: 'María Trinidad Sánchez',     b1: null, b2: null, b3: 18,  bf: 18,  nos: 18, nota: 'El Boletín 03 la incorporó con 18 y el cómputo definitivo lo mantuvo → coincide con nuestro conteo.' },
   // Diferencias que persisten en el Boletín 3
-  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  b3: 27,  nos: 37, verificado: true, nota: 'Acta 0025 validada (37). El Boletín 03 subió de 25 a 27 pero mantiene el acta objetada sin corregir del todo.' },
-  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, b3: 52,  nos: 76, verificado: true, nota: 'Acta 0181 verificada (76). ATENCIÓN: el Boletín 03 BAJÓ Higüey de 73 a 52; un boletín no debería reducir votos — se solicita revisión, posible reasignación/error de columna.' },
-  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  b3: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada (13): Votos Plancha No.2 = 2 + fraccionado renglón 1 = 11 → 13. El Boletín 03 sigue en 11; omite los 2 votos por plancha.' },
-  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   b3: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 en la fila "Suma"; el Boletín 03 sigue en 7. Se mantiene "A verificar".' },
+  { dem: 'Puerto Plata',               b1: 25,  b2: 25,  b3: 27,  bf: 27,  nos: 37, verificado: true, nota: 'Acta 0025 validada (37). El Boletín 03 subió de 25 a 27 y el cómputo definitivo cerró ahí: el acta objetada nunca se corrigió del todo.' },
+  { dem: 'La Altagracia (Higüey)',     b1: null, b2: 73, b3: 52,  bf: 52,  nos: 76, verificado: true, nota: 'Acta 0181 verificada (76). ATENCIÓN: el Boletín 03 BAJÓ Higüey de 73 a 52 y el cómputo definitivo mantuvo 52; un cómputo posterior no debería reducir votos. Además Higüey cerró con 21 nulos de 76 emitidos (27.6%), contra 2.6% nacional: la tasa más alta del país.' },
+  { dem: 'Hato Mayor',                 b1: 11,  b2: 11,  b3: 11,  bf: 11,  nos: 13, verificado: true, nota: 'Acta 0156 verificada (13): Votos Plancha No.2 = 2 + fraccionado renglón 1 = 11 → 13. El cómputo definitivo cerró en 11; omite los 2 votos por plancha.' },
+  { dem: 'Sánchez Ramírez (Cotuí)',    b1: 7,   b2: 7,   b3: 7,   bf: 7,   nos: 41, nota: 'Acta 0100: "Votos Plancha No.2 = 34" (voto de plancha completa que suma a los 5 renglones) + fraccionado renglón 1 = 7 → 41. El delegado no cargó los 34 en la fila "Suma"; el cómputo definitivo cerró en 7. Es la mayor diferencia sin resolver.' },
 ]
 
 // ── Votos por demarcación: los 5 candidatos de Plancha 2 en cada boletín ─────
@@ -2111,55 +2115,57 @@ const BOLETIN_CMP: CmpBoletin[] = [
 // Orden de los 5 valores = POSICIONES_P2 (Richardson, Abud, Calderón, García, Mejía).
 // b1/b2 = Boletines Preliminares 01 y 02 (CDN de Arquitectura), transcritos de los PDF
 // escaneados. `null` = la demarcación aún NO aparecía en ese boletín.
+// bf = RELACIÓN GENERAL DEFINITIVA DEL CÓMPUTO ELECTORAL (21/07/2026).
 // Totales de control por boletín (fila de cada candidato):
 //   B01 → 639 / 521 / 599 / 459 / 485   ·   B02 → 778 / 571 / 685 / 521 / 534
+//   B03 → 790 / 600 / 714 / 551 / 559   ·   DEF → 790 / 600 / 717 / 556 / 558
 type P2 = [number, number, number, number, number]
-type DemBoletin = { dem: string; folio: string; b1: P2 | null; b2: P2 | null; b3: P2 }
+type DemBoletin = { dem: string; folio: string; b1: P2 | null; b2: P2 | null; b3: P2; bf: P2 }
 const POR_DEMARCACION: DemBoletin[] = [
-  { dem: 'MOPC (DN)',                folio: '0407', b1: [134,120,108,88,105], b2: [134,120,108,88,105], b3: [134,120,108,88,105] },
-  { dem: 'EGEHID',                   folio: '0463', b1: [6,5,3,2,4],      b2: [6,5,3,2,4],      b3: [6,5,3,2,4] },
-  { dem: 'Agricultura',              folio: '0453', b1: [3,3,3,3,3],      b2: [3,3,3,3,3],      b3: [3,3,3,3,3] },
-  { dem: 'INDRHI',                   folio: '0195', b1: [79,62,40,32,46], b2: [79,62,40,32,46], b3: [79,62,40,32,46] },
-  { dem: 'DIE',                      folio: '0254', b1: [9,8,10,6,9],     b2: [9,8,10,6,9],     b3: [9,8,10,6,9] },
-  { dem: 'Del. Prov. Sto. Dgo.',     folio: '0489', b1: [46,38,53,38,34], b2: [46,38,53,38,34], b3: [46,38,53,38,34] },
-  { dem: 'Sto. Dgo. Norte',          folio: '0200', b1: [25,17,14,8,18],  b2: [25,17,14,8,18],  b3: [25,17,14,8,18] },
-  { dem: 'Sto. Dgo. Oeste',          folio: '0470', b1: [13,9,7,4,11],    b2: [13,9,7,4,11],    b3: [13,9,7,4,11] },
-  { dem: 'Boca Chica',               folio: '0478', b1: [9,5,0,0,5],      b2: [9,5,0,0,5],      b3: [9,5,0,0,5] },
-  { dem: 'Puerto Plata',             folio: '0025', b1: [25,14,29,14,13], b2: [25,14,29,14,13], b3: [27,15,31,14,14] },
-  { dem: 'Dajabón',                  folio: '0006', b1: [2,0,1,1,0],      b2: [2,0,1,1,0],      b3: [2,0,1,1,0] },
-  { dem: 'Montecristi',              folio: '0019', b1: [7,7,1,2,7],      b2: [7,7,1,2,7],      b3: [7,7,1,2,7] },
-  { dem: 'La Vega',                  folio: '0217', b1: [39,35,40,26,41], b2: [39,35,40,26,41], b3: [39,35,40,26,41] },
-  { dem: 'Monseñor Nouel (Bonao)',   folio: '0210', b1: [4,1,11,0,0],     b2: [4,1,11,0,0],     b3: [4,1,11,0,0] },
-  { dem: 'Salcedo (Hnas. Mirabal)',  folio: '0225', b1: [1,0,9,9,0],      b2: [1,0,9,9,0],      b3: [1,0,9,9,0] },
-  { dem: 'Jarabacoa',                folio: '0038', b1: null,             b2: [5,5,6,4,5],      b3: [5,5,6,4,5] },
-  { dem: 'Santiago',                 folio: '0036', b1: [84,86,29,26,85], b2: [84,86,29,26,85], b3: [84,86,29,26,85] },
-  { dem: 'Espaillat (Moca)',         folio: '0236', b1: null,             b2: [5,5,5,3,5],      b3: [5,5,5,3,5] },
-  { dem: 'Valverde (Mao)',           folio: '0003', b1: [4,2,4,2,2],      b2: [4,2,4,2,2],      b3: [4,2,4,2,2] },
-  { dem: 'Santiago Rodríguez',       folio: '0239', b1: null,             b2: [18,14,22,21,7],  b3: [7,6,6,6,6] },
-  { dem: 'San Francisco de Macorís', folio: '0082', b1: [10,9,42,42,4],   b2: [10,9,42,42,4],   b3: [10,9,42,42,4] },
-  { dem: 'Samaná',                   folio: '0074', b1: null,             b2: [0,0,0,0,0],      b3: [18,14,21,20,6] },
-  { dem: 'María Trinidad Sánchez',   folio: '0088', b1: null,             b2: null,             b3: [18,16,18,16,13] },
-  { dem: 'Sánchez Ramírez (Cotuí)',  folio: '0100', b1: [7,7,29,29,7],    b2: [7,7,29,29,7],    b3: [7,7,29,29,7] },
-  { dem: 'Fantino',                  folio: '0063', b1: [0,0,12,12,0],    b2: [0,0,12,12,0],    b3: [0,0,12,12,0] },
-  { dem: 'Villa la Mata',            folio: '0054', b1: [3,4,6,5,3],      b2: [3,4,6,5,3],      b3: [3,4,6,5,3] },
-  { dem: 'San Cristóbal',            folio: '0120', b1: [22,22,19,14,16], b2: [22,22,19,14,16], b3: [22,22,19,14,16] },
-  { dem: 'Azua',                     folio: '0105', b1: null,             b2: [12,9,10,10,9],   b3: [12,9,10,10,9] },
-  { dem: 'Baní (Peravia)',           folio: '0129', b1: [11,10,10,0,10],  b2: [11,10,10,0,10],  b3: [11,10,10,0,10] },
-  { dem: 'Barahona',                 folio: '0150', b1: [21,12,9,9,7],    b2: [21,12,9,9,7],    b3: [21,12,9,9,7] },
-  { dem: 'San Juan de la Maguana',   folio: '0112', b1: null,             b2: [11,6,18,16,4],   b3: [11,6,18,16,4] },
-  { dem: 'Elías Piña',               folio: '0204', b1: [0,0,1,4,4],      b2: [0,0,1,4,4],      b3: [0,0,1,4,4] },
-  { dem: 'La Romana',                folio: '0175', b1: [46,37,76,59,34], b2: [46,37,76,59,34], b3: [46,37,76,59,34] },
-  { dem: 'La Altagracia (Higüey)',   folio: '0181', b1: null,             b2: [73,10,16,1,10],  b3: [52,10,14,4,10] },
-  { dem: 'El Seibo',                 folio: '0169', b1: [14,5,1,1,12],    b2: [14,5,1,1,12],    b3: [14,5,1,1,12] },
-  { dem: 'Reg. Sureste (S.P.M.)',    folio: '0047', b1: [4,1,22,19,1],    b2: [4,1,22,19,1],    b3: [10,7,28,25,7] },
-  { dem: 'Monte Plata',              folio: '0140', b1: null,             b2: [15,1,9,7,9],     b3: [15,1,9,7,9] },
-  { dem: 'Hato Mayor',               folio: '0156', b1: [11,2,10,4,4],    b2: [11,2,10,4,4],    b3: [11,2,10,4,4] },
+  { dem: 'MOPC (DN)',                folio: '0407', b1: [134,120,108,88,105], b2: [134,120,108,88,105], b3: [134,120,108,88,105],  bf: [134,120,108,88,105] },
+  { dem: 'EGEHID',                   folio: '0463', b1: [6,5,3,2,4],      b2: [6,5,3,2,4],      b3: [6,5,3,2,4],  bf: [6,5,3,2,4] },
+  { dem: 'Agricultura',              folio: '0453', b1: [3,3,3,3,3],      b2: [3,3,3,3,3],      b3: [3,3,3,3,3],  bf: [3,3,3,3,3] },
+  { dem: 'INDRHI',                   folio: '0195', b1: [79,62,40,32,46], b2: [79,62,40,32,46], b3: [79,62,40,32,46],  bf: [79,62,40,32,46] },
+  { dem: 'DIE',                      folio: '0254', b1: [9,8,10,6,9],     b2: [9,8,10,6,9],     b3: [9,8,10,6,9],  bf: [9,8,10,6,9] },
+  { dem: 'Del. Prov. Sto. Dgo.',     folio: '0489', b1: [46,38,53,38,34], b2: [46,38,53,38,34], b3: [46,38,53,38,34],  bf: [46,38,53,38,34] },
+  { dem: 'Sto. Dgo. Norte',          folio: '0200', b1: [25,17,14,8,18],  b2: [25,17,14,8,18],  b3: [25,17,14,8,18],  bf: [25,17,14,8,18] },
+  { dem: 'Sto. Dgo. Oeste',          folio: '0470', b1: [13,9,7,4,11],    b2: [13,9,7,4,11],    b3: [13,9,7,4,11],  bf: [13,9,7,4,11] },
+  { dem: 'Boca Chica',               folio: '0478', b1: [9,5,0,0,5],      b2: [9,5,0,0,5],      b3: [9,5,0,0,5],  bf: [9,5,3,5,4] },
+  { dem: 'Puerto Plata',             folio: '0025', b1: [25,14,29,14,13], b2: [25,14,29,14,13], b3: [27,15,31,14,14],  bf: [27,15,31,14,14] },
+  { dem: 'Dajabón',                  folio: '0006', b1: [2,0,1,1,0],      b2: [2,0,1,1,0],      b3: [2,0,1,1,0],  bf: [2,0,1,1,0] },
+  { dem: 'Montecristi',              folio: '0019', b1: [7,7,1,2,7],      b2: [7,7,1,2,7],      b3: [7,7,1,2,7],  bf: [7,7,1,2,7] },
+  { dem: 'La Vega',                  folio: '0217', b1: [39,35,40,26,41], b2: [39,35,40,26,41], b3: [39,35,40,26,41],  bf: [39,35,40,26,41] },
+  { dem: 'Monseñor Nouel (Bonao)',   folio: '0210', b1: [4,1,11,0,0],     b2: [4,1,11,0,0],     b3: [4,1,11,0,0],  bf: [4,1,11,0,0] },
+  { dem: 'Salcedo (Hnas. Mirabal)',  folio: '0225', b1: [1,0,9,9,0],      b2: [1,0,9,9,0],      b3: [1,0,9,9,0],  bf: [1,0,9,9,0] },
+  { dem: 'Jarabacoa',                folio: '0038', b1: null,             b2: [5,5,6,4,5],      b3: [5,5,6,4,5],  bf: [5,5,6,4,5] },
+  { dem: 'Santiago',                 folio: '0036', b1: [84,86,29,26,85], b2: [84,86,29,26,85], b3: [84,86,29,26,85],  bf: [84,86,29,26,85] },
+  { dem: 'Espaillat (Moca)',         folio: '0236', b1: null,             b2: [5,5,5,3,5],      b3: [5,5,5,3,5],  bf: [5,5,5,3,5] },
+  { dem: 'Valverde (Mao)',           folio: '0003', b1: [4,2,4,2,2],      b2: [4,2,4,2,2],      b3: [4,2,4,2,2],  bf: [4,2,4,2,2] },
+  { dem: 'Santiago Rodríguez',       folio: '0239', b1: null,             b2: [18,14,22,21,7],  b3: [7,6,6,6,6],  bf: [7,6,6,6,6] },
+  { dem: 'San Francisco de Macorís', folio: '0082', b1: [10,9,42,42,4],   b2: [10,9,42,42,4],   b3: [10,9,42,42,4],  bf: [10,9,42,42,4] },
+  { dem: 'Samaná',                   folio: '0074', b1: null,             b2: [0,0,0,0,0],      b3: [18,14,21,20,6],  bf: [18,14,21,20,6] },
+  { dem: 'María Trinidad Sánchez',   folio: '0088', b1: null,             b2: null,             b3: [18,16,18,16,13],  bf: [18,16,18,16,13] },
+  { dem: 'Sánchez Ramírez (Cotuí)',  folio: '0100', b1: [7,7,29,29,7],    b2: [7,7,29,29,7],    b3: [7,7,29,29,7],  bf: [7,7,29,29,7] },
+  { dem: 'Fantino',                  folio: '0063', b1: [0,0,12,12,0],    b2: [0,0,12,12,0],    b3: [0,0,12,12,0],  bf: [0,0,12,12,0] },
+  { dem: 'Villa la Mata',            folio: '0054', b1: [3,4,6,5,3],      b2: [3,4,6,5,3],      b3: [3,4,6,5,3],  bf: [3,4,6,5,3] },
+  { dem: 'San Cristóbal',            folio: '0120', b1: [22,22,19,14,16], b2: [22,22,19,14,16], b3: [22,22,19,14,16],  bf: [22,22,19,14,16] },
+  { dem: 'Azua',                     folio: '0105', b1: null,             b2: [12,9,10,10,9],   b3: [12,9,10,10,9],  bf: [12,9,10,10,9] },
+  { dem: 'Baní (Peravia)',           folio: '0129', b1: [11,10,10,0,10],  b2: [11,10,10,0,10],  b3: [11,10,10,0,10],  bf: [11,10,10,0,10] },
+  { dem: 'Barahona',                 folio: '0150', b1: [21,12,9,9,7],    b2: [21,12,9,9,7],    b3: [21,12,9,9,7],  bf: [21,12,9,9,7] },
+  { dem: 'San Juan de la Maguana',   folio: '0112', b1: null,             b2: [11,6,18,16,4],   b3: [11,6,18,16,4],  bf: [11,6,18,16,4] },
+  { dem: 'Elías Piña',               folio: '0204', b1: [0,0,1,4,4],      b2: [0,0,1,4,4],      b3: [0,0,1,4,4],  bf: [0,0,1,4,4] },
+  { dem: 'La Romana',                folio: '0175', b1: [46,37,76,59,34], b2: [46,37,76,59,34], b3: [46,37,76,59,34],  bf: [46,37,76,59,34] },
+  { dem: 'La Altagracia (Higüey)',   folio: '0181', b1: null,             b2: [73,10,16,1,10],  b3: [52,10,14,4,10],  bf: [52,10,14,4,10] },
+  { dem: 'El Seibo',                 folio: '0169', b1: [14,5,1,1,12],    b2: [14,5,1,1,12],    b3: [14,5,1,1,12],  bf: [14,5,1,1,12] },
+  { dem: 'Reg. Sureste (S.P.M.)',    folio: '0047', b1: [4,1,22,19,1],    b2: [4,1,22,19,1],    b3: [10,7,28,25,7],  bf: [10,7,28,25,7] },
+  { dem: 'Monte Plata',              folio: '0140', b1: null,             b2: [15,1,9,7,9],     b3: [15,1,9,7,9],  bf: [15,1,9,7,9] },
+  { dem: 'Hato Mayor',               folio: '0156', b1: [11,2,10,4,4],    b2: [11,2,10,4,4],    b3: [11,2,10,4,4],  bf: [11,2,10,4,4] },
 ]
 
 // ── Detección de novedades por demarcación ───────────────────────────────────
-// Una demarcación tiene "novedad" si: (a) el Boletín 03 no cuadra con nuestro conteo
-// de actas, (b) un boletín posterior redujo votos de algún candidato (anomalía grave),
-// o (c) cambió entre boletines (incorporación o corrección de la CNE).
+// Una demarcación tiene "novedad" si: (a) el cómputo definitivo no cuadra con nuestro
+// conteo de actas, (b) un cómputo posterior redujo votos de algún candidato (anomalía
+// grave), o (c) cambió entre boletines (incorporación o corrección de la CNE).
 type Novedad = { d: DemBoletin; tipo: 'descuadre' | 'bajada' | 'cambio'; detalle: string }
 function novedadesDemarcacion(): Novedad[] {
   const out: Novedad[] = []
@@ -2170,12 +2176,12 @@ function novedadesDemarcacion(): Novedad[] {
     const cambio = (prev: P2 | null, cur: P2 | null) =>
       (prev == null) !== (cur == null) || (prev != null && cur != null && cur.some((v, i) => v !== prev[i]))
 
-    if (bajo(d.b1, d.b2) || bajo(d.b2, d.b3)) {
-      out.push({ d, tipo: 'bajada', detalle: 'Un boletín posterior REDUJO votos de algún candidato' })
-    } else if (nos && d.b3.some((v, i) => v !== nos[i])) {
-      const dif = nos.reduce((s, v, i) => s + (v - d.b3[i]), 0)
-      out.push({ d, tipo: 'descuadre', detalle: `Nuestro conteo no cuadra con el Boletín 03 (${dif > 0 ? '+' : ''}${dif} en total de plancha)` })
-    } else if (cambio(d.b1, d.b2) || cambio(d.b2, d.b3)) {
+    if (bajo(d.b1, d.b2) || bajo(d.b2, d.b3) || bajo(d.b3, d.bf)) {
+      out.push({ d, tipo: 'bajada', detalle: 'Un cómputo posterior REDUJO votos de algún candidato' })
+    } else if (nos && d.bf.some((v, i) => v !== nos[i])) {
+      const dif = nos.reduce((s, v, i) => s + (v - d.bf[i]), 0)
+      out.push({ d, tipo: 'descuadre', detalle: `Nuestro conteo no cuadra con el cómputo definitivo (${dif > 0 ? '+' : ''}${dif} en total de plancha)` })
+    } else if (cambio(d.b1, d.b2) || cambio(d.b2, d.b3) || cambio(d.b3, d.bf)) {
       out.push({ d, tipo: 'cambio', detalle: 'La CNE la incorporó o corrigió entre boletines' })
     }
   }
@@ -2193,7 +2199,7 @@ function TabPorDemarcacion() {
   const nos  = acta?.p2 ?? null
 
   const estiloNov = {
-    bajada:    { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c', icon: '⚠', txt: 'Boletín redujo votos' },
+    bajada:    { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c', icon: '⚠', txt: 'Un cómputo redujo votos' },
     descuadre: { bg: '#fffbeb', border: '#fde68a', color: '#b45309', icon: '≠', txt: 'No cuadra con nuestro conteo' },
     cambio:    { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8', icon: '↻', txt: 'Corregida/incorporada por la CNE' },
   } as const
@@ -2202,8 +2208,8 @@ function TabPorDemarcacion() {
     <div className="space-y-5">
       <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
         Votos de los <b>5 candidatos de la Plancha 2</b> en la demarcación elegida a lo largo de los
-        <b> Boletines Preliminares 01, 02 y 03</b> de la CNE vs <b>nuestro conteo de actas</b>.
-        Un “—” significa que esa demarcación aún no aparecía en ese boletín.
+        <b> Boletines Preliminares 01, 02 y 03</b> y del <b>cómputo definitivo</b> de la CNE, frente a
+        <b> nuestro conteo de actas</b>. Un “—” significa que esa demarcación aún no aparecía en ese boletín.
       </div>
 
       {/* Novedades detectadas — se muestran de entrada, sin tener que buscarlas */}
@@ -2215,7 +2221,7 @@ function TabPorDemarcacion() {
           </p>
         </div>
         {novedades.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-gray-500">Sin novedades: todas las demarcaciones cuadran con el Boletín 03.</p>
+          <p className="px-5 py-4 text-sm text-gray-500">Sin novedades: todas las demarcaciones cuadran con el cómputo definitivo.</p>
         ) : (
           <div className="p-3 flex flex-wrap gap-2">
             {novedades.map(n => {
@@ -2274,7 +2280,8 @@ function TabPorDemarcacion() {
                 <th className="text-right px-4 py-2 font-semibold">Boletín 01</th>
                 <th className="text-right px-4 py-2 font-semibold">Boletín 02</th>
                 <th className="text-right px-4 py-2 font-semibold">Boletín 03</th>
-                <th className="text-right px-4 py-2 font-semibold">Δ 01→03</th>
+                <th className="text-right px-4 py-2 font-semibold">Definitivo</th>
+                <th className="text-right px-4 py-2 font-semibold">Δ 01→def.</th>
                 <th className="text-right px-4 py-2 font-semibold">Nuestro conteo</th>
                 <th className="text-right px-4 py-2 font-semibold">Diferencia</th>
               </tr>
@@ -2285,11 +2292,12 @@ function TabPorDemarcacion() {
                 const vb1 = sel.b1 ? sel.b1[i] : null
                 const vb2 = sel.b2 ? sel.b2[i] : null
                 const vb3 = sel.b3[i]
+                const vbf = sel.bf[i]
                 const vno = nos ? nos[i] : null
-                const dif = vno != null ? vno - vb3 : null
-                // Evolución entre boletines: rojo si algún boletín bajó respecto al anterior.
-                const bajo = (vb2 != null && vb1 != null && vb2 < vb1) || (vb2 != null && vb3 < vb2)
-                const evol = vb1 != null ? vb3 - vb1 : vb2 != null ? vb3 - vb2 : null
+                const dif = vno != null ? vno - vbf : null
+                // Evolución entre cómputos: rojo si alguno bajó respecto al anterior.
+                const bajo = (vb2 != null && vb1 != null && vb2 < vb1) || (vb2 != null && vb3 < vb2) || vbf < vb3
+                const evol = vb1 != null ? vbf - vb1 : vb2 != null ? vbf - vb2 : null
                 const celda = (v: number | null, prev: number | null) => (
                   <td className="px-4 py-2.5 text-right tabular-nums"
                     style={{ color: v == null ? '#d1d5db' : prev != null && v < prev ? '#b91c1c' : prev != null && v > prev ? '#1d4ed8' : '#6b7280',
@@ -2304,6 +2312,7 @@ function TabPorDemarcacion() {
                     {celda(vb1, null)}
                     {celda(vb2, vb1)}
                     {celda(vb3, vb2)}
+                    {celda(vbf, vb3)}
                     <td className="px-4 py-2.5 text-right tabular-nums font-semibold"
                       style={{ color: evol == null ? '#9ca3af' : bajo ? '#b91c1c' : evol > 0 ? '#1d4ed8' : '#6b7280' }}>
                       {evol == null ? '—' : evol === 0 ? '=' : `${evol > 0 ? '+' : ''}${evol}`}
@@ -2324,6 +2333,7 @@ function TabPorDemarcacion() {
                 <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b1 ? sel.b1.reduce((a, b) => a + b, 0) : '—'}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b2 ? sel.b2.reduce((a, b) => a + b, 0) : '—'}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-gray-600">{sel.b3.reduce((a, b) => a + b, 0)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-700">{sel.bf.reduce((a, b) => a + b, 0)}</td>
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right tabular-nums text-gray-800">{nos ? nos.reduce((a, b) => a + b, 0) : '—'}</td>
                 <td className="px-4 py-3" />
@@ -2332,8 +2342,9 @@ function TabPorDemarcacion() {
           </table>
         </div>
         <p className="px-5 py-2 text-[11px] text-gray-400">
-          “Δ 01→03” = cuánto movió la CNE ese candidato entre el primer y el último boletín (⚠ = algún boletín le <b>bajó</b> votos).
-          “Diferencia” = nuestro conteo − Boletín 03. Verde = coincide · ámbar = tenemos más · rojo = el boletín tiene más.
+          “Δ 01→def.” = cuánto movió la CNE ese candidato entre el primer boletín y el cómputo definitivo
+          (⚠ = en algún momento le <b>bajó</b> votos).
+          “Diferencia” = nuestro conteo − cómputo definitivo. Verde = coincide · ámbar = tenemos más · rojo = el cómputo tiene más.
         </p>
       </div>
     </div>
@@ -2551,8 +2562,8 @@ function TabResultadoActas() {
 
 // ─── Sub-tab: Boletines (comparación con los boletines oficiales de la CNE) ────
 function TabBoletines() {
-  const sum = (k: 'b1' | 'b2' | 'b3' | 'nos') => BOLETIN_CMP.reduce((s, r) => s + (r[k] ?? 0), 0)
-  const t1 = sum('b1'), t2 = sum('b2'), t3 = sum('b3'), tn = sum('nos')
+  const sum = (k: 'b1' | 'b2' | 'b3' | 'bf' | 'nos') => BOLETIN_CMP.reduce((s, r) => s + (r[k] ?? 0), 0)
+  const t1 = sum('b1'), t2 = sum('b2'), t3 = sum('b3'), tf = sum('bf'), tn = sum('nos')
 
   // Detección automática de anomalías: un boletín posterior NO debería reducir votos.
   // Solo se marca si además la baja deja la cifra POR DEBAJO de nuestro conteo (la queja real);
@@ -2563,19 +2574,20 @@ function TabBoletines() {
     const bajoDeNos = (v: number) => r.nos == null || v < r.nos
     if (r.b1 != null && r.b2 != null && r.b2 < r.b1 && bajoDeNos(r.b2)) out.push({ dem: r.dem, de: 'Boletín 01', a: 'Boletín 02', v1: r.b1, v2: r.b2 })
     if (r.b2 != null && r.b3 != null && r.b3 < r.b2 && bajoDeNos(r.b3)) out.push({ dem: r.dem, de: 'Boletín 02', a: 'Boletín 03', v1: r.b2, v2: r.b3 })
+    if (r.b3 != null && r.bf != null && r.bf < r.b3 && bajoDeNos(r.bf)) out.push({ dem: r.dem, de: 'Boletín 03', a: 'Cómputo definitivo', v1: r.b3, v2: r.bf })
     return out
   })
 
-  // Métricas de conciliación (contra el boletín más reciente = B03)
-  const enComun    = BOLETIN_CMP.filter(r => r.b3 != null && r.nos != null)
-  const coinciden  = enComun.filter(r => r.b3 === r.nos).length
+  // Métricas de conciliación (contra el cómputo definitivo)
+  const enComun    = BOLETIN_CMP.filter(r => r.bf != null && r.nos != null)
+  const coinciden  = enComun.filter(r => r.bf === r.nos).length
 
   const estado = (r: CmpBoletin) => {
-    if (r.nos == null && r.b3 != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
-    if (r.b3 == null && r.nos != null) return { txt: 'Fuera de boletín', color: '#6b7280', bg: '#f9fafb', icon: '•' }
-    if (r.b3 === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
+    if (r.nos == null && r.bf != null) return { txt: 'Nos falta', color: '#b45309', bg: '#fffbeb', icon: '➕' }
+    if (r.bf == null && r.nos != null) return { txt: 'Fuera del cómputo', color: '#6b7280', bg: '#f9fafb', icon: '•' }
+    if (r.bf === r.nos)                return { txt: 'Coincide', color: '#15803d', bg: '#f0fdf4', icon: '✓' }
     if (r.verificado) {
-      const dir = (r.nos ?? 0) > (r.b3 ?? 0) ? 'boletín subcuenta' : 'boletín sobrecuenta'
+      const dir = (r.nos ?? 0) > (r.bf ?? 0) ? 'cómputo subcuenta' : 'cómputo sobrecuenta'
       return { txt: `Verificado · ${dir}`, color: '#15803d', bg: '#f0fdf4', icon: '✓' }
     }
     return { txt: 'A verificar', color: '#b45309', bg: '#fffbeb', icon: '⚠' }
@@ -2606,16 +2618,18 @@ function TabBoletines() {
       {/* Nota de método */}
       <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
         Comparación de la línea de <b>George Richardson</b> (Plancha 2 · renglón 1, núcleo Arquitectura)
-        entre los <b>Boletines Preliminares 01, 02 y 03</b> de la CNE y <b>nuestro conteo de actas</b>.
-        El estado compara contra el <b>Boletín 03</b> (el más reciente). Un “—” significa que esa demarcación aún no aparecía en ese boletín.
+        entre los <b>Boletines Preliminares 01, 02 y 03</b>, la <b>Relación General Definitiva del Cómputo
+        Electoral</b> de la CNE y <b>nuestro conteo de actas</b>. El estado compara contra el
+        <b> cómputo definitivo</b>. Un “—” significa que esa demarcación aún no aparecía en ese boletín.
       </div>
 
       {/* Totales por conteo */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {[
           { label: 'Boletín 01', val: t1, sub: 'oficial CNE', color: 'var(--color-marino)' },
           { label: 'Boletín 02', val: t2, sub: 'oficial CNE', color: 'var(--color-marino)' },
-          { label: 'Boletín 03', val: t3, sub: 'oficial CNE · último', color: 'var(--color-marino)' },
+          { label: 'Boletín 03', val: t3, sub: 'oficial CNE', color: 'var(--color-marino)' },
+          { label: 'Definitivo', val: tf, sub: 'oficial CNE · firme', color: 'var(--color-marino)' },
           { label: 'Nuestro conteo', val: tn, sub: `${ACTAS_ARQ.length} actas · el más completo`, color: '#16a34a' },
         ].map(c => (
           <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
@@ -2628,19 +2642,21 @@ function TabBoletines() {
 
       {/* Marcador de avance B2 → B3 */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-2">
-        <p className="text-sm font-semibold text-gray-700">📈 Qué cambió del Boletín 02 al 03</p>
+        <p className="text-sm font-semibold text-gray-700">📈 Qué cambió del Boletín 03 al cómputo definitivo</p>
         <p className="text-xs text-gray-500">
-          Richardson pasó de <b className="tabular-nums">{t2}</b> a <b className="tabular-nums">{t3}</b> votos
-          (<span className="text-green-700 font-semibold tabular-nums">{t3 - t2 >= 0 ? '+' : ''}{t3 - t2}</span>).
-          La CNE <b>incorporó/corrigió</b> en el Boletín 03 estas demarcaciones (varias ya coinciden con nosotros):
+          Richardson quedó en <b className="tabular-nums">{tf}</b> votos
+          (<span className="font-semibold tabular-nums">{tf - t3 >= 0 ? '+' : ''}{tf - t3}</span> respecto al Boletín 03).
+          En la línea de Richardson la CNE <b>no movió ninguna demarcación</b>; el único ajuste del cómputo
+          definitivo fue en <b>Boca Chica</b>, en los renglones 3, 4 y 5 de la Plancha 2
+          (Calderón 0→3, García 0→5, Mejía 5→4).
         </p>
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {BOLETIN_CMP.filter(r => (r.b2 ?? -1) !== (r.b3 ?? -1)).map(r => {
-            const sube = (r.b3 ?? 0) >= (r.b2 ?? 0)
+          {BOLETIN_CMP.filter(r => (r.b3 ?? -1) !== (r.bf ?? -1)).map(r => {
+            const sube = (r.bf ?? 0) >= (r.b3 ?? 0)
             return (
               <span key={r.dem} className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: sube ? 'rgba(22,163,74,0.10)' : 'rgba(220,38,38,0.10)', color: sube ? '#15803d' : '#b91c1c' }}>
-                {r.dem}: {r.b2 ?? '—'} → {r.b3 ?? '—'}
+                {r.dem}: {r.b3 ?? '—'} → {r.bf ?? '—'}
               </span>
             )
           })}
@@ -2650,8 +2666,8 @@ function TabBoletines() {
       {/* Tabla comparativa */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
-          <p className="text-sm font-semibold text-gray-700">Richardson — Boletín 01 vs 02 vs 03 vs Nosotros</p>
-          <p className="text-xs text-gray-400">{coinciden} de {enComun.length} demarcaciones coinciden con el Boletín 03</p>
+          <p className="text-sm font-semibold text-gray-700">Richardson — Boletines 01/02/03 vs Definitivo vs Nosotros</p>
+          <p className="text-xs text-gray-400">{coinciden} de {enComun.length} demarcaciones coinciden con el cómputo definitivo</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -2661,6 +2677,7 @@ function TabBoletines() {
                 <th className="text-right px-3 py-2 font-semibold">Bol. 01</th>
                 <th className="text-right px-3 py-2 font-semibold">Bol. 02</th>
                 <th className="text-right px-3 py-2 font-semibold">Bol. 03</th>
+                <th className="text-right px-3 py-2 font-semibold">Definitivo</th>
                 <th className="text-right px-3 py-2 font-semibold">Nosotros</th>
                 <th className="text-left px-4 py-2 font-semibold">Estado</th>
               </tr>
@@ -2668,7 +2685,7 @@ function TabBoletines() {
             <tbody className="divide-y divide-gray-50">
               {BOLETIN_CMP.map(r => {
                 const e = estado(r)
-                const nuevo = r.b2 == null && r.b3 != null
+                const nuevo = r.b2 == null && r.bf != null
                 return (
                   <tr key={r.dem} style={{ backgroundColor: e.txt === 'Coincide' ? undefined : e.bg }}>
                     <td className="px-5 py-2.5 font-medium text-gray-700">
@@ -2679,7 +2696,8 @@ function TabBoletines() {
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b1)}</td>
                     <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b2)}</td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-gray-700">{cell(r.b3)}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-500">{cell(r.b3)}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-gray-700">{cell(r.bf)}</td>
                     <td className="px-3 py-2.5 text-right font-black text-gray-800">{cell(r.nos)}</td>
                     <td className="px-4 py-2.5">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: e.color }}>
@@ -2695,7 +2713,8 @@ function TabBoletines() {
                 <td className="px-5 py-3 text-gray-700">TOTAL Richardson</td>
                 <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t1}</td>
                 <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t2}</td>
-                <td className="px-3 py-3 text-right tabular-nums text-gray-700">{t3}</td>
+                <td className="px-3 py-3 text-right tabular-nums text-gray-600">{t3}</td>
+                <td className="px-3 py-3 text-right tabular-nums text-gray-700">{tf}</td>
                 <td className="px-3 py-3 text-right tabular-nums text-green-700">{tn}</td>
                 <td className="px-4 py-3" />
               </tr>
@@ -2711,33 +2730,46 @@ function TabBoletines() {
         </div>
         <div className="p-5 space-y-3 text-sm text-gray-700">
           <p>
-            <b>1. Richardson lidera en los tres boletines.</b> Nuestro conteo ({tn}) es el más completo,
-            por encima del Boletín 03 ({t3}), el 02 ({t2}) y el 01 ({t1}). La diferencia
-            (<span className="tabular-nums">+{tn - t3}</span> vs. el Boletín 03) se debe a las actas que aún no incorpora la CNE.
+            <b>1. Resultado firme: gana la Plancha 2 en los cinco renglones.</b> En el cómputo definitivo
+            Richardson obtiene <b className="tabular-nums">{tf}</b> votos contra <b>100</b> de la Plancha 1
+            en el renglón 1 — una diferencia de <b className="tabular-nums">690</b> votos (88.8% de los
+            válidos emitidos a ese renglón). Los cinco: Richardson 790, Abud 600, Calderón 717,
+            García 556, Mejía 558.
           </p>
           <p>
-            <b>2. El Boletín 03 nos dio la razón en varias demarcaciones.</b> La CNE corrigió e incorporó:
-            <b> Samaná</b> (0→18), <b>Santiago Rodríguez</b> (18→7), <b>Reg. Sureste</b> (4→10) y sumó
-            <b> María Trinidad Sánchez</b> (18) — las cuatro <b>ya coinciden con nuestro conteo</b>. En total,
-            <b> {coinciden} de {enComun.length}</b> demarcaciones ya coinciden con el Boletín 03.
+            <b>2. El cómputo definitivo cambió muy poco frente al Boletín 03.</b> La línea de Richardson
+            quedó idéntica ({t3} → {tf}); el único ajuste fue <b>Boca Chica</b> en los renglones 3, 4 y 5
+            (Calderón +3, García +5, Mejía −1). Totales generales sin cambio: 1,294 emitidos · 33 nulos ·
+            1,261 válidos.
           </p>
           <p>
-            <b>3. Diferencias que persisten en el Boletín 03</b> (cotejadas contra el acta física):
+            <b>3. Nuestro conteo sigue por encima ({tn} vs {tf}).</b> La diferencia de
+            <span className="tabular-nums"> +{tn - tf}</span> son actas que la CNE nunca incorporó.
+            <b> {coinciden} de {enComun.length}</b> demarcaciones coinciden con el cómputo definitivo.
+            Diferencias que quedaron sin resolver:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-[13px] text-gray-600">
-            <li><b>Puerto Plata</b> (37 vs 27): el B03 subió de 25 a 27, pero sigue con el acta objetada sin corregir del todo.</li>
-            <li><b>La Altagracia / Higüey</b> (76 vs 52): <b>ojo</b>, el B03 BAJÓ de 73 a 52; un boletín no debería reducir votos — pedimos revisión (posible reasignación de columna).</li>
-            <li><b>Hato Mayor</b> (13 vs 11): acta 0156; 11 fraccionados + 2 votos por plancha = 13; el B03 sigue omitiendo los 2 votos por plancha.</li>
-            <li><b>Sánchez Ramírez</b> (41 vs 7): acta 0100 trae 34 votos de plancha completa + 7 fraccionados = 41; el B03 sigue en 7. “A verificar” hasta cotejo conjunto.</li>
-            <li><b>Boca Chica</b> (18 vs 9): acta 0478 descuadrada (9 votos de plancha + fila Suma); el B03 sigue en 9. “A verificar”.</li>
+            <li><b>Sánchez Ramírez</b> (41 vs 7): acta 0100 trae 34 votos de plancha completa + 7 fraccionados; el cómputo definitivo se quedó en 7.</li>
+            <li><b>La Altagracia / Higüey</b> (76 vs 52): el B03 BAJÓ de 73 a 52 y el definitivo mantuvo 52. Además, Higüey cerró con <b>21 nulos de 76 emitidos (27.6%)</b> contra 2.6% nacional — la tasa más alta del país, en la misma demarcación de la baja.</li>
+            <li><b>Boca Chica</b> (18 vs 9): acta 0478 descuadrada; el definitivo corrigió los renglones 3, 4 y 5, pero dejó a Richardson en 9.</li>
+            <li><b>Puerto Plata</b> (37 vs 27): el acta objetada nunca se corrigió del todo.</li>
+            <li><b>Hato Mayor</b> (13 vs 11): siguen omitidos los 2 votos por plancha del acta 0156.</li>
           </ul>
           <p>
-            Ninguna de estas diferencias cambia el liderazgo. La más relevante a reclamar es <b>La Altagracia</b>,
-            porque el boletín <b>redujo</b> votos, algo que amerita explicación de la CNE.
+            <b>4. Tres celdas del cómputo definitivo no cuadran</b> (más votos en un renglón que boletas
+            válidas en esa demarcación): <b>EGEHID</b> renglón 1 (8 &gt; 7), <b>Barahona</b> renglón 1
+            (23 &gt; 21) y <b>La Romana</b> renglón 3 (80 &gt; 78). Nuestras actas coinciden con el cómputo
+            en las tres, así que el descuadre viene del acta de mesa, no de la transcripción de la CNE.
+          </p>
+          <p>
+            Ninguna de estas observaciones cambia el resultado: <b>ni sumando todo lo reclamado ni
+            quitándolo</b> se altera quién ganó.
           </p>
           <p className="text-[12px] text-gray-400 pt-1 border-t border-gray-100">
-            Cifras transcritas de los boletines oficiales escaneados (Preliminar 01, 02 y 03). Los totales oficiales
-            impresos coinciden con la suma de esta tabla (639 · 778 · 790). Documento de trabajo interno.
+            Cifras transcritas de los documentos oficiales escaneados de la CNE (Boletines Preliminares 01,
+            02 y 03, y la Relación General Definitiva del Cómputo Electoral del 21/07/2026). Los totales
+            oficiales impresos coinciden con la suma de esta tabla (639 · 778 · 790 · 790) y la aritmética
+            del cómputo definitivo fue verificada fila por fila. Documento de trabajo interno.
           </p>
         </div>
       </div>
