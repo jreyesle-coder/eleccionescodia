@@ -2874,6 +2874,8 @@ function TabActasNacionales() {
           [0,1,2,3,4,5,6].map(i => actas.reduce((s, a) => s + (a.p3[i] ?? 0), 0)),
         ]
         const totalPlancha = totP.map(rs => rs.reduce((s, v) => s + v, 0))
+        const r1 = totP.map(rs => rs[0])                       // Renglón 1 por plancha (encabeza la plancha)
+        const maxR1 = Math.max(...r1)
         const planchasConVotos = [0, 1, 2].filter(p => totalPlancha[p] > 0)
         const hayTentativas = actas.some(a => a.porConfirmar)
 
@@ -2897,15 +2899,16 @@ function TabActasNacionales() {
             {/* Totales por plancha */}
             <div className={`grid gap-4 ${planchasConVotos.length >= 3 ? 'sm:grid-cols-3' : planchasConVotos.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
               {planchasConVotos.map(p => {
-                const lider = totalPlancha[p] === Math.max(...totalPlancha) && totalPlancha[p] > 0
+                const lider = r1[p] === maxR1 && r1[p] > 0
+                const pct = validos > 0 ? (r1[p] / validos * 100) : 0
                 return (
                   <div key={p} className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-1"
                        style={{ borderColor: lider ? '#16a34a' : '#e5e7eb' }}>
                     <p className="text-xs font-bold uppercase tracking-wide" style={{ color: lider ? '#16a34a' : 'var(--color-marino)' }}>
                       {PLANCHAS_NAC[p]}{lider ? ' · ★ va al frente' : ''}
                     </p>
-                    <p className="text-4xl font-black tabular-nums" style={{ color: lider ? '#16a34a' : '#374151' }}>{totalPlancha[p].toLocaleString()}</p>
-                    <p className="text-xs text-gray-400">votos-candidato acumulados (7 renglones)</p>
+                    <p className="text-4xl font-black tabular-nums" style={{ color: lider ? '#16a34a' : '#374151' }}>{r1[p].toLocaleString()}</p>
+                    <p className="text-xs text-gray-400">votos en el <b>Renglón 1</b> · {pct.toFixed(1)}% de válidos</p>
                   </div>
                 )
               })}
