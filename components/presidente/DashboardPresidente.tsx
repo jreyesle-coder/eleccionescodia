@@ -2819,6 +2819,8 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0472', eleccion: 'Delegación Prov. Santo Domingo', lugar: 'Boca Chica (Núcleo)', fecha: '05/08/2026', total: 36, nulos: 0, validos: 36, p1: [11, 12, 11, 11, 11, 11, 11], p2: [24, 19, 19, 19, 19, 19, 19], p3: Z7 },
   // Junta Directiva Nacional, Boca Chica 0471: Plancha I whole 29 + frac (r1=6, r4=1). 1 nulo.
   { folio: '0471', eleccion: 'Junta Directiva',   lugar: 'Boca Chica (Núcleo)', fecha: '05/08/2026', total: 36, nulos: 1, validos: 35, p1: [35, 29, 29, 30, 29, 29, 29], p2: Z7, p3: Z7 },
+  // Junta Directiva, Regional Sur Central 0452: Plancha I whole 91 + frac (14/4/2/2/4/1/0). 2 nulos.
+  { folio: '0452', eleccion: 'Junta Directiva',   lugar: 'Regional Sur Central', fecha: '05/08/2026', total: 112, nulos: 2, validos: 110, p1: [105, 95, 93, 93, 95, 92, 91], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
