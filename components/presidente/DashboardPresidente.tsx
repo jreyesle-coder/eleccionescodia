@@ -2828,6 +2828,8 @@ const ACTAS_NAC: ActaNacional[] = [
   // Nacional, Santiago Rodríguez 0006: fila "Suma" en blanco. Plancha I whole 58 + frac r1=6 → r1=64, resto 58.
   // Acta descuadrada: anotó válidos 58 / total 59 (no sumó los 6 fraccionados); real válidos 64. Plancha II/III sin votos.
   { folio: '0006', eleccion: 'Nacionales',        lugar: 'Santiago Rodríguez', fecha: '05/08/2026', total: 65, nulos: 1, validos: 64, p1: [64, 58, 58, 58, 58, 58, 58], p2: Z7, p3: Z7, porConfirmar: true },
+  // Nacional, Hermanas Mirabal 0070: Plancha I whole 75 + frac (12/6/0/2/1/1/1). 17 nulos. Cuadra.
+  { folio: '0070', eleccion: 'Nacionales',        lugar: 'Hermanas Mirabal', fecha: '05/08/2026', total: 110, nulos: 17, validos: 93, p1: [87, 81, 75, 77, 76, 76, 76], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
