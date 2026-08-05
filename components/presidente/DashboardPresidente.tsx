@@ -2812,6 +2812,9 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0433', eleccion: 'Junta Directiva',   lugar: 'MOPC',         fecha: '05/08/2026', total: 66, nulos: 0, validos: 66, p1: [60, 44, 38, 38, 37, 39, 38], p2: Z7, p3: Z7 },
   { folio: '0432', eleccion: 'Junta Directiva',   lugar: 'MOPC (mesa)',  fecha: '05/08/2026', total: 99, nulos: 0, validos: 99, p1: [76, 88, 67, 65, 64, 65, 66], p2: Z7, p3: Z7 },
   { folio: '0081', eleccion: 'Nacionales',        lugar: 'Barahona',     fecha: '05/08/2026', total: 81, nulos: 0, validos: 81, p1: [81, 77, 76, 76, 77, 76, 76], p2: Z7, p3: Z7 },
+  // Samaná 0049: 77 votos de plancha completa (I) + 0 fraccionados → los 77 aplican a los 7 renglones.
+  // El delegado solo escribió el 77 en el renglón 1 de la fila "Suma", pero por regla el voto de plancha suma a todos.
+  { folio: '0049', eleccion: 'Nacionales',        lugar: 'Samaná',       fecha: '05/08/2026', total: 77, nulos: 0, validos: 77, p1: [77, 77, 77, 77, 77, 77, 77], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
