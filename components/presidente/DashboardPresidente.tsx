@@ -2777,15 +2777,245 @@ function TabBoletines() {
   )
 }
 
+// ─── Actas Nacionales (conteo oficial de todas las elecciones) ────────────────
+// A diferencia de las actas de Arquitectura (donde solo importa la línea de
+// Richardson), aquí seguimos el resultado COMPLETO de las elecciones nacionales.
+// Cada acta trae 3 planchas (I, II, III) con 7 renglones (una posición/escaño
+// c/u). El valor de cada renglón = fila "Suma Votos Plancha más Fraccionados"
+// = votos de plancha completa (suman a los 7 renglones) + fraccionado del renglón.
+// Como cada renglón es una posición distinta, se comparan las planchas renglón
+// por renglón: para cada posición, la plancha con más votos gana ese escaño.
+interface ActaNacional {
+  folio:         string
+  eleccion:      string               // 'Presidencia CODIA' | 'Junta Directiva' | 'Nacionales' ...
+  lugar:         string
+  fecha:         string
+  total:         number               // Cantidad total de votos
+  nulos:         number
+  validos:       number
+  p1:            number[]             // Plancha I  · renglones 1-7 (Suma más fraccionados)
+  p2:            number[]             // Plancha II · renglones 1-7
+  p3:            number[]             // Plancha III· renglones 1-7
+  porConfirmar?: boolean
+}
+
+// Nombres de las 3 planchas nacionales (editar cuando se confirmen).
+const PLANCHAS_NAC = ['Plancha I', 'Plancha II', 'Plancha III']
+// Nombres de los 7 renglones/posiciones (editar cuando se confirmen).
+const POSICIONES_NAC = ['Renglón 1', 'Renglón 2', 'Renglón 3', 'Renglón 4', 'Renglón 5', 'Renglón 6', 'Renglón 7']
+const Z7 = [0, 0, 0, 0, 0, 0, 0]
+
+// ⬇️ CARGAR ACTAS NACIONALES AQUÍ. Cada pX = fila "Suma Votos Plancha más
+// Fraccionados No.X" (7 renglones). Usar Z7 (siete ceros) si la plancha no tiene votos.
+const ACTAS_NAC: ActaNacional[] = [
+  { folio: '0447', eleccion: 'Presidencia CODIA', lugar: 'Club MOPC',    fecha: '05/08/2026', total: 22, nulos: 3, validos: 19, p1: [18, 15, 14, 14, 14, 14, 14], p2: Z7, p3: Z7 },
+  { folio: '0433', eleccion: 'Junta Directiva',   lugar: 'MOPC',         fecha: '05/08/2026', total: 66, nulos: 0, validos: 66, p1: [60, 44, 38, 38, 37, 39, 38], p2: Z7, p3: Z7 },
+  { folio: '0432', eleccion: 'Junta Directiva',   lugar: 'MOPC (mesa)',  fecha: '05/08/2026', total: 99, nulos: 0, validos: 99, p1: [76, 88, 67, 65, 64, 65, 66], p2: Z7, p3: Z7 },
+  { folio: '0081', eleccion: 'Nacionales',        lugar: 'Barahona',     fecha: '05/08/2026', total: 81, nulos: 0, validos: 81, p1: [81, 77, 76, 76, 77, 76, 76], p2: Z7, p3: Z7 },
+]
+
+function TabActasNacionales() {
+  // Agrupar por tipo de elección (cada tipo es una boleta distinta; no se suman entre sí).
+  const grupos = ACTAS_NAC.reduce<Record<string, ActaNacional[]>>((acc, a) => {
+    (acc[a.eleccion] ??= []).push(a)
+    return acc
+  }, {})
+  const nombresGrupos = Object.keys(grupos)
+
+  const totGeneral   = ACTAS_NAC.reduce((s, a) => s + a.total, 0)
+  const nulosGeneral = ACTAS_NAC.reduce((s, a) => s + a.nulos, 0)
+
+  if (ACTAS_NAC.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center space-y-2">
+        <p className="text-4xl">🗳️</p>
+        <p className="text-gray-700 font-semibold">Aún no hay actas nacionales cargadas</p>
+        <p className="text-xs text-gray-400 max-w-md mx-auto">
+          Envíame las fotos de las actas y las voy tabulando aquí, agrupadas por tipo de elección.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Aclaración del método */}
+      <div className="rounded-xl px-4 py-3 text-xs" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a' }}>
+        Conteo oficial de las actas de escrutinio. Cada renglón es una posición distinta; las planchas
+        se comparan <b>renglón por renglón</b> (la plancha con más votos en ese renglón gana esa posición).
+        Se usa la fila <b>“Suma Votos Plancha más Fraccionados”</b>.
+      </div>
+
+      {/* Resumen general */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Actas cargadas',  val: ACTAS_NAC.length.toLocaleString() },
+          { label: 'Tipos de boleta', val: nombresGrupos.length.toLocaleString() },
+          { label: 'Total votos',     val: totGeneral.toLocaleString() },
+          { label: 'Nulos',           val: nulosGeneral.toLocaleString() },
+        ].map(m => (
+          <div key={m.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{m.label}</p>
+            <p className="text-2xl font-black tabular-nums mt-1" style={{ color: 'var(--color-marino)' }}>{m.val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Un bloque por tipo de elección */}
+      {nombresGrupos.map(nombre => {
+        const actas   = grupos[nombre]
+        const total   = actas.reduce((s, a) => s + a.total, 0)
+        const nulos   = actas.reduce((s, a) => s + a.nulos, 0)
+        const validos = actas.reduce((s, a) => s + a.validos, 0)
+        // Totales por plancha y renglón (7 renglones × 3 planchas)
+        const totP = [
+          [0,1,2,3,4,5,6].map(i => actas.reduce((s, a) => s + (a.p1[i] ?? 0), 0)),
+          [0,1,2,3,4,5,6].map(i => actas.reduce((s, a) => s + (a.p2[i] ?? 0), 0)),
+          [0,1,2,3,4,5,6].map(i => actas.reduce((s, a) => s + (a.p3[i] ?? 0), 0)),
+        ]
+        const totalPlancha = totP.map(rs => rs.reduce((s, v) => s + v, 0))
+        const planchasConVotos = [0, 1, 2].filter(p => totalPlancha[p] > 0)
+        const hayTentativas = actas.some(a => a.porConfirmar)
+
+        return (
+          <div key={nombre} className="space-y-4">
+            {/* Encabezado del grupo */}
+            <div className="rounded-2xl p-5 text-white flex items-center justify-between gap-4 flex-wrap"
+                 style={{ background: 'linear-gradient(135deg, #0F1B33, #1F3A6B)' }}>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Elección</p>
+                <p className="text-2xl font-black">{nombre}</p>
+              </div>
+              <div className="flex gap-6 text-center">
+                <div><p className="text-2xl font-black tabular-nums">{actas.length}</p><p className="text-[11px] text-blue-200">actas</p></div>
+                <div><p className="text-2xl font-black tabular-nums">{total.toLocaleString()}</p><p className="text-[11px] text-blue-200">votos</p></div>
+                <div><p className="text-2xl font-black tabular-nums">{validos.toLocaleString()}</p><p className="text-[11px] text-blue-200">válidos</p></div>
+                <div><p className="text-2xl font-black tabular-nums">{nulos.toLocaleString()}</p><p className="text-[11px] text-blue-200">nulos</p></div>
+              </div>
+            </div>
+
+            {/* Totales por plancha */}
+            <div className={`grid gap-4 ${planchasConVotos.length >= 3 ? 'sm:grid-cols-3' : planchasConVotos.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
+              {planchasConVotos.map(p => {
+                const lider = totalPlancha[p] === Math.max(...totalPlancha) && totalPlancha[p] > 0
+                return (
+                  <div key={p} className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-1"
+                       style={{ borderColor: lider ? '#16a34a' : '#e5e7eb' }}>
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: lider ? '#16a34a' : 'var(--color-marino)' }}>
+                      {PLANCHAS_NAC[p]}{lider ? ' · ★ va al frente' : ''}
+                    </p>
+                    <p className="text-4xl font-black tabular-nums" style={{ color: lider ? '#16a34a' : '#374151' }}>{totalPlancha[p].toLocaleString()}</p>
+                    <p className="text-xs text-gray-400">votos-candidato acumulados (7 renglones)</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Tabla renglón × plancha */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-gray-100">
+                <p className="text-sm font-semibold text-gray-700">Votos por renglón (posición) — comparativa de planchas</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                      <th className="text-left px-5 py-2 font-semibold">Renglón</th>
+                      {planchasConVotos.map(p => (
+                        <th key={p} className="text-right px-5 py-2 font-semibold">{PLANCHAS_NAC[p]}</th>
+                      ))}
+                      <th className="text-left px-5 py-2 font-semibold">Lidera</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {[0,1,2,3,4,5,6].map(i => {
+                      const vals = planchasConVotos.map(p => totP[p][i])
+                      const maxV = Math.max(...vals)
+                      const idxLider = maxV > 0 ? planchasConVotos[vals.indexOf(maxV)] : -1
+                      return (
+                        <tr key={i}>
+                          <td className="px-5 py-2.5 font-medium text-gray-700">{POSICIONES_NAC[i]}</td>
+                          {planchasConVotos.map(p => (
+                            <td key={p} className="px-5 py-2.5 text-right font-bold tabular-nums"
+                                style={{ color: p === idxLider ? '#16a34a' : '#374151' }}>
+                              {totP[p][i].toLocaleString()}
+                            </td>
+                          ))}
+                          <td className="px-5 py-2.5 text-xs font-semibold" style={{ color: idxLider >= 0 ? '#16a34a' : '#9ca3af' }}>
+                            {idxLider >= 0 ? PLANCHAS_NAC[idxLider] : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Detalle por acta */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[...actas].sort((a, b) => a.folio.localeCompare(b.folio)).map(a => (
+                <div key={a.folio} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--color-marino)', color: 'white' }}>
+                    <div>
+                      <p className="font-bold text-sm leading-tight">
+                        {a.lugar}
+                        {a.porConfirmar && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-dorado)', color: '#0F1B33' }}>por confirmar</span>}
+                      </p>
+                      <p className="text-[11px] text-blue-200">Acta {a.folio} · {a.fecha} · {a.validos.toLocaleString()} válidos</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xl font-black tabular-nums">{a.total.toLocaleString()}</p>
+                      <p className="text-[10px] text-blue-200">votos</p>
+                    </div>
+                  </div>
+                  {[0,1,2].filter(p => (p === 0 ? a.p1 : p === 1 ? a.p2 : a.p3).some(v => v > 0)).map(p => {
+                    const rs = p === 0 ? a.p1 : p === 1 ? a.p2 : a.p3
+                    return (
+                      <div key={p} className="px-5 pt-3">
+                        <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{PLANCHAS_NAC[p]}</p>
+                        <div className="grid grid-cols-7 gap-1 text-center">
+                          {rs.map((v, i) => (
+                            <div key={i} className="rounded-lg py-1 bg-gray-50">
+                              <p className="text-[9px] text-gray-400">{i + 1}</p>
+                              <p className="text-sm font-bold tabular-nums text-gray-700">{v}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div className="px-5 py-3 mt-2 grid grid-cols-3 gap-2 text-center text-xs border-t border-gray-100">
+                    <div><span className="text-gray-400">Total: </span><span className="font-semibold tabular-nums">{a.total}</span></div>
+                    <div><span className="text-gray-400">Válidos: </span><span className="font-semibold tabular-nums">{a.validos}</span></div>
+                    <div><span className="text-gray-400">Nulos: </span><span className="font-semibold tabular-nums">{a.nulos}</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {hayTentativas && (
+              <p className="text-xs text-gray-400 text-center">
+                Las actas marcadas <b>“por confirmar”</b> tienen lectura tentativa; se ajustan al verificar.
+              </p>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Tab: Día de Elección (con sub-tabs) ──────────────────────────────────────
 function TabDiaEleccion() {
-  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'boletines' | 'demarcacion'>('vivo')
+  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'nacionales' | 'boletines' | 'demarcacion'>('vivo')
   return (
     <div className="space-y-5">
       <div className="flex gap-2 border-b border-gray-200 flex-wrap">
         {([
           { id: 'vivo'        as const, label: '📡 Tendencia en vivo' },
           { id: 'actas'       as const, label: '🗒️ Resultado en actas' },
+          { id: 'nacionales'  as const, label: '🗳️ Actas nacionales' },
           { id: 'boletines'   as const, label: '📋 Boletines' },
           { id: 'demarcacion' as const, label: '📍 Por demarcación' },
         ]).map(s => (
@@ -2803,6 +3033,7 @@ function TabDiaEleccion() {
       </div>
       {subTab === 'vivo'        && <TabDiaEleccionVivo />}
       {subTab === 'actas'       && <TabResultadoActas />}
+      {subTab === 'nacionales'  && <TabActasNacionales />}
       {subTab === 'boletines'   && <TabBoletines />}
       {subTab === 'demarcacion' && <TabPorDemarcacion />}
     </div>
