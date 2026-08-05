@@ -2825,6 +2825,9 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0037', eleccion: 'Regional',          lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [75, 75, 75, 75, 75, 75, 75], p2: [22, 22, 22, 22, 22, 22, 22], p3: [7, 7, 7, 7, 7, 7, 7] },
   // Nacional, El Seibo 0484: Plancha I whole 106 + 0 frac → 106 a los 7 renglones. Acta descuadrada (total 110 vs válidos 106; nulos ajustados a 4).
   { folio: '0484', eleccion: 'Nacionales',        lugar: 'El Seibo',     fecha: '05/08/2026', total: 110, nulos: 4, validos: 106, p1: [106, 106, 106, 106, 106, 106, 106], p2: Z7, p3: Z7, porConfirmar: true },
+  // Nacional, Santiago Rodríguez 0006: fila "Suma" en blanco. Plancha I whole 58 + frac r1=6 → r1=64, resto 58.
+  // Acta descuadrada: anotó válidos 58 / total 59 (no sumó los 6 fraccionados); real válidos 64. Plancha II/III sin votos.
+  { folio: '0006', eleccion: 'Nacionales',        lugar: 'Santiago Rodríguez', fecha: '05/08/2026', total: 65, nulos: 1, validos: 64, p1: [64, 58, 58, 58, 58, 58, 58], p2: Z7, p3: Z7, porConfirmar: true },
 ]
 
 function TabActasNacionales() {
