@@ -2815,6 +2815,8 @@ const ACTAS_NAC: ActaNacional[] = [
   // Samaná 0049: 77 votos de plancha completa (I) + 0 fraccionados → los 77 aplican a los 7 renglones.
   // El delegado solo escribió el 77 en el renglón 1 de la fila "Suma", pero por regla el voto de plancha suma a todos.
   { folio: '0049', eleccion: 'Nacionales',        lugar: 'Samaná',       fecha: '05/08/2026', total: 77, nulos: 0, validos: 77, p1: [77, 77, 77, 77, 77, 77, 77], p2: Z7, p3: Z7 },
+  // Boca Chica 0472: Plancha I (whole 11, frac r2=1) y Plancha II (whole 19, frac r1=5). Plancha III sin votos.
+  { folio: '0472', eleccion: 'Delegación Prov. Santo Domingo', lugar: 'Boca Chica (Núcleo)', fecha: '05/08/2026', total: 36, nulos: 0, validos: 36, p1: [11, 12, 11, 11, 11, 11, 11], p2: [24, 19, 19, 19, 19, 19, 19], p3: Z7 },
 ]
 
 function TabActasNacionales() {
