@@ -2865,8 +2865,9 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0099', eleccion: 'Regional Sur del Valle', lugar: 'San Juan', fecha: '05/08/2026', total: 172, nulos: 2, validos: 170, p1: [169, 163, 162, 163, 163, 163, 162], p2: Z7, p3: Z7, porConfirmar: true },
   // Regional Este, La Romana 0077: 3 planchas, 0 fraccionados → cada plancha (I=419 Oquelis, II=6, III=196 Memo) a sus 7 renglones. 7 nulos.
   { folio: '0077', eleccion: 'Regional Este', lugar: 'La Romana', fecha: '05/08/2026', total: 628, nulos: 7, validos: 621, p1: [419, 419, 419, 419, 419, 419, 419], p2: [6, 6, 6, 6, 6, 6, 6], p3: [196, 196, 196, 196, 196, 196, 196] },
-  // PENDIENTE — Nacional (JDN), La Romana 0076: acta EN BLANCO, solo el total 628 válidos, sin desglose de planchas/candidatos.
-  // No se carga para no inventar votos de Richardson. Esperar el acta detallada.
+  // Nacional (JDN), La Romana 0076: acta sin desglose (solo total 628 válidos). A nivel nacional solo compite la
+  // Plancha 1, así que los 628 son de la Plancha 1 → 628 a los 7 renglones (regla confirmada por el usuario). 0 nulos.
+  { folio: '0076', eleccion: JDN, lugar: 'La Romana', fecha: '05/08/2026', total: 628, nulos: 0, validos: 628, p1: [628, 628, 628, 628, 628, 628, 628], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
