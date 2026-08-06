@@ -2834,6 +2834,10 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0036', eleccion: 'Nacionales',        lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 3, validos: 103, p1: [103, 99, 99, 99, 99, 99, 99], p2: Z7, p3: Z7 },
   // Delegación Moca 0038: Plancha I whole 102 + frac (r1=1, r4=1). Casilla "Votos Plancha I"=104 es la de válidos; la Suma confirma whole 102.
   { folio: '0038', eleccion: 'Delegación Moca',   lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [103, 102, 102, 103, 102, 102, 102], p2: Z7, p3: Z7 },
+  // Junta Directiva, San Juan 0100: Plancha I whole 152 + frac (5/6/5/1/0/1/2). Cuadra.
+  { folio: '0100', eleccion: 'Junta Directiva',   lugar: 'San Juan',     fecha: '05/08/2026', total: 172, nulos: 3, validos: 169, p1: [157, 158, 157, 153, 152, 153, 154], p2: Z7, p3: Z7 },
+  // Nacional, Sto. Dgo. Norte 0470: Plancha I whole 216 + frac (30/15/11/2/10/8/8). Cuadra.
+  { folio: '0470', eleccion: 'Nacionales',        lugar: 'Sto. Dgo. Norte', fecha: '05/08/2026', total: 287, nulos: 21, validos: 266, p1: [246, 231, 227, 218, 226, 224, 224], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
