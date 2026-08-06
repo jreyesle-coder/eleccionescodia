@@ -2840,6 +2840,8 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0470', eleccion: 'Nacionales',        lugar: 'Sto. Dgo. Norte', fecha: '05/08/2026', total: 287, nulos: 21, validos: 266, p1: [246, 231, 227, 218, 226, 224, 224], p2: Z7, p3: Z7 },
   // Junta Directiva Nac, Delegación Prov. Sto. Dgo. Mesa II 0421: Plancha I whole 257 + frac (30/23/9/12/6/6/12). Cuadra.
   { folio: '0421', eleccion: 'Junta Directiva',   lugar: 'Delegación Prov. Sto. Dgo. (Mesa II)', fecha: '05/08/2026', total: 360, nulos: 36, validos: 324, p1: [287, 280, 266, 269, 263, 263, 269], p2: Z7, p3: Z7 },
+  // Junta Directiva DELEGACIÓN Prov. Sto. Dgo. Mesa I 0420: DOS planchas. P1 whole 186 + frac (12/0/0/0/3/1/0); P2 whole 131 + frac (15/1/0/0/0/0/0). Cuadra.
+  { folio: '0420', eleccion: 'Junta Directiva Delegación Prov.', lugar: 'Delegación Prov. Sto. Dgo. (Mesa I)', fecha: '05/08/2026', total: 360, nulos: 12, validos: 348, p1: [198, 186, 186, 186, 189, 187, 186], p2: [146, 132, 131, 131, 131, 131, 131], p3: Z7 },
 ]
 
 function TabActasNacionales() {
