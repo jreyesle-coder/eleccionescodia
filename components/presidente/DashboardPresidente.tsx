@@ -2830,6 +2830,10 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0006', eleccion: 'Nacionales',        lugar: 'Santiago Rodríguez', fecha: '05/08/2026', total: 65, nulos: 1, validos: 64, p1: [64, 58, 58, 58, 58, 58, 58], p2: Z7, p3: Z7, porConfirmar: true },
   // Nacional, Hermanas Mirabal 0070: Plancha I whole 75 + frac (12/6/0/2/1/1/1). 17 nulos. Cuadra.
   { folio: '0070', eleccion: 'Nacionales',        lugar: 'Hermanas Mirabal', fecha: '05/08/2026', total: 110, nulos: 17, validos: 93, p1: [87, 81, 75, 77, 76, 76, 76], p2: Z7, p3: Z7 },
+  // Nacional, Moca 0036: Plancha I whole 99 + frac r1=4. Casilla "Votos Plancha I"=103 es la de válidos; la Suma confirma whole 99.
+  { folio: '0036', eleccion: 'Nacionales',        lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 3, validos: 103, p1: [103, 99, 99, 99, 99, 99, 99], p2: Z7, p3: Z7 },
+  // Delegación Moca 0038: Plancha I whole 102 + frac (r1=1, r4=1). Casilla "Votos Plancha I"=104 es la de válidos; la Suma confirma whole 102.
+  { folio: '0038', eleccion: 'Delegación Moca',   lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [103, 102, 102, 103, 102, 102, 102], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
