@@ -2863,6 +2863,10 @@ const ACTAS_NAC: ActaNacional[] = [
   // Regional Sur del Valle, San Juan 0099: Plancha I whole 162 + frac (7/1/0/1/1/1/0). El acta escribió renglón 7 = "2"
   // (imposible: el voto de plancha 162 aplica a los 7 renglones); registrado 162 por la regla. porConfirmar.
   { folio: '0099', eleccion: 'Regional Sur del Valle', lugar: 'San Juan', fecha: '05/08/2026', total: 172, nulos: 2, validos: 170, p1: [169, 163, 162, 163, 163, 163, 162], p2: Z7, p3: Z7, porConfirmar: true },
+  // Regional Este, La Romana 0077: 3 planchas, 0 fraccionados → cada plancha (I=419 Oquelis, II=6, III=196 Memo) a sus 7 renglones. 7 nulos.
+  { folio: '0077', eleccion: 'Regional Este', lugar: 'La Romana', fecha: '05/08/2026', total: 628, nulos: 7, validos: 621, p1: [419, 419, 419, 419, 419, 419, 419], p2: [6, 6, 6, 6, 6, 6, 6], p3: [196, 196, 196, 196, 196, 196, 196] },
+  // PENDIENTE — Nacional (JDN), La Romana 0076: acta EN BLANCO, solo el total 628 válidos, sin desglose de planchas/candidatos.
+  // No se carga para no inventar votos de Richardson. Esperar el acta detallada.
 ]
 
 function TabActasNacionales() {
