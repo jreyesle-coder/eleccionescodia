@@ -2823,6 +2823,22 @@ const CANDIDATOS_JDN: { nombre: string; cargo: string }[] = [
   { nombre: 'Ing. Dahianna De La Rosa',     cargo: 'Secretaría de Relaciones Intergremial' },
 ]
 
+// ── Boletines oficiales de la Junta Directiva Nacional (CNE CODIA) ──
+// Totales por candidato en el MISMO orden de renglón que CANDIDATOS_JDN
+// (0 = Richardson). El boletín lista los candidatos por nombre; aquí se
+// reordenan a renglón. Agregar b2, b3… al llegar nuevos boletines.
+interface BoletinNac { emitidos: number; nulos: number; validos: number; porCand: number[] }
+const BOLETINES_NAC: { id: string; fecha: string; b: BoletinNac }[] = [
+  {
+    id: 'Preliminar 01', fecha: '05/08/2026',
+    b: {
+      emitidos: 4529, nulos: 241, validos: 4288,
+      // renglón: 1 Richardson, 2 César, 3 Rafael, 4 Yrene, 5 Ramón, 6 Carlos, 7 Dahianna
+      porCand: [3953, 3758, 3772, 3643, 3640, 3652, 3673],
+    },
+  },
+]
+
 // ⬇️ CARGAR ACTAS NACIONALES AQUÍ. Cada pX = fila "Suma Votos Plancha más
 // Fraccionados No.X" (7 renglones). Usar Z7 (siete ceros) si la plancha no tiene votos.
 const ACTAS_NAC: ActaNacional[] = [
@@ -2840,7 +2856,8 @@ const ACTAS_NAC: ActaNacional[] = [
   // Junta Directiva, Regional Sur Central 0452: Plancha I whole 91 + frac (14/4/2/2/4/1/0). 2 nulos.
   { folio: '0452', eleccion: JDN,   lugar: 'Regional Sur Central', fecha: '05/08/2026', total: 112, nulos: 2, validos: 110, p1: [105, 95, 93, 93, 95, 92, 91], p2: Z7, p3: Z7 },
   // Regional, Moca 0037: 3 planchas, 0 fraccionados → cada plancha (75/22/7) va a sus 7 renglones. 2 nulos.
-  { folio: '0037', eleccion: 'Regional (Moca)',   lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [75, 75, 75, 75, 75, 75, 75], p2: [22, 22, 22, 22, 22, 22, 22], p3: [7, 7, 7, 7, 7, 7, 7] },
+  // Regional Norte (Moca/Espaillat) 0037: el boletín confirma que Espaillat pertenece a Regional Norte.
+  { folio: '0037', eleccion: 'Regional Norte',     lugar: 'Moca (Espaillat)', fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [75, 75, 75, 75, 75, 75, 75], p2: [22, 22, 22, 22, 22, 22, 22], p3: [7, 7, 7, 7, 7, 7, 7] },
   // Nacional, El Seibo 0484: Plancha I whole 106 + 0 frac → 106 a los 7 renglones. Acta descuadrada (total 110 vs válidos 106; nulos ajustados a 4).
   { folio: '0484', eleccion: JDN,        lugar: 'El Seibo',     fecha: '05/08/2026', total: 110, nulos: 4, validos: 106, p1: [106, 106, 106, 106, 106, 106, 106], p2: Z7, p3: Z7, porConfirmar: true },
   // Nacional, Santiago Rodríguez 0006: fila "Suma" en blanco. Plancha I whole 58 + frac r1=6 → r1=64, resto 58.
@@ -2868,6 +2885,11 @@ const ACTAS_NAC: ActaNacional[] = [
   // Nacional (JDN), La Romana 0076: acta sin desglose (solo total 628 válidos). A nivel nacional solo compite la
   // Plancha 1, así que los 628 son de la Plancha 1 → 628 a los 7 renglones (regla confirmada por el usuario). 0 nulos.
   { folio: '0076', eleccion: JDN, lugar: 'La Romana', fecha: '05/08/2026', total: 628, nulos: 0, validos: 628, p1: [628, 628, 628, 628, 628, 628, 628], p2: Z7, p3: Z7 },
+  // Nacional (JDN), Santiago (CODIA) 0016: Plancha I whole 340 + frac (217/25/20/9/73/3/9). Header descuadrado
+  // (línea 5 repite el total); válidos = total 1046 − 70 nulos = 976 (coincide con "por planchas" 976). Suma verificada.
+  { folio: '0016', eleccion: JDN, lugar: 'Santiago (CODIA)', fecha: '05/08/2026', total: 1046, nulos: 70, validos: 976, p1: [557, 365, 360, 349, 413, 343, 349], p2: Z7, p3: Z7 },
+  // Regional Norte, Santiago (CODIA) 0018: 3 planchas, 0 fraccionados → cada plancha (I=590, II=307, III=129) a sus 7 renglones. 20 nulos.
+  { folio: '0018', eleccion: 'Regional Norte', lugar: 'Santiago (CODIA)', fecha: '05/08/2026', total: 1046, nulos: 20, validos: 1026, p1: [590, 590, 590, 590, 590, 590, 590], p2: [307, 307, 307, 307, 307, 307, 307], p3: [129, 129, 129, 129, 129, 129, 129] },
 ]
 
 function TabActasNacionales() {
@@ -3138,9 +3160,134 @@ function TabActasNacionales() {
   )
 }
 
+// ─── Sub-tab: Boletín Nacional (boletines oficiales de la Junta Directiva Nacional) ──
+function TabBoletinNacional() {
+  const [sel, setSel] = useState(0)
+  const boletin = BOLETINES_NAC[sel]
+  // Nuestro conteo por candidato (renglón) desde las actas de la JDN
+  const nuestro = [0,1,2,3,4,5,6].map(i =>
+    ACTAS_NAC.filter(a => a.eleccion === JDN).reduce((s, a) => s + (a.p1[i] ?? 0), 0)
+  )
+  const nActas = ACTAS_NAC.filter(a => a.eleccion === JDN).length
+
+  if (!boletin) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 text-center space-y-2">
+        <p className="text-4xl">📋</p>
+        <p className="text-gray-700 font-semibold">Aún no hay boletines nacionales cargados</p>
+      </div>
+    )
+  }
+
+  const b = boletin.b
+  const george = b.porCand[0]
+  const pctGeorge = b.validos > 0 ? (george / b.validos * 100) : 0
+  const maxCand = Math.max(...b.porCand, 1)
+
+  return (
+    <div className="space-y-5">
+      {/* Selector de boletín */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-gray-500">Boletín oficial del cómputo — Junta Directiva Nacional (CNE · CODIA)</p>
+        {BOLETINES_NAC.length > 1 && (
+          <select value={sel} onChange={e => setSel(Number(e.target.value))}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5">
+            {BOLETINES_NAC.map((x, i) => <option key={x.id} value={i}>{x.id}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* Banner Richardson */}
+      <div className="rounded-2xl p-6 text-white flex items-center justify-between gap-4 flex-wrap"
+           style={{ background: 'linear-gradient(135deg, #0F1B33, #1F3A6B)' }}>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">
+            {boletin.id} · {boletin.fecha} · George Richardson (Presidente)
+          </p>
+          <p className="text-4xl font-black">{george.toLocaleString()} votos</p>
+          <p className="text-blue-200 text-sm mt-1">{pctGeorge.toFixed(1)}% de {b.validos.toLocaleString()} válidos</p>
+        </div>
+        <div className="text-center rounded-xl px-6 py-4 shrink-0"
+             style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}>
+          <p className="font-black text-3xl tabular-nums">{pctGeorge.toFixed(0)}%</p>
+          <p className="text-xs opacity-70 mt-1">Presidencia</p>
+        </div>
+      </div>
+
+      {/* Votación general */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Votos emitidos', val: b.emitidos },
+          { label: 'Nulos',          val: b.nulos },
+          { label: 'Válidos',        val: b.validos },
+        ].map(m => (
+          <div key={m.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{m.label}</p>
+            <p className="text-2xl font-black tabular-nums mt-1" style={{ color: 'var(--color-marino)' }}>{m.val.toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla candidatos: boletín vs nuestro conteo */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+          <p className="text-sm font-semibold text-gray-700">Votos por candidato — {boletin.id}</p>
+          <p className="text-xs text-gray-400">Comparado con nuestro conteo ({nActas} actas)</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                <th className="text-left px-5 py-2 font-semibold">#</th>
+                <th className="text-left px-5 py-2 font-semibold">Candidato / Cargo</th>
+                <th className="text-right px-5 py-2 font-semibold">Boletín</th>
+                <th className="text-right px-5 py-2 font-semibold">Nuestro conteo</th>
+                <th className="text-right px-5 py-2 font-semibold">Dif.</th>
+                <th className="text-left px-5 py-2 font-semibold w-1/4">Boletín</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {CANDIDATOS_JDN.map((c, i) => {
+                const esGeorge = i === 0
+                const vb = b.porCand[i]
+                const vn = nuestro[i]
+                const dif = vn - vb
+                const pct = (vb / maxCand) * 100
+                return (
+                  <tr key={i} style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.06)' } : undefined}>
+                    <td className="px-5 py-3 font-bold tabular-nums align-top" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>{i + 1}</td>
+                    <td className="px-5 py-3">
+                      <p className="font-semibold leading-tight" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{c.nombre}{esGeorge ? ' ⭐' : ''}</p>
+                      <p className="text-[11px] text-gray-400">{c.cargo}</p>
+                    </td>
+                    <td className="px-5 py-3 text-right font-black tabular-nums align-top" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{vb.toLocaleString()}</td>
+                    <td className="px-5 py-3 text-right tabular-nums align-top text-gray-500">{vn.toLocaleString()}</td>
+                    <td className="px-5 py-3 text-right tabular-nums align-top font-semibold" style={{ color: dif === 0 ? '#9ca3af' : dif > 0 ? '#16a34a' : '#dc2626' }}>
+                      {dif > 0 ? '+' : ''}{dif.toLocaleString()}
+                    </td>
+                    <td className="px-5 py-3 align-middle">
+                      <div className="bg-gray-100 rounded-full h-2">
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: esGeorge ? '#16a34a' : 'var(--color-real)' }} />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="px-5 py-2 text-[11px] text-gray-400">
+          “Nuestro conteo” suma la Plancha 1 de las {nActas} actas nacionales cargadas. La diferencia con el boletín
+          se debe a las actas que aún faltan por transcribir en uno u otro lado; se va cerrando al cargar más.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Tab: Día de Elección (con sub-tabs) ──────────────────────────────────────
 function TabDiaEleccion() {
-  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'nacionales' | 'boletines' | 'demarcacion'>('vivo')
+  const [subTab, setSubTab] = useState<'vivo' | 'actas' | 'nacionales' | 'boletin_nac' | 'boletines' | 'demarcacion'>('vivo')
   return (
     <div className="space-y-5">
       <div className="flex gap-2 border-b border-gray-200 flex-wrap">
@@ -3148,7 +3295,8 @@ function TabDiaEleccion() {
           { id: 'vivo'        as const, label: '📡 Tendencia en vivo' },
           { id: 'actas'       as const, label: '🗒️ Resultado en actas' },
           { id: 'nacionales'  as const, label: '🗳️ Actas nacionales' },
-          { id: 'boletines'   as const, label: '📋 Boletines' },
+          { id: 'boletin_nac' as const, label: '📋 Boletín nacional' },
+          { id: 'boletines'   as const, label: '📋 Boletines (Arq.)' },
           { id: 'demarcacion' as const, label: '📍 Por demarcación' },
         ]).map(s => (
           <button
@@ -3166,6 +3314,7 @@ function TabDiaEleccion() {
       {subTab === 'vivo'        && <TabDiaEleccionVivo />}
       {subTab === 'actas'       && <TabResultadoActas />}
       {subTab === 'nacionales'  && <TabActasNacionales />}
+      {subTab === 'boletin_nac' && <TabBoletinNacional />}
       {subTab === 'boletines'   && <TabBoletines />}
       {subTab === 'demarcacion' && <TabPorDemarcacion />}
     </div>
