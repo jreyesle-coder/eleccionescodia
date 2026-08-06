@@ -2838,6 +2838,8 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0100', eleccion: 'Junta Directiva',   lugar: 'San Juan',     fecha: '05/08/2026', total: 172, nulos: 3, validos: 169, p1: [157, 158, 157, 153, 152, 153, 154], p2: Z7, p3: Z7 },
   // Nacional, Sto. Dgo. Norte 0470: Plancha I whole 216 + frac (30/15/11/2/10/8/8). Cuadra.
   { folio: '0470', eleccion: 'Nacionales',        lugar: 'Sto. Dgo. Norte', fecha: '05/08/2026', total: 287, nulos: 21, validos: 266, p1: [246, 231, 227, 218, 226, 224, 224], p2: Z7, p3: Z7 },
+  // Junta Directiva Nac, Delegación Prov. Sto. Dgo. Mesa II 0421: Plancha I whole 257 + frac (30/23/9/12/6/6/12). Cuadra.
+  { folio: '0421', eleccion: 'Junta Directiva',   lugar: 'Delegación Prov. Sto. Dgo. (Mesa II)', fecha: '05/08/2026', total: 360, nulos: 36, validos: 324, p1: [287, 280, 266, 269, 263, 263, 269], p2: Z7, p3: Z7 },
 ]
 
 function TabActasNacionales() {
@@ -2904,6 +2906,15 @@ function TabActasNacionales() {
         const maxR1 = Math.max(...r1)
         const planchasConVotos = [0, 1, 2].filter(p => totalPlancha[p] > 0)
         const hayTentativas = actas.some(a => a.porConfirmar)
+        // Frase en español: quién encabeza este bloque (por el renglón 1)
+        const liderR1 = planchasConVotos.reduce((best, p) => (r1[p] > r1[best] ? p : best), planchasConVotos[0] ?? 0)
+        const pctLider = validos > 0 ? (r1[liderR1] / validos * 100) : 0
+        const soloUna = planchasConVotos.length <= 1
+        const frase = planchasConVotos.length === 0
+          ? 'Todavía sin votos registrados.'
+          : soloUna
+            ? `La ${PLANCHAS_NAC[liderR1]} va sola al frente: ${r1[liderR1].toLocaleString()} votos en el renglón 1 de ${validos.toLocaleString()} válidos (${pctLider.toFixed(0)}%). Las demás planchas no obtuvieron votos.`
+            : `La ${PLANCHAS_NAC[liderR1]} encabeza con ${r1[liderR1].toLocaleString()} votos en el renglón 1 de ${validos.toLocaleString()} válidos (${pctLider.toFixed(0)}%). Revisa la tabla: cada renglón es un cargo distinto y puede tener otro ganador.`
 
         return (
           <div key={nombre} className="space-y-4">
@@ -2920,6 +2931,13 @@ function TabActasNacionales() {
                 <div><p className="text-2xl font-black tabular-nums">{validos.toLocaleString()}</p><p className="text-[11px] text-blue-200">válidos</p></div>
                 <div><p className="text-2xl font-black tabular-nums">{nulos.toLocaleString()}</p><p className="text-[11px] text-blue-200">nulos</p></div>
               </div>
+            </div>
+
+            {/* Frase resumen en español */}
+            <div className="rounded-xl px-4 py-3 text-sm font-medium flex items-start gap-2"
+                 style={{ backgroundColor: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.35)', color: '#15803d' }}>
+              <span className="text-base leading-none">🏆</span>
+              <span>{frase}</span>
             </div>
 
             {/* Totales por plancha */}
