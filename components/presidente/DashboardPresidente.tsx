@@ -2822,7 +2822,7 @@ const ACTAS_NAC: ActaNacional[] = [
   // Junta Directiva, Regional Sur Central 0452: Plancha I whole 91 + frac (14/4/2/2/4/1/0). 2 nulos.
   { folio: '0452', eleccion: 'Junta Directiva',   lugar: 'Regional Sur Central', fecha: '05/08/2026', total: 112, nulos: 2, validos: 110, p1: [105, 95, 93, 93, 95, 92, 91], p2: Z7, p3: Z7 },
   // Regional, Moca 0037: 3 planchas, 0 fraccionados → cada plancha (75/22/7) va a sus 7 renglones. 2 nulos.
-  { folio: '0037', eleccion: 'Regional',          lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [75, 75, 75, 75, 75, 75, 75], p2: [22, 22, 22, 22, 22, 22, 22], p3: [7, 7, 7, 7, 7, 7, 7] },
+  { folio: '0037', eleccion: 'Regional (Moca)',   lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [75, 75, 75, 75, 75, 75, 75], p2: [22, 22, 22, 22, 22, 22, 22], p3: [7, 7, 7, 7, 7, 7, 7] },
   // Nacional, El Seibo 0484: Plancha I whole 106 + 0 frac → 106 a los 7 renglones. Acta descuadrada (total 110 vs válidos 106; nulos ajustados a 4).
   { folio: '0484', eleccion: 'Nacionales',        lugar: 'El Seibo',     fecha: '05/08/2026', total: 110, nulos: 4, validos: 106, p1: [106, 106, 106, 106, 106, 106, 106], p2: Z7, p3: Z7, porConfirmar: true },
   // Nacional, Santiago Rodríguez 0006: fila "Suma" en blanco. Plancha I whole 58 + frac r1=6 → r1=64, resto 58.
@@ -2842,6 +2842,9 @@ const ACTAS_NAC: ActaNacional[] = [
   { folio: '0421', eleccion: 'Junta Directiva',   lugar: 'Delegación Prov. Sto. Dgo. (Mesa II)', fecha: '05/08/2026', total: 360, nulos: 36, validos: 324, p1: [287, 280, 266, 269, 263, 263, 269], p2: Z7, p3: Z7 },
   // Junta Directiva DELEGACIÓN Prov. Sto. Dgo. Mesa I 0420: DOS planchas. P1 whole 186 + frac (12/0/0/0/3/1/0); P2 whole 131 + frac (15/1/0/0/0/0/0). Cuadra.
   { folio: '0420', eleccion: 'Junta Directiva Delegación Prov.', lugar: 'Delegación Prov. Sto. Dgo. (Mesa I)', fecha: '05/08/2026', total: 360, nulos: 12, validos: 348, p1: [198, 186, 186, 186, 189, 187, 186], p2: [146, 132, 131, 131, 131, 131, 131], p3: Z7 },
+  // Regional Sur del Valle, San Juan 0099: Plancha I whole 162 + frac (7/1/0/1/1/1/0). El acta escribió renglón 7 = "2"
+  // (imposible: el voto de plancha 162 aplica a los 7 renglones); registrado 162 por la regla. porConfirmar.
+  { folio: '0099', eleccion: 'Regional Sur del Valle', lugar: 'San Juan', fecha: '05/08/2026', total: 172, nulos: 2, validos: 170, p1: [169, 163, 162, 163, 163, 163, 162], p2: Z7, p3: Z7, porConfirmar: true },
 ]
 
 function TabActasNacionales() {
