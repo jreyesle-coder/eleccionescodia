@@ -2801,45 +2801,63 @@ interface ActaNacional {
 
 // Nombres de las 3 planchas nacionales (editar cuando se confirmen).
 const PLANCHAS_NAC = ['Plancha I', 'Plancha II', 'Plancha III']
-// Nombres de los 7 renglones/posiciones (editar cuando se confirmen).
+// Nombres de los 7 renglones/posiciones (genérico, para elecciones donde no
+// conocemos los candidatos: Regional, Delegación).
 const POSICIONES_NAC = ['Renglón 1', 'Renglón 2', 'Renglón 3', 'Renglón 4', 'Renglón 5', 'Renglón 6', 'Renglón 7']
 const Z7 = [0, 0, 0, 0, 0, 0, 0]
+
+// Nombre de la elección que nos interesa (la que sigue nuestro Presidente).
+// Todas las actas nacionales (rotuladas 'Nacional', 'Presidencia CODIA', 'Codia
+// Nacional', 'Junta Directiva Nac') son en realidad ESTA misma boleta.
+const JDN = 'Junta Directiva Nacional'
+
+// Los 7 candidatos de la Plancha 1 (única en la Junta Directiva Nacional), en el
+// orden de los renglones 1-7. renglón 1 = George Richardson (Presidente).
+const CANDIDATOS_JDN: { nombre: string; cargo: string }[] = [
+  { nombre: 'Arq. George Richardson',       cargo: 'Presidente' },
+  { nombre: 'Ing. César Ramírez',           cargo: 'Secretario General' },
+  { nombre: 'Agrim. Rafael Ferreras',       cargo: 'Tesorero' },
+  { nombre: 'Ing. Agrón. Yrene López',      cargo: 'Secretaría de Actas' },
+  { nombre: 'Ramón Arturo Martínez Acosta', cargo: 'Secretaría de Educación y Eventos' },
+  { nombre: 'Ing. Carlos De Los Santos',    cargo: 'Secretaría de Relaciones Públicas' },
+  { nombre: 'Ing. Dahianna De La Rosa',     cargo: 'Secretaría de Relaciones Intergremial' },
+]
 
 // ⬇️ CARGAR ACTAS NACIONALES AQUÍ. Cada pX = fila "Suma Votos Plancha más
 // Fraccionados No.X" (7 renglones). Usar Z7 (siete ceros) si la plancha no tiene votos.
 const ACTAS_NAC: ActaNacional[] = [
-  { folio: '0447', eleccion: 'Presidencia CODIA', lugar: 'Club MOPC',    fecha: '05/08/2026', total: 22, nulos: 3, validos: 19, p1: [18, 15, 14, 14, 14, 14, 14], p2: Z7, p3: Z7 },
-  { folio: '0433', eleccion: 'Junta Directiva',   lugar: 'MOPC',         fecha: '05/08/2026', total: 66, nulos: 0, validos: 66, p1: [60, 44, 38, 38, 37, 39, 38], p2: Z7, p3: Z7 },
-  { folio: '0432', eleccion: 'Junta Directiva',   lugar: 'MOPC (mesa)',  fecha: '05/08/2026', total: 99, nulos: 0, validos: 99, p1: [76, 88, 67, 65, 64, 65, 66], p2: Z7, p3: Z7 },
-  { folio: '0081', eleccion: 'Nacionales',        lugar: 'Barahona',     fecha: '05/08/2026', total: 81, nulos: 0, validos: 81, p1: [81, 77, 76, 76, 77, 76, 76], p2: Z7, p3: Z7 },
+  { folio: '0447', eleccion: JDN, lugar: 'Club MOPC',    fecha: '05/08/2026', total: 22, nulos: 3, validos: 19, p1: [18, 15, 14, 14, 14, 14, 14], p2: Z7, p3: Z7 },
+  { folio: '0433', eleccion: JDN,   lugar: 'MOPC',         fecha: '05/08/2026', total: 66, nulos: 0, validos: 66, p1: [60, 44, 38, 38, 37, 39, 38], p2: Z7, p3: Z7 },
+  { folio: '0432', eleccion: JDN,   lugar: 'MOPC (mesa)',  fecha: '05/08/2026', total: 99, nulos: 0, validos: 99, p1: [76, 88, 67, 65, 64, 65, 66], p2: Z7, p3: Z7 },
+  { folio: '0081', eleccion: JDN,        lugar: 'Barahona',     fecha: '05/08/2026', total: 81, nulos: 0, validos: 81, p1: [81, 77, 76, 76, 77, 76, 76], p2: Z7, p3: Z7 },
   // Samaná 0049: 77 votos de plancha completa (I) + 0 fraccionados → los 77 aplican a los 7 renglones.
   // El delegado solo escribió el 77 en el renglón 1 de la fila "Suma", pero por regla el voto de plancha suma a todos.
-  { folio: '0049', eleccion: 'Nacionales',        lugar: 'Samaná',       fecha: '05/08/2026', total: 77, nulos: 0, validos: 77, p1: [77, 77, 77, 77, 77, 77, 77], p2: Z7, p3: Z7 },
+  { folio: '0049', eleccion: JDN,        lugar: 'Samaná',       fecha: '05/08/2026', total: 77, nulos: 0, validos: 77, p1: [77, 77, 77, 77, 77, 77, 77], p2: Z7, p3: Z7 },
   // Boca Chica 0472: Plancha I (whole 11, frac r2=1) y Plancha II (whole 19, frac r1=5). Plancha III sin votos.
   { folio: '0472', eleccion: 'Delegación Prov. Santo Domingo', lugar: 'Boca Chica (Núcleo)', fecha: '05/08/2026', total: 36, nulos: 0, validos: 36, p1: [11, 12, 11, 11, 11, 11, 11], p2: [24, 19, 19, 19, 19, 19, 19], p3: Z7 },
   // Junta Directiva Nacional, Boca Chica 0471: Plancha I whole 29 + frac (r1=6, r4=1). 1 nulo.
-  { folio: '0471', eleccion: 'Junta Directiva',   lugar: 'Boca Chica (Núcleo)', fecha: '05/08/2026', total: 36, nulos: 1, validos: 35, p1: [35, 29, 29, 30, 29, 29, 29], p2: Z7, p3: Z7 },
+  { folio: '0471', eleccion: JDN,   lugar: 'Boca Chica (Núcleo)', fecha: '05/08/2026', total: 36, nulos: 1, validos: 35, p1: [35, 29, 29, 30, 29, 29, 29], p2: Z7, p3: Z7 },
   // Junta Directiva, Regional Sur Central 0452: Plancha I whole 91 + frac (14/4/2/2/4/1/0). 2 nulos.
-  { folio: '0452', eleccion: 'Junta Directiva',   lugar: 'Regional Sur Central', fecha: '05/08/2026', total: 112, nulos: 2, validos: 110, p1: [105, 95, 93, 93, 95, 92, 91], p2: Z7, p3: Z7 },
+  { folio: '0452', eleccion: JDN,   lugar: 'Regional Sur Central', fecha: '05/08/2026', total: 112, nulos: 2, validos: 110, p1: [105, 95, 93, 93, 95, 92, 91], p2: Z7, p3: Z7 },
   // Regional, Moca 0037: 3 planchas, 0 fraccionados → cada plancha (75/22/7) va a sus 7 renglones. 2 nulos.
   { folio: '0037', eleccion: 'Regional (Moca)',   lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [75, 75, 75, 75, 75, 75, 75], p2: [22, 22, 22, 22, 22, 22, 22], p3: [7, 7, 7, 7, 7, 7, 7] },
   // Nacional, El Seibo 0484: Plancha I whole 106 + 0 frac → 106 a los 7 renglones. Acta descuadrada (total 110 vs válidos 106; nulos ajustados a 4).
-  { folio: '0484', eleccion: 'Nacionales',        lugar: 'El Seibo',     fecha: '05/08/2026', total: 110, nulos: 4, validos: 106, p1: [106, 106, 106, 106, 106, 106, 106], p2: Z7, p3: Z7, porConfirmar: true },
+  { folio: '0484', eleccion: JDN,        lugar: 'El Seibo',     fecha: '05/08/2026', total: 110, nulos: 4, validos: 106, p1: [106, 106, 106, 106, 106, 106, 106], p2: Z7, p3: Z7, porConfirmar: true },
   // Nacional, Santiago Rodríguez 0006: fila "Suma" en blanco. Plancha I whole 58 + frac r1=6 → r1=64, resto 58.
   // Acta descuadrada: anotó válidos 58 / total 59 (no sumó los 6 fraccionados); real válidos 64. Plancha II/III sin votos.
-  { folio: '0006', eleccion: 'Nacionales',        lugar: 'Santiago Rodríguez', fecha: '05/08/2026', total: 65, nulos: 1, validos: 64, p1: [64, 58, 58, 58, 58, 58, 58], p2: Z7, p3: Z7, porConfirmar: true },
+  { folio: '0006', eleccion: JDN,        lugar: 'Santiago Rodríguez', fecha: '05/08/2026', total: 65, nulos: 1, validos: 64, p1: [64, 58, 58, 58, 58, 58, 58], p2: Z7, p3: Z7, porConfirmar: true },
   // Nacional, Hermanas Mirabal 0070: Plancha I whole 75 + frac (12/6/0/2/1/1/1). 17 nulos. Cuadra.
-  { folio: '0070', eleccion: 'Nacionales',        lugar: 'Hermanas Mirabal', fecha: '05/08/2026', total: 110, nulos: 17, validos: 93, p1: [87, 81, 75, 77, 76, 76, 76], p2: Z7, p3: Z7 },
+  { folio: '0070', eleccion: JDN,        lugar: 'Hermanas Mirabal', fecha: '05/08/2026', total: 110, nulos: 17, validos: 93, p1: [87, 81, 75, 77, 76, 76, 76], p2: Z7, p3: Z7 },
   // Nacional, Moca 0036: Plancha I whole 99 + frac r1=4. Casilla "Votos Plancha I"=103 es la de válidos; la Suma confirma whole 99.
-  { folio: '0036', eleccion: 'Nacionales',        lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 3, validos: 103, p1: [103, 99, 99, 99, 99, 99, 99], p2: Z7, p3: Z7 },
+  { folio: '0036', eleccion: JDN,        lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 3, validos: 103, p1: [103, 99, 99, 99, 99, 99, 99], p2: Z7, p3: Z7 },
   // Delegación Moca 0038: Plancha I whole 102 + frac (r1=1, r4=1). Casilla "Votos Plancha I"=104 es la de válidos; la Suma confirma whole 102.
   { folio: '0038', eleccion: 'Delegación Moca',   lugar: 'Moca',         fecha: '05/08/2026', total: 106, nulos: 2, validos: 104, p1: [103, 102, 102, 103, 102, 102, 102], p2: Z7, p3: Z7 },
   // Junta Directiva, San Juan 0100: Plancha I whole 152 + frac (5/6/5/1/0/1/2). Cuadra.
-  { folio: '0100', eleccion: 'Junta Directiva',   lugar: 'San Juan',     fecha: '05/08/2026', total: 172, nulos: 3, validos: 169, p1: [157, 158, 157, 153, 152, 153, 154], p2: Z7, p3: Z7 },
+  { folio: '0100', eleccion: JDN,   lugar: 'San Juan',     fecha: '05/08/2026', total: 172, nulos: 3, validos: 169, p1: [157, 158, 157, 153, 152, 153, 154], p2: Z7, p3: Z7 },
   // Nacional, Sto. Dgo. Norte 0470: Plancha I whole 216 + frac (30/15/11/2/10/8/8). Cuadra.
-  { folio: '0470', eleccion: 'Nacionales',        lugar: 'Sto. Dgo. Norte', fecha: '05/08/2026', total: 287, nulos: 21, validos: 266, p1: [246, 231, 227, 218, 226, 224, 224], p2: Z7, p3: Z7 },
+  { folio: '0470', eleccion: JDN,        lugar: 'Sto. Dgo. Norte', fecha: '05/08/2026', total: 287, nulos: 21, validos: 266, p1: [246, 231, 227, 218, 226, 224, 224], p2: Z7, p3: Z7 },
   // Junta Directiva Nac, Delegación Prov. Sto. Dgo. Mesa II 0421: Plancha I whole 257 + frac (30/23/9/12/6/6/12). Cuadra.
-  { folio: '0421', eleccion: 'Junta Directiva',   lugar: 'Delegación Prov. Sto. Dgo. (Mesa II)', fecha: '05/08/2026', total: 360, nulos: 36, validos: 324, p1: [287, 280, 266, 269, 263, 263, 269], p2: Z7, p3: Z7 },
+  { folio: '0421', eleccion: JDN,   lugar: 'Delegación Prov. Sto. Dgo. (Mesa II)', fecha: '05/08/2026', total: 360, nulos: 36, validos: 324, p1: [287, 280, 266, 269, 263, 263, 269], p2: Z7, p3: Z7 },
   // Junta Directiva DELEGACIÓN Prov. Sto. Dgo. Mesa I 0420: DOS planchas. P1 whole 186 + frac (12/0/0/0/3/1/0); P2 whole 131 + frac (15/1/0/0/0/0/0). Cuadra.
   { folio: '0420', eleccion: 'Junta Directiva Delegación Prov.', lugar: 'Delegación Prov. Sto. Dgo. (Mesa I)', fecha: '05/08/2026', total: 360, nulos: 12, validos: 348, p1: [198, 186, 186, 186, 189, 187, 186], p2: [146, 132, 131, 131, 131, 131, 131], p3: Z7 },
   // Regional Sur del Valle, San Juan 0099: Plancha I whole 162 + frac (7/1/0/1/1/1/0). El acta escribió renglón 7 = "2"
@@ -2911,15 +2929,20 @@ function TabActasNacionales() {
         const maxR1 = Math.max(...r1)
         const planchasConVotos = [0, 1, 2].filter(p => totalPlancha[p] > 0)
         const hayTentativas = actas.some(a => a.porConfirmar)
+        const esJDN = nombre === JDN                            // la elección que nos interesa
         // Frase en español: quién encabeza este bloque (por el renglón 1)
         const liderR1 = planchasConVotos.reduce((best, p) => (r1[p] > r1[best] ? p : best), planchasConVotos[0] ?? 0)
         const pctLider = validos > 0 ? (r1[liderR1] / validos * 100) : 0
         const soloUna = planchasConVotos.length <= 1
-        const frase = planchasConVotos.length === 0
-          ? 'Todavía sin votos registrados.'
-          : soloUna
-            ? `La ${PLANCHAS_NAC[liderR1]} va sola al frente: ${r1[liderR1].toLocaleString()} votos en el renglón 1 de ${validos.toLocaleString()} válidos (${pctLider.toFixed(0)}%). Las demás planchas no obtuvieron votos.`
-            : `La ${PLANCHAS_NAC[liderR1]} encabeza con ${r1[liderR1].toLocaleString()} votos en el renglón 1 de ${validos.toLocaleString()} válidos (${pctLider.toFixed(0)}%). Revisa la tabla: cada renglón es un cargo distinto y puede tener otro ganador.`
+        const votosGeorge = totP[0][0]                          // Plancha 1, renglón 1 = George Richardson
+        const pctGeorge = validos > 0 ? (votosGeorge / validos * 100) : 0
+        const frase = esJDN
+          ? `George Richardson (Presidente) lleva ${votosGeorge.toLocaleString()} votos en ${actas.length} acta${actas.length !== 1 ? 's' : ''} de la Junta Directiva Nacional (${pctGeorge.toFixed(0)}% de ${validos.toLocaleString()} válidos). Abajo, el voto de cada uno de los 7 candidatos de la plancha.`
+          : planchasConVotos.length === 0
+            ? 'Todavía sin votos registrados.'
+            : soloUna
+              ? `La ${PLANCHAS_NAC[liderR1]} va sola al frente: ${r1[liderR1].toLocaleString()} votos en el renglón 1 de ${validos.toLocaleString()} válidos (${pctLider.toFixed(0)}%). Las demás planchas no obtuvieron votos.`
+              : `La ${PLANCHAS_NAC[liderR1]} encabeza con ${r1[liderR1].toLocaleString()} votos en el renglón 1 de ${validos.toLocaleString()} válidos (${pctLider.toFixed(0)}%). Revisa la tabla: cada renglón es un cargo distinto y puede tener otro ganador.`
 
         return (
           <div key={nombre} className="space-y-4">
@@ -2945,64 +2968,116 @@ function TabActasNacionales() {
               <span>{frase}</span>
             </div>
 
-            {/* Totales por plancha */}
-            <div className={`grid gap-4 ${planchasConVotos.length >= 3 ? 'sm:grid-cols-3' : planchasConVotos.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
-              {planchasConVotos.map(p => {
-                const lider = r1[p] === maxR1 && r1[p] > 0
-                const pct = validos > 0 ? (r1[p] / validos * 100) : 0
-                return (
-                  <div key={p} className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-1"
-                       style={{ borderColor: lider ? '#16a34a' : '#e5e7eb' }}>
-                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: lider ? '#16a34a' : 'var(--color-marino)' }}>
-                      {PLANCHAS_NAC[p]}{lider ? ' · ★ va al frente' : ''}
-                    </p>
-                    <p className="text-4xl font-black tabular-nums" style={{ color: lider ? '#16a34a' : '#374151' }}>{r1[p].toLocaleString()}</p>
-                    <p className="text-xs text-gray-400">votos en el <b>Renglón 1</b> · {pct.toFixed(1)}% de válidos</p>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Tabla renglón × plancha */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-700">Votos por renglón (posición) — comparativa de planchas</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
-                      <th className="text-left px-5 py-2 font-semibold">Renglón</th>
-                      {planchasConVotos.map(p => (
-                        <th key={p} className="text-right px-5 py-2 font-semibold">{PLANCHAS_NAC[p]}</th>
-                      ))}
-                      <th className="text-left px-5 py-2 font-semibold">Lidera</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {[0,1,2,3,4,5,6].map(i => {
-                      const vals = planchasConVotos.map(p => totP[p][i])
-                      const maxV = Math.max(...vals)
-                      const idxLider = maxV > 0 ? planchasConVotos[vals.indexOf(maxV)] : -1
-                      return (
-                        <tr key={i}>
-                          <td className="px-5 py-2.5 font-medium text-gray-700">{POSICIONES_NAC[i]}</td>
-                          {planchasConVotos.map(p => (
-                            <td key={p} className="px-5 py-2.5 text-right font-bold tabular-nums"
-                                style={{ color: p === idxLider ? '#16a34a' : '#374151' }}>
-                              {totP[p][i].toLocaleString()}
+            {esJDN ? (
+              /* ── Vista Junta Directiva Nacional: los 7 candidatos de la Plancha 1 ── */
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-sm font-semibold text-gray-700">Votos por candidato — Plancha 1</p>
+                  <p className="text-xs text-gray-400">Renglón 1 = Presidente · única plancha en la Junta Directiva</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                        <th className="text-left px-5 py-2 font-semibold">#</th>
+                        <th className="text-left px-5 py-2 font-semibold">Candidato / Cargo</th>
+                        <th className="text-right px-5 py-2 font-semibold">Votos</th>
+                        <th className="text-left px-5 py-2 font-semibold w-1/3">Peso relativo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {CANDIDATOS_JDN.map((c, i) => {
+                        const v = totP[0][i]
+                        const esGeorge = i === 0
+                        const maxCand = Math.max(...totP[0], 1)
+                        const pct = (v / maxCand) * 100
+                        return (
+                          <tr key={i} style={esGeorge ? { backgroundColor: 'rgba(22,163,74,0.06)' } : undefined}>
+                            <td className="px-5 py-3 font-bold tabular-nums align-top" style={{ color: esGeorge ? '#16a34a' : 'var(--color-marino)' }}>{i + 1}</td>
+                            <td className="px-5 py-3">
+                              <p className="font-semibold leading-tight" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>
+                                {c.nombre}{esGeorge ? ' ⭐' : ''}
+                              </p>
+                              <p className="text-[11px] text-gray-400">{c.cargo}</p>
                             </td>
-                          ))}
-                          <td className="px-5 py-2.5 text-xs font-semibold" style={{ color: idxLider >= 0 ? '#16a34a' : '#9ca3af' }}>
-                            {idxLider >= 0 ? PLANCHAS_NAC[idxLider] : '—'}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                            <td className="px-5 py-3 text-right font-black tabular-nums align-top" style={{ color: esGeorge ? '#16a34a' : '#374151' }}>{v.toLocaleString()}</td>
+                            <td className="px-5 py-3 align-middle">
+                              <div className="bg-gray-100 rounded-full h-2">
+                                <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, backgroundColor: esGeorge ? '#16a34a' : 'var(--color-real)' }} />
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="px-5 py-2 text-[11px] text-gray-400">
+                  Cada votante puede votar la plancha completa o fraccionar entre candidatos, por eso cada uno tiene su propio total.
+                </p>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Totales por plancha */}
+                <div className={`grid gap-4 ${planchasConVotos.length >= 3 ? 'sm:grid-cols-3' : planchasConVotos.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
+                  {planchasConVotos.map(p => {
+                    const lider = r1[p] === maxR1 && r1[p] > 0
+                    const pct = validos > 0 ? (r1[p] / validos * 100) : 0
+                    return (
+                      <div key={p} className="bg-white rounded-2xl border-2 shadow-sm p-5 space-y-1"
+                           style={{ borderColor: lider ? '#16a34a' : '#e5e7eb' }}>
+                        <p className="text-xs font-bold uppercase tracking-wide" style={{ color: lider ? '#16a34a' : 'var(--color-marino)' }}>
+                          {PLANCHAS_NAC[p]}{lider ? ' · ★ va al frente' : ''}
+                        </p>
+                        <p className="text-4xl font-black tabular-nums" style={{ color: lider ? '#16a34a' : '#374151' }}>{r1[p].toLocaleString()}</p>
+                        <p className="text-xs text-gray-400">votos en el <b>Renglón 1</b> · {pct.toFixed(1)}% de válidos</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Tabla renglón × plancha */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-700">Votos por renglón (posición) — comparativa de planchas</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs uppercase tracking-wide border-b" style={{ color: 'var(--color-marino)' }}>
+                          <th className="text-left px-5 py-2 font-semibold">Renglón</th>
+                          {planchasConVotos.map(p => (
+                            <th key={p} className="text-right px-5 py-2 font-semibold">{PLANCHAS_NAC[p]}</th>
+                          ))}
+                          <th className="text-left px-5 py-2 font-semibold">Lidera</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {[0,1,2,3,4,5,6].map(i => {
+                          const vals = planchasConVotos.map(p => totP[p][i])
+                          const maxV = Math.max(...vals)
+                          const idxLider = maxV > 0 ? planchasConVotos[vals.indexOf(maxV)] : -1
+                          return (
+                            <tr key={i}>
+                              <td className="px-5 py-2.5 font-medium text-gray-700">{POSICIONES_NAC[i]}</td>
+                              {planchasConVotos.map(p => (
+                                <td key={p} className="px-5 py-2.5 text-right font-bold tabular-nums"
+                                    style={{ color: p === idxLider ? '#16a34a' : '#374151' }}>
+                                  {totP[p][i].toLocaleString()}
+                                </td>
+                              ))}
+                              <td className="px-5 py-2.5 text-xs font-semibold" style={{ color: idxLider >= 0 ? '#16a34a' : '#9ca3af' }}>
+                                {idxLider >= 0 ? PLANCHAS_NAC[idxLider] : '—'}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Detalle por acta */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
