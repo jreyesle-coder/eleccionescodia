@@ -2837,6 +2837,15 @@ const BOLETINES_NAC: { id: string; fecha: string; b: BoletinNac }[] = [
       porCand: [3953, 3758, 3772, 3643, 3640, 3652, 3673],
     },
   },
+  {
+    id: 'Preliminar 02', fecha: '07/08/2026',
+    b: {
+      emitidos: 6467, nulos: 336, validos: 6131,
+      // boletín por nombre: Rich 5354, César 4921, Rafael 4930, Yrene 4784, Carlos 4858, Ramón 4773, Dahianna 4812
+      // reordenado a renglón: 1 Rich, 2 César, 3 Rafael, 4 Yrene, 5 Ramón, 6 Carlos, 7 Dahianna
+      porCand: [5354, 4921, 4930, 4784, 4773, 4858, 4812],
+    },
+  },
 ]
 
 // ⬇️ CARGAR ACTAS NACIONALES AQUÍ. Cada pX = fila "Suma Votos Plancha más
@@ -3162,7 +3171,7 @@ function TabActasNacionales() {
 
 // ─── Sub-tab: Boletín Nacional (boletines oficiales de la Junta Directiva Nacional) ──
 function TabBoletinNacional() {
-  const [sel, setSel] = useState(0)
+  const [sel, setSel] = useState(BOLETINES_NAC.length - 1)  // abre el más reciente
   const boletin = BOLETINES_NAC[sel]
   // Nuestro conteo por candidato (renglón) desde las actas de la JDN
   const nuestro = [0,1,2,3,4,5,6].map(i =>
