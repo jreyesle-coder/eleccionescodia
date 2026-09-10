@@ -169,11 +169,15 @@ export default function ConsultaDeuda() {
       )
     }
 
-    if (deudaInfo.monto === 0) {
+    if (deudaInfo.monto <= 0) {
       return (
         <div className="rounded-xl px-4 py-3 bg-green-50 border border-green-200">
           <p className="text-sm font-bold text-green-700">✓ Estás al día con el CODIA</p>
-          <p className="text-xs text-green-600 mt-0.5">No tienes deuda pendiente. Estás habilitado para votar.</p>
+          <p className="text-xs text-green-600 mt-0.5">
+            {deudaInfo.monto < 0
+              ? `Tienes un saldo a favor de $${Math.abs(deudaInfo.monto).toLocaleString('es-DO')}. Estás habilitado para votar.`
+              : 'No tienes deuda pendiente. Estás habilitado para votar.'}
+          </p>
         </div>
       )
     }
