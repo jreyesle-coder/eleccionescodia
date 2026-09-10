@@ -354,14 +354,12 @@ export default function ConsultaDeuda() {
       <div className="max-w-md mx-auto px-4 py-10">
         <div className="text-center space-y-1 mb-6">
           <div className="flex justify-center mb-3">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center shadow-md"
-              style={{ backgroundColor: 'var(--color-marino)' }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path fillRule="evenodd" d="M12 1.5l8.485 3.182A1 1 0 0121 5.634V12c0 4.418-3.582 7.5-9 9.75C6.582 19.5 3 16.418 3 12V5.634a1 1 0 01.515-.952L12 1.5zm3.03 7.22a.75.75 0 10-1.06-1.06L10.5 12.19l-1.47-1.47a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-codia.png"
+              alt="Colegio Dominicano de Ingenieros, Arquitectos y Agrimensores (CODIA)"
+              className="h-16 w-auto"
+            />
           </div>
           <h1 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--color-marino)' }}>
             CONSULTA DE ESTADO
