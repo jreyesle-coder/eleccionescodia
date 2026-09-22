@@ -108,7 +108,7 @@ export default function DashboardPadron({ nombreUsuario, rol }: Props) {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="nombre" angle={-35} textAnchor="end" interval={0} height={70} tick={{ fontSize: 11 }} />
                   <YAxis tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: any) => rd(v)} />
+                  <Tooltip formatter={(v: unknown) => rd(Number(v))} />
                   <Bar dataKey="deuda" fill={MARINO} radius={[4, 4, 0, 0]} name="Deuda" />
                 </BarChart>
               </ResponsiveContainer>
@@ -122,7 +122,7 @@ export default function DashboardPadron({ nombreUsuario, rol }: Props) {
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="nucleo" width={140} tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(v: any) => rd(v)} />
+                    <Tooltip formatter={(v: unknown) => rd(Number(v))} />
                     <Bar dataKey="deuda" fill={DORADO} radius={[0, 4, 4, 0]} name="Deuda" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -135,7 +135,7 @@ export default function DashboardPadron({ nombreUsuario, rol }: Props) {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="rango" tick={{ fontSize: 11 }} />
                     <YAxis tickFormatter={(v) => num(v)} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: any) => num(v)} />
+                    <Tooltip formatter={(v: unknown) => num(Number(v))} />
                     <Bar dataKey="colegiados" fill={MARINO} radius={[4, 4, 0, 0]} name="Colegiados" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -145,10 +145,10 @@ export default function DashboardPadron({ nombreUsuario, rol }: Props) {
               <Card title="Género (estimado por nombre)">
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={d.por_genero} dataKey="colegiados" nameKey="genero" cx="50%" cy="50%" outerRadius={100} label={(e: any) => `${e.genero}: ${num(e.colegiados)}`}>
+                    <Pie data={d.por_genero} dataKey="colegiados" nameKey="genero" cx="50%" cy="50%" outerRadius={100} label={(e) => { const g = e as unknown as { genero: string; colegiados: number }; return `${g.genero}: ${num(g.colegiados)}` }}>
                       {d.por_genero.map((g) => <Cell key={g.genero} fill={GEN_COLORS[g.genero] || '#9ca3af'} />)}
                     </Pie>
-                    <Tooltip formatter={(v: any) => num(v)} />
+                    <Tooltip formatter={(v: unknown) => num(Number(v))} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -161,7 +161,7 @@ export default function DashboardPadron({ nombreUsuario, rol }: Props) {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="nombre" angle={-35} textAnchor="end" interval={0} height={70} tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: any) => num(v)} />
+                    <Tooltip formatter={(v: unknown) => num(Number(v))} />
                     <Bar dataKey="colegiados" fill={DORADO} radius={[4, 4, 0, 0]} name="Colegiados" />
                   </BarChart>
                 </ResponsiveContainer>
