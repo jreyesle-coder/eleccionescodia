@@ -2,6 +2,18 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // El dominio curso.rogapps.com sirve SOLO el formulario del curso en su raíz.
+  const host = (request.headers.get('host') || '').toLowerCase()
+  if (host === 'curso.rogapps.com') {
+    const p = request.nextUrl.pathname
+    if (p === '/' || p === '/home') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/curso-ingles'
+      return NextResponse.rewrite(url)
+    }
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
