@@ -123,14 +123,11 @@ export default function FormInscripcionIngles() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f4f6fb' }}>
       <div className="max-w-md mx-auto px-4 py-10">
-        <div className="text-center space-y-1 mb-6">
-          <div className="flex justify-center mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-codia.png" alt="CODIA" className="h-14 w-auto" />
-          </div>
-          <h1 className="text-xl font-extrabold tracking-tight" style={{ color: MARINO }}>CURSO DE INGLÉS</h1>
-          <p className="text-sm text-gray-500">Inscripción para colegiados del CODIA · con INFOTEP / CIFAL.</p>
-          <div className="pt-1"><div className="h-0.5 w-full rounded-full" style={{ backgroundColor: DORADO }} /></div>
+        <div className="mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/curso-ingles-banner.jpg" alt="Curso de Inglés — CODIA, con INFOTEP y CIFAL"
+            className="w-full rounded-2xl shadow-md" />
+          <div className="mt-3 h-0.5 w-full rounded-full" style={{ backgroundColor: DORADO }} />
         </div>
 
         {listo ? (
