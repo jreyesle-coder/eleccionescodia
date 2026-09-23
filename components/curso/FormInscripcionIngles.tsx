@@ -9,7 +9,10 @@ const BUCKET = 'curso-ingles'
 const MAX_MB = 5
 const ACEPTA = 'image/jpeg,image/png,image/webp,application/pdf'
 
-interface Colegiado { codigo: number; nombre_completo: string; nucleo: string | null; inhabilitado?: boolean }
+interface Colegiado {
+  codigo: number; nombre_completo: string; nucleo: string | null
+  inhabilitado?: boolean; monto_deuda?: number; ya_inscrito?: boolean
+}
 
 const soloDigitos = (s: string) => s.replace(/\D/g, '')
 const emailOk = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)
@@ -30,6 +33,7 @@ export default function FormInscripcionIngles() {
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const [listo, setListo] = useState(false)
+  const [docsPendientes, setDocsPendientes] = useState(false)
 
   async function verificar() {
     const ced = soloDigitos(cedula)
@@ -47,11 +51,20 @@ export default function FormInscripcionIngles() {
       setErrorVerif('Esta colegiatura figura como inhabilitada. Comunícate con las oficinas del CODIA.')
       return
     }
+    if (match.ya_inscrito) {
+      setErrorVerif('Esta cédula ya está inscrita en el curso. No es posible registrarse dos veces.')
+      return
+    }
+    if ((match.monto_deuda ?? 0) > 0) {
+      setErrorVerif(`Tienes una deuda pendiente con el CODIA de RD$ ${(match.monto_deuda ?? 0).toLocaleString('es-DO')}. Debes estar al día para inscribirte en el curso.`)
+      return
+    }
     setColegiado(match)
   }
 
+  // Documentos opcionales: solo se valida formato/tamaño si se adjuntan.
   function validarArchivo(f: File | null, campo: string): string | null {
-    if (!f) return `Adjunta la ${campo}.`
+    if (!f) return null
     if (f.size > MAX_MB * 1024 * 1024) return `La ${campo} supera ${MAX_MB} MB.`
     if (!ACEPTA.split(',').includes(f.type)) return `La ${campo} debe ser imagen (JPG/PNG) o PDF.`
     return null
@@ -76,8 +89,9 @@ export default function FormInscripcionIngles() {
 
     setEnviando(true)
     try {
-      const cedulaPath = await subir(docCedula!, 'cedula')
-      const tituloPath = await subir(docTitulo!, 'titulo')
+      const cedulaPath = docCedula ? await subir(docCedula, 'cedula') : null
+      const tituloPath = docTitulo ? await subir(docTitulo, 'titulo') : null
+      const completa = !!cedulaPath && !!tituloPath
       const { error } = await supabase.from('inscripciones_ingles').insert({
         nombre: colegiado.nombre_completo,
         cedula: soloDigitos(cedula),
@@ -87,8 +101,14 @@ export default function FormInscripcionIngles() {
         nucleo: colegiado.nucleo,
         cedula_doc: cedulaPath,
         titulo_doc: tituloPath,
+        estado: completa ? 'completa' : 'pendiente_documentos',
       })
-      if (error) throw new Error(error.message)
+      if (error) {
+        if ((error as { code?: string }).code === '23505')
+          throw new Error('Esta cédula ya está inscrita en el curso.')
+        throw new Error(error.message)
+      }
+      setDocsPendientes(!completa)
       setListo(true)
     } catch (err) {
       setErrorEnvio(err instanceof Error ? err.message : 'No se pudo completar la inscripción.')
@@ -120,6 +140,11 @@ export default function FormInscripcionIngles() {
             </div>
             <h2 className="text-lg font-extrabold text-green-700">¡Inscripción recibida!</h2>
             <p className="text-sm text-gray-600">Gracias, <b>{colegiado?.nombre_completo}</b>. Tu inscripción al Curso de Inglés fue registrada. El CODIA se comunicará contigo con los próximos pasos.</p>
+            {docsPendientes && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Tu inscripción quedó <b>pendiente de documentos</b>. Recuerda entregar la copia de tu cédula y de tu título.
+              </p>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-5 space-y-4">
@@ -157,13 +182,19 @@ export default function FormInscripcionIngles() {
                     <input value={email} onChange={e => setEmail(e.target.value)} placeholder="tucorreo@ejemplo.com" type="email" className={inputCls} style={ring} required />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 block mb-1">Copia de cédula <span className="text-gray-400">(JPG/PNG/PDF, máx {MAX_MB}MB)</span></label>
-                    <input type="file" accept={ACEPTA} onChange={e => setDocCedula(e.target.files?.[0] ?? null)} className="w-full text-sm" required />
+                    <label className="text-xs font-semibold text-gray-600 block mb-1">Copia de cédula <span className="text-gray-400">(opcional · JPG/PNG/PDF, máx {MAX_MB}MB)</span></label>
+                    <input type="file" accept={ACEPTA} onChange={e => setDocCedula(e.target.files?.[0] ?? null)} className="w-full text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 block mb-1">Copia de título <span className="text-gray-400">(JPG/PNG/PDF, máx {MAX_MB}MB)</span></label>
-                    <input type="file" accept={ACEPTA} onChange={e => setDocTitulo(e.target.files?.[0] ?? null)} className="w-full text-sm" required />
+                    <label className="text-xs font-semibold text-gray-600 block mb-1">Copia de título <span className="text-gray-400">(opcional · JPG/PNG/PDF, máx {MAX_MB}MB)</span></label>
+                    <input type="file" accept={ACEPTA} onChange={e => setDocTitulo(e.target.files?.[0] ?? null)} className="w-full text-sm" />
                   </div>
+
+                  {(!docCedula || !docTitulo) && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      Puedes inscribirte ahora sin adjuntar los documentos; tu inscripción quedará marcada como <b>pendiente de documentos</b> hasta que los entregues.
+                    </p>
+                  )}
 
                   {errorEnvio && <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{errorEnvio}</p>}
 
