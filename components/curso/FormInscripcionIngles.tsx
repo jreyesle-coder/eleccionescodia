@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const MARINO = '#1F3864'
@@ -34,6 +34,13 @@ export default function FormInscripcionIngles() {
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const [listo, setListo] = useState(false)
   const [docsPendientes, setDocsPendientes] = useState(false)
+  const [cupo, setCupo] = useState<{ total: number; limite: number; abierto: boolean } | null>(null)
+
+  useEffect(() => {
+    supabase.rpc('estado_curso_ingles').then(({ data }) => {
+      if (data) setCupo(data as { total: number; limite: number; abierto: boolean })
+    })
+  }, [supabase])
 
   async function verificar() {
     const ced = soloDigitos(cedula)
@@ -106,6 +113,10 @@ export default function FormInscripcionIngles() {
       if (error) {
         if ((error as { code?: string }).code === '23505')
           throw new Error('Esta cédula ya está inscrita en el curso.')
+        if ((error.message || '').includes('CUPO_LLENO')) {
+          setCupo(c => c ? { ...c, abierto: false } : c)
+          throw new Error('Los cupos del curso se agotaron mientras completabas la inscripción. Inscripción cerrada.')
+        }
         throw new Error(error.message)
       }
       setDocsPendientes(!completa)
@@ -128,6 +139,11 @@ export default function FormInscripcionIngles() {
           <img src="/curso-ingles-banner.jpg" alt="Curso de Inglés — CODIA, con INFOTEP y CIFAL"
             className="w-full rounded-2xl shadow-md" />
           <div className="mt-3 h-0.5 w-full rounded-full" style={{ backgroundColor: DORADO }} />
+          {cupo && cupo.abierto && !listo && (
+            <p className="text-center text-xs font-semibold mt-3" style={{ color: MARINO }}>
+              Cupos disponibles: {cupo.limite - cupo.total} de {cupo.limite}
+            </p>
+          )}
         </div>
 
         {listo ? (
@@ -142,6 +158,14 @@ export default function FormInscripcionIngles() {
                 Tu inscripción quedó <b>pendiente de documentos</b>. Recuerda entregar la copia de tu cédula y de tu título.
               </p>
             )}
+          </div>
+        ) : cupo && !cupo.abierto ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6 text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#fee2e2' }}>
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </div>
+            <h2 className="text-lg font-extrabold text-red-700">Inscripciones cerradas</h2>
+            <p className="text-sm text-gray-600">Se completaron los <b>{cupo.limite} cupos</b> disponibles para el Curso de Inglés. Gracias por tu interés; mantente atento a próximas convocatorias del CODIA.</p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-5 space-y-4">
