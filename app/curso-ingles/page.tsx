@@ -16,8 +16,8 @@ export const metadata: Metadata = {
     locale: 'es_DO',
     images: [{
       url: 'https://curso.rogapps.com/curso-ingles-banner.jpg',
-      width: 1254,
-      height: 1254,
+      width: 1408,
+      height: 1600,
       alt: 'Curso de Inglés para colegiados del CODIA',
     }],
   },
