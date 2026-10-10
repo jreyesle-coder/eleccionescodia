@@ -237,11 +237,11 @@ export default function FormCurso({ slug }: { slug: string }) {
                     </div>
                   ))}
 
-                  {curso.documentos.some(d => !docs[d.key]) && (
-                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      Puedes registrarte sin adjuntar todos los documentos; los que falten quedarán pendientes de entrega.
-                    </p>
-                  )}
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    Puedes registrarte sin adjuntar todos los documentos; los que falten quedarán pendientes de entrega.
+                    El CODIA se reserva el derecho de <b>rechazar la solicitud</b> si no se completan los documentos solicitados.
+                    La <b>aprobación está sujeta a la disponibilidad de cupos</b>.
+                  </p>
                   {errorEnvio && <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{errorEnvio}</p>}
 
                   <button type="submit" disabled={enviando}
