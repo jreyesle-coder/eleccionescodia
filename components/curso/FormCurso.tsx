@@ -154,12 +154,17 @@ export default function FormCurso({ slug }: { slug: string }) {
             <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#dcfce7' }}>
               <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
             </div>
-            <h2 className="text-lg font-extrabold text-green-700">¡Registro recibido!</h2>
+            <h2 className="text-lg font-extrabold text-green-700">¡Solicitud enviada!</h2>
             <p className="text-sm text-gray-600">
               {curso.requiere_aprobacion
-                ? 'Tu solicitud fue registrada y está PENDIENTE de aprobación del CODIA. Te contactaremos para confirmar tu cupo.'
+                ? 'Tu solicitud ha sido enviada y estará siendo evaluada por el CODIA. Podrás verificar si fuiste seleccionado en el módulo de consulta.'
                 : 'Tu inscripción fue registrada. El CODIA se comunicará contigo con los próximos pasos.'}
             </p>
+            {curso.requiere_aprobacion && (
+              <a href="/cursos/consulta" className="inline-block text-sm font-semibold underline" style={{ color: MARINO }}>
+                Consultar mi estado →
+              </a>
+            )}
           </div>
         ) : estado && !estado.abierto ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6 text-center space-y-2">

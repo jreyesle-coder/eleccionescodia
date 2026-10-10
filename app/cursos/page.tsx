@@ -29,6 +29,9 @@ export default async function CursosIndex() {
           <img src="/logo-codia.png" alt="CODIA" className="h-14 w-auto mx-auto mb-3" />
           <h1 className="text-xl font-extrabold" style={{ color: '#1F3864' }}>Plan de Capacitación y Actualización Profesional</h1>
           <p className="text-sm text-gray-500">Cursos disponibles para los colegiados del CODIA.</p>
+          <Link href="/cursos/consulta" className="inline-block mt-2 text-sm font-semibold underline" style={{ color: '#1F3864' }}>
+            ¿Ya te inscribiste? Consulta si fuiste seleccionado →
+          </Link>
         </div>
         {cursos.length === 0 ? (
           <p className="text-center text-sm text-gray-500 py-10">No hay cursos disponibles en este momento.</p>
