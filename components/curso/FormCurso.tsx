@@ -142,11 +142,6 @@ export default function FormCurso({ slug }: { slug: string }) {
             <img src={curso.banner_url} alt={curso.titulo} className="w-full rounded-2xl shadow-md" />
           )}
           <div className="mt-3 h-0.5 w-full rounded-full" style={{ backgroundColor: DORADO }} />
-          {estado && estado.abierto && !listo && (
-            <p className="text-center text-xs font-semibold mt-3" style={{ color: MARINO }}>
-              Cupos: {curso.limite} · Registros disponibles: {Math.max(0, estado.max_registros - estado.total)} de {estado.max_registros}
-            </p>
-          )}
         </div>
 
         {listo ? (
