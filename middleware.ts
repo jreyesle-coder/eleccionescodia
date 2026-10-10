@@ -8,10 +8,23 @@ export async function middleware(request: NextRequest) {
     const p = request.nextUrl.pathname
     if (p === '/' || p === '/home') {
       const url = request.nextUrl.clone()
-      url.pathname = '/curso-ingles'
+      url.pathname = '/cursos'
+      return NextResponse.rewrite(url)
+    }
+    // curso.rogapps.com/<slug>  →  /cursos/<slug>
+    if (!p.startsWith('/cursos')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/cursos' + p
       return NextResponse.rewrite(url)
     }
     return NextResponse.next({ request })
+  }
+
+  // Link viejo del curso de inglés → sistema de cursos
+  if (request.nextUrl.pathname === '/curso-ingles') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/cursos/ingles'
+    return NextResponse.redirect(url)
   }
 
   let supabaseResponse = NextResponse.next({ request })
@@ -44,7 +57,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const publicPaths = ['/', '/home', '/acceso', '/consulta', '/deuda', '/login', '/encuesta', '/verifica', '/v2', '/plan-accion', '/curso-ingles']
-  if (!user && !publicPaths.includes(pathname)) {
+  const esPublica = publicPaths.includes(pathname) || pathname.startsWith('/cursos')
+  if (!user && !esPublica) {
     const url = request.nextUrl.clone()
     url.pathname = '/home'
     return NextResponse.redirect(url)
