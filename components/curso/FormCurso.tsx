@@ -180,6 +180,13 @@ export default function FormCurso({ slug }: { slug: string }) {
               </div>
             )}
 
+            {!colegiado && (
+              <div className="rounded-xl px-4 py-3 text-center" style={{ backgroundColor: MARINO }}>
+                <p className="text-sm font-bold text-white">Inscríbete aquí</p>
+                <p className="text-xs text-blue-100 mt-0.5">Ingresa tu cédula de colegiado y pulsa <b>Verificar</b> para habilitar el formulario de solicitud.</p>
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-semibold text-gray-600 block mb-1">Cédula</label>
               <div className="flex gap-2">
