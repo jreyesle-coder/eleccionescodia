@@ -165,6 +165,9 @@ values
 on conflict (slug) do nothing;
 
 -- ── Migrar inscripciones del curso de inglés (si existen) ───────────────────
+-- Se desactiva el trigger de cupo para no bloquear el histórico (inglés ya
+-- tenía 41 inscritos, por encima del tope de 40).
+alter table public.inscripciones_curso disable trigger trg_cupo_curso;
 do $$
 declare v_ing uuid;
 begin
@@ -178,3 +181,10 @@ begin
     on conflict (curso_id, cedula) do nothing;
   end if;
 end $$;
+alter table public.inscripciones_curso enable trigger trg_cupo_curso;
+
+-- Inglés ya cerrado con 41 inscritos: ajusta sus cupos para reflejar lo real.
+update public.cursos set max_registros = greatest(max_registros,
+  (select count(*) from public.inscripciones_curso i where i.curso_id = cursos.id)),
+  limite = greatest(limite, (select count(*) from public.inscripciones_curso i where i.curso_id = cursos.id))
+where slug = 'ingles';
