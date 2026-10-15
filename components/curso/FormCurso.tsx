@@ -75,10 +75,28 @@ export default function FormCurso({ slug }: { slug: string }) {
     }
     if (match.ya_inscrito) { setErrorVerif('Esta cédula ya está registrada en este curso.'); return }
     if (match.inhabilitado) { setErrorVerif('Esta colegiatura figura como inhabilitada. Comunícate con el CODIA.'); return }
-    if (curso.bloquear_con_deuda && (match.monto_deuda ?? 0) > 0) {
-      setErrorVerif(`Tienes una deuda pendiente con el CODIA de RD$ ${(match.monto_deuda ?? 0).toLocaleString('es-DO')}. Debes estar al día para inscribirte.`)
-      return
+
+    // Consulta de deuda EN VIVO contra el portal del CODIA (no el valor guardado,
+    // que se desfasa). Solo se bloquea si el portal confirma deuda real (> 0).
+    // Si la consulta en vivo falla, se deja pasar para no bloquear por una falla técnica.
+    if (curso.bloquear_con_deuda && match.codigo) {
+      setVerificando(true)
+      try {
+        const r = await fetch('/api/consulta-deuda', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codigo: match.codigo, cedula: ced }),
+        })
+        const d = await r.json() as { habilitado?: boolean; monto?: number; fuente?: string }
+        if (d.fuente === 'vivo' && d.habilitado === false) {
+          setVerificando(false)
+          setErrorVerif(`Según el portal del CODIA tienes una deuda pendiente de RD$ ${(d.monto ?? 0).toLocaleString('es-DO')}. Debes estar al día para inscribirte. Si ya pagaste, espera unos minutos a que el sistema lo refleje e intenta de nuevo.`)
+          return
+        }
+      } catch { /* falla de red → no bloquear */ }
+      setVerificando(false)
     }
+
     setColegiado(match)
   }
 
